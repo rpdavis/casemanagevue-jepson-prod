@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home - Student Portal</title>
+  <link rel="stylesheet" href="./styles/style.css">
+  <link rel="stylesheet" href="./styles/tables.css">
+</head>
+<body>
+  <main id="main-content"></main>
+
+  <script type="module">
+    import "./firebase/config.js"; // Must come first
+    import { initPageWithNav } from "../components/init.js";
+    import { STUDENT_ACCESS_ROLES } from "../firebase/roles.js";
+    import { showStudentsView } from "../views/students.js";
+
+    initPageWithNav({
+      allowedRoles: STUDENT_ACCESS_ROLES,
+      defaultView: "students",
+      viewMap: {
+        students: showStudentsView
+      }
+    });
+  </script>
+</body>
+</html>

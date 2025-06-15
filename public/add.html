@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Student</title>
+  <link rel="stylesheet" href="./styles/style.css">
+</head>
+<body>
+  <main id="main-content"></main>
+
+  <script type="module">
+    import "../firebase/config.js";
+    import { initPageWithNav } from "../components/init.js";
+    import { CASE_MANAGEMENT_ROLES } from "../firebase/roles.js";
+    import { showAddStudentView } from "../views/add.js";
+
+    initPageWithNav({
+      allowedRoles: CASE_MANAGEMENT_ROLES,
+      defaultView: "add",
+      viewMap: {
+        add: showAddStudentView
+      }
+    });
+  </script>
+</body>
+</html>

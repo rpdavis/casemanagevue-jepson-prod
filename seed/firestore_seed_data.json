@@ -1,0 +1,76 @@
+{
+  "users": [
+    {
+      "user_id": "u_teacher_001",
+      "name": "Ms. Ramirez",
+      "email": "ramirez@school.org",
+      "role": "teacher"
+    },
+    {
+      "user_id": "u_casemanager_001",
+      "name": "Mr. Johnson",
+      "email": "johnson@school.org",
+      "role": "case_manager"
+    }
+  ],
+  "students": [
+    {
+      "student_id": "s_001",
+      "first_name": "Sophia",
+      "last_name": "Ferrell",
+      "casemanager_id": "u_casemanager_001",
+      "schedule": {
+        "1": "u_teacher_001",
+        "2": "u_teacher_001"
+      }
+    },
+    {
+      "student_id": "s_002",
+      "first_name": "Liam",
+      "last_name": "Nguyen",
+      "casemanager_id": "u_casemanager_001",
+      "schedule": {
+        "1": "u_teacher_001",
+        "3": "u_teacher_001"
+      }
+    }
+  ],
+  "iep_goals": [
+    {
+      "goal_id": "g_001",
+      "student_id": "s_001",
+      "category": "Reading",
+      "description": "Improve reading comprehension to grade level",
+      "start_date": "2025-01-01",
+      "end_date": "2025-12-31"
+    }
+  ],
+  "accommodations": [
+    {
+      "accommodation_id": "a_001",
+      "student_id": "s_001",
+      "text": "Extended time on tests",
+      "applies_to": "all"
+    },
+    {
+      "accommodation_id": "a_002",
+      "student_id": "s_001",
+      "text": "Preferential seating",
+      "applies_to": "period_1"
+    }
+  ],
+  "student_class_assignments": [
+    {
+      "assignment_id": "sca_001",
+      "student_id": "s_001",
+      "teacher_id": "u_teacher_001",
+      "period": "1"
+    },
+    {
+      "assignment_id": "sca_002",
+      "student_id": "s_002",
+      "teacher_id": "u_teacher_001",
+      "period": "3"
+    }
+  ]
+}

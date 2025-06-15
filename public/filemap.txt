@@ -1,0 +1,39 @@
+.
+├── add.html
+├── admin.html
+├── components
+│   ├── filters.js
+│   ├── init.js
+│   ├── nav.js
+│   ├── studentDialogEdit.js
+│   ├── studentFilters.js
+│   ├── studentForm.js
+│   └── studentTable.js
+├── filemap.txt
+├── firebase
+│   ├── config.js
+│   ├── roles.js
+│   └── session.js
+├── home.html
+├── login.html
+├── styles
+│   ├── style.css
+│   └── tables.css
+├── testing.html
+└── views
+    ├── OLD-admin.js
+    ├── add.js
+    ├── admin
+    │   ├── addUsers.js
+    │   ├── editUsers.js
+    │   ├── periods.js
+    │   ├── permissions-model.js
+    │   ├── permissions-ui.css
+    │   ├── permissions-ui.js
+    │   ├── permissions.js
+    │   └── presentation.js
+    ├── admin.js
+    ├── students.js
+    └── testing.js
+
+6 directories, 31 files

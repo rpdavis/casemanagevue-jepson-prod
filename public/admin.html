@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="./styles/style.css">
+  <link rel="stylesheet" href="./styles/tables.css">
+</head>
+<body>
+  <main id="main-content">
+    <h1>Admin Panel</h1>
+    <!-- All admin sections will be dynamically rendered by showAdminView -->
+  </main>
+  <script type="module">
+    import "./firebase/config.js";
+    import { initPageWithNav } from "./components/init.js";
+    import { showAdminView } from "./views/admin.js";
+    import { ADMIN_ONLY } from "./firebase/roles.js";
+
+    initPageWithNav({
+      allowedRoles: ADMIN_ONLY,
+      defaultView: "admin",
+      viewMap: {
+        admin: showAdminView
+      }
+    });
+  </script>
+</body>
+</html>

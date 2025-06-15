@@ -1,0 +1,25 @@
+.permissions-table-admin {
+  border-collapse: collapse;
+  width: auto;
+  margin-bottom: 1em;
+  background: #f7fafc;
+}
+.permissions-table-admin th, .permissions-table-admin td {
+  border: 1px solid #c4c7cc;
+  padding: 0.5em 0.8em;
+  text-align: center;
+  font-size: 1.08em;
+}
+.permissions-table-admin th {
+  background: #e9f1f9;
+  font-weight: 600;
+}
+.permissions-table-admin td:first-child {
+  background: #f2f7fb;
+  font-weight: 500;
+}
+.permissions-table-admin input[type="checkbox"] {
+  width: 1.2em;
+  height: 1.2em;
+  accent-color: #1976d2;
+}

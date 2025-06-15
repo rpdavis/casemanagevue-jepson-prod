@@ -1,0 +1,257 @@
+/* Student Table */
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.students-table thead {
+  background: #dfe7f3;
+  color: #111;
+  font-weight: 600;
+}
+
+.students-table th,
+.students-table td {
+  padding: 0.9rem .4rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #d1d1d1;
+}
+
+td .student-name {
+  font-weight: 700;
+  color: #003366;
+  font-size: 1.2rem;
+}
+
+.students-table tbody tr:nth-child(even) {
+  background: #f8fafd;
+}
+
+.students-table a {
+  color: #005bb5;
+  text-decoration: none;
+}
+
+.students-table a:hover {
+  text-decoration: underline;
+}
+
+.students-table pre {
+  white-space: pre-wrap;
+  margin: 0;
+  font-family: inherit;
+  background: #edf1f7;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #222;
+}
+
+/* Custom bullets for lists */
+.students-table td ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.students-table td ul li {
+  position: relative;
+  padding-left: .2em;
+  line-height: 1.3;
+}
+
+.students-table td ul li::before {
+  position: absolute;
+  left: 0;
+  color: #333;
+}
+
+/* Column width balancing */
+.students-table th:nth-child(1) { width: 16%; }
+.students-table th:nth-child(2) { width: 10%; }
+.students-table th:nth-child(3) { width: 9%; }
+.students-table th:nth-child(4) { width: 11%; }
+.students-table th:nth-child(5),
+.students-table th:nth-child(6) { width: 19%; }
+.students-table th:nth-child(7) { width: 8%; }
+.students-table th:nth-child(8) { width: 4%; }
+
+/* Schedule row limiter + toggle */
+.schedule-list {
+  max-height: 9.6em;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.schedule-list.expanded {
+  max-height: none;
+}
+
+.expand-toggle {
+  text-align: center;
+  cursor: pointer;
+  color: #005bb5;
+  font-size: 1.2em;
+  margin-top: 0.3em;
+  user-select: none;
+}
+.bullet-list {
+list-style: disc!important;
+background: linear-gradient(to top, #f4f6f9 100%, transparent);
+
+padding: .1rem 1.2rem!important;
+border-radius: .5rem;
+
+}
+
+.students-table .bullet-list li{
+padding-left:0!important;
+}
+
+
+
+  .instruction-cell, .with-flag{
+  position: relative;
+    padding-top: 1.2rem;
+}
+
+.flag-overlay {
+position: absolute;
+top: 0;
+left: 0;
+background: #ffeeba;
+color: #333;
+font-size: 0.75rem;
+padding: 0 6px;
+z-index: 1;
+
+text-align: center;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+margin: .1rem .4rem;
+width: 90%;
+}
+.flag-separate-setting {
+ /*background: linear-gradient(to right, #ffeeba 80%, transparent);*/
+ background:#ffeeba ;
+}
+.flag-preferential-seating {
+/*background: radial-gradient(#babfff 75.63%, transparent);*/
+background:#babfff;
+
+}
+.flag-low {
+  background-color: #fff4cc; /* pale yellow */
+}
+.flag-medium {
+  background-color: #ffe0a3; /* light orange */
+}
+.flag-high {
+  background-color: #ffc1a3; /* soft red-orange */
+}
+.flag-critical {
+  background-color: #ff9999; /* bright red */
+}
+/* User Admin Table Specific Column Widths */
+.user-admin-table th:nth-child(1), /* Name */
+.user-admin-table td:nth-child(1) {
+  width: 17%;
+  min-width: 110px;
+  max-width: 230px;
+}
+
+.user-admin-table th:nth-child(2), /* Title */
+.user-admin-table td:nth-child(2) {
+  width: 13%;
+  min-width: 80px;
+  max-width: 180px;
+}
+
+.user-admin-table th:nth-child(3), /* Email */
+.user-admin-table td:nth-child(3) {
+  width: 22%;
+  min-width: 150px;
+  max-width: 320px;
+  word-break: break-all;
+}
+
+.user-admin-table th:nth-child(4), /* Role */
+.user-admin-table td:nth-child(4) {
+  width: 14%;
+  min-width: 90px;
+  max-width: 140px;
+}
+
+.user-admin-table th:nth-child(5), /* Subject */
+.user-admin-table td:nth-child(5) {
+  width: 16%;
+  min-width: 100px;
+  max-width: 200px;
+}
+
+.user-admin-table th:nth-child(6), /* Action */
+.user-admin-table td:nth-child(6) {
+  width: 10%;
+  min-width: 70px;
+  max-width: 100px;
+  text-align: center;
+}
+
+/* Ensure table still fills container */
+.user-admin-table {
+  table-layout: fixed;
+  width: 100%;
+}
+/*----------*/
+.user-admin-table th:nth-child(6),
+.user-admin-table td:nth-child(6) {
+  min-width: 90px;
+  max-width: 160px;
+  width: 10%;
+  text-align: center;
+  overflow: hidden;
+}
+
+.action-btns {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2em;
+  flex-wrap: wrap;
+  width: 100%!important;
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.user-admin-table {
+  border-collapse: collapse;
+}
+.user-admin-table td, .user-admin-table th {
+  border-bottom: 1px solid #d1d1d1;
+  /* Remove border from last row if desired: */
+}
+.action-btns button {
+  min-width: 28px;
+  max-width: 36px;
+  padding: 0.15em 0.3em;
+  font-size: 1.1em;
+  line-height: 2.1;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.12s;
+  outline: none;
+  box-sizing: border-box;
+}
+.user-admin-table tr {
+  height: 2.2em; /* Or whatever matches your design */
+}

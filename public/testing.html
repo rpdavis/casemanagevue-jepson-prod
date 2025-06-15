@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Testing Page</title>
+  <link rel="stylesheet" href="./styles/style.css">
+  <link rel="stylesheet" href="./styles/tables.css">
+</head>
+<body>
+  <main id="main-content"></main>
+
+  <script type="module">
+    import "../firebase/config.js"; // Must come first!
+    import { initPageWithNav } from "../components/init.js";
+    import { showTestingView } from "../views/testing.js";
+    import { ADMIN_ROLES } from "../firebase/roles.js";
+
+    // Use ADMIN_ROLES or any role set you want for access.
+    initPageWithNav({
+      allowedRoles: ADMIN_ROLES,
+      defaultView: "testing",
+      viewMap: {
+        testing: showTestingView
+      }
+    });
+  </script>
+</body>
+</html>
