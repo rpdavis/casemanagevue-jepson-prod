@@ -1,15 +1,18 @@
-// admin/permissions-ui.js
-console.log("admin/permissions-ui.js");
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import { VALID_ROLES, PERMISSION_ACTIONS } from "./permissions-model.js";
+// permissions-ui.js
 
-// Actions and labels
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { VALID_ROLES, PERMISSION_ACTIONS, PERMISSIONS_MATRIX } from "./permissions-model.js";
+
 const ACTION_LIST = [
   PERMISSION_ACTIONS.VIEW_USERS,
   PERMISSION_ACTIONS.EDIT_USER,
   PERMISSION_ACTIONS.DELETE_USER,
   PERMISSION_ACTIONS.MANAGE_SUBJECTS,
   PERMISSION_ACTIONS.MANAGE_ROLES,
+  PERMISSION_ACTIONS.VIEW_STUDENTS,
+  PERMISSION_ACTIONS.EDIT_STUDENT_CM,
+  PERMISSION_ACTIONS.EDIT_STUDENT_ALL,
+  PERMISSION_ACTIONS.TESTING
 ];
 
 const ACTION_LABELS = {
@@ -18,6 +21,10 @@ const ACTION_LABELS = {
   [PERMISSION_ACTIONS.DELETE_USER]: "Delete User",
   [PERMISSION_ACTIONS.MANAGE_SUBJECTS]: "Manage Subjects",
   [PERMISSION_ACTIONS.MANAGE_ROLES]: "Manage Roles",
+  [PERMISSION_ACTIONS.VIEW_STUDENTS]: "View Students",
+  [PERMISSION_ACTIONS.EDIT_STUDENT_CM]: "Edit Students (Own Caseload)",
+  [PERMISSION_ACTIONS.EDIT_STUDENT_ALL]: "Edit All Students",
+  [PERMISSION_ACTIONS.TESTING]: "Testing"
 };
 
 /**
@@ -90,24 +97,17 @@ export async function showPermissionsMatrix(container) {
  * Loads the permissions matrix from Firestore.
  * @param {Firestore} db
  * @param {string} docPath
- * @returns {Promise<Object>} The matrix object: { [role]: [actions] }
  */
 async function loadPermissionsMatrix(db, docPath) {
   try {
-    const snap = await getDoc(doc(db, docPath));
-    if (snap.exists()) return snap.data();
-  } catch (err) {
-    // ignore, fallback to default
+    const docRef = doc(db, docPath);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+  } catch (e) {
+    // ignore, fall back to default
   }
-  // Fallback: default matrix (view-only for all except ADMIN)
-  const matrix = {};
-  const ACTION_LIST = [
-    PERMISSION_ACTIONS.VIEW_USERS,
-    PERMISSION_ACTIONS.EDIT_USER,
-    PERMISSION_ACTIONS.DELETE_USER,
-    PERMISSION_ACTIONS.MANAGE_SUBJECTS,
-    PERMISSION_ACTIONS.MANAGE_ROLES,
-  ];
-  VALID_ROLES.forEach(role => matrix[role] = role === "ADMIN" ? ACTION_LIST.slice() : [PERMISSION_ACTIONS.VIEW_USERS]);
-  return matrix;
+  // Fallback to default
+  return PERMISSIONS_MATRIX;
 }

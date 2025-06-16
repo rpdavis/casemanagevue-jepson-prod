@@ -1,74 +1,45 @@
-// studentTable.js
-
 import { canEditStudent } from "../firebase/roles.js";
+import { showStudentEmailDialog } from "./studentEmailDialog.js";
 
+/**
+ * Renders the student table.
+ * @param {HTMLElement} container
+ * @param {Array} students
+ * @param {Object} userMap
+ * @param {Object} currentUser
+ * @param {Function} onEditClick
+ */
 export function renderStudentTable(container, students, userMap, currentUser, onEditClick) {
   const table = document.createElement("table");
-  table.classList.add("students-table");
-
-  function formatDate(dateStr) {
-    if (!dateStr) return "—";
-    const d = new Date(dateStr);
-    return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
-  }
-
-  function getMeetingUrgencyColor(student) {
-    const today = new Date();
-    const parseDate = str => str ? new Date(str) : null;
-    const targetDate = parseDate(student.meeting_date) || parseDate(student.review_date) || parseDate(student.reeval_date);
-    if (!targetDate) return "";
-    const daysDiff = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
-    if (daysDiff <= 0) return "flag-critical";
-    if (daysDiff <= 7) return "flag-high";
-    if (daysDiff <= 14) return "flag-medium";
-    if (daysDiff <= 21) return "flag-mid";
-    if (daysDiff <= 28) return "flag-low";
-    return "";
-  }
-
-  const sorted = [...students];
-
+  table.className = "students-table";
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Student Info</th>
+        <th>Student</th>
         <th>Services</th>
-        <th>CM</th>
+        <th>Case Manager</th>
         <th>Schedule</th>
-        <th>Instruction Accom.</th>
-        <th>Assessment Accom.</th>
+        <th>Instruction</th>
+        <th>Assessment</th>
         <th>Docs</th>
-        <th>Actions</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      ${sorted.map(student => {
-        const name = `${student.first_name} ${student.last_name}`;
-        const review = formatDate(student.review_date);
-        const reeval = formatDate(student.reeval_date);
-        const cmInitials = userMap[student.casemanager_id]?.initials || "—";
-        const urgencyClass = getMeetingUrgencyColor(student);
+      ${students.map(student => {
+        const studentInfo = `${student.last_name}, ${student.first_name}`;
+        const scheduleList = (student.schedule ? Object.entries(student.schedule).map(([period, teacherId]) =>
+          `<li>${period}: ${userMap[teacherId]?.initials || teacherId}</li>`
+        ).join("") : "—");
+        const docs = (student.docs ? student.docs.map(doc =>
+          `<a href="${doc.url}" target="_blank">${doc.name}</a>`
+        ).join(", ") : "");
 
-        const studentInfo = `
-          <div class="student-name ${urgencyClass}"><strong>${name}</strong></div>
-          <div>Grade: ${student.grade}</div>
-          <div>Program: ${student.plan}</div>
-          <div>Plan Review: ${review}</div>
-          <div>Reevaluations: ${reeval}</div>
-        `;
-
-        const scheduleList = Object.entries(student.schedule || {}).map(([p, t]) => {
-          const label = p === "SH" ? "SH" : `P${p}`;
-          return `<li>${label}: ${userMap[t]?.initials || t}</li>`;
-        }).join("");
-
-        const docs = [
-          student.has_bip ? "BIP" : null,
-          student.ataglance_pdf_url ? `<a href="${student.ataglance_pdf_url}" target="_blank">At-A-Glance</a>` : null
-        ].filter(Boolean).join("<br>");
+        let cmInitials = "";
+        if (student.casemanager_id && userMap[student.casemanager_id])
+          cmInitials = userMap[student.casemanager_id].initials;
 
         const serviceList = [];
-        if (student.speech_id) serviceList.push(`SP (${userMap[student.speech_id]?.initials || "?"})`);
         if (student.mh_id) serviceList.push(`MH (${userMap[student.mh_id]?.initials || "?"})`);
         if (student.ot_id) serviceList.push(`OT (${userMap[student.ot_id]?.initials || "?"})`);
         (student.services || []).forEach(s => serviceList.push(s));
@@ -90,8 +61,15 @@ export function renderStudentTable(container, students, userMap, currentUser, on
             ${instructionHTML}
             ${assessmentHTML}
             <td>${docs || "—"}</td>
-            <td>${canEditStudent(student, currentUser)
-              ? `<button class="edit-btn" data-id="${student.id}">Edit</button>` : ""}</td>
+            <td>
+              ${canEditStudent(student, currentUser)
+                ? `
+                  <button class="edit-btn" data-id="${student.id}">Edit</button>
+                  <button class="email-btn" data-id="${student.id}" style="display:block;margin-top:6px;">Email</button>
+                  <button class="teacher-feedback-btn" data-id="${student.id}" style="display:block;margin-top:6px;">Teacher Feedback</button>
+                `
+                : ""}
+            </td>
           </tr>
         `;
       }).join("")}
@@ -101,8 +79,19 @@ export function renderStudentTable(container, students, userMap, currentUser, on
   container.innerHTML = "";
   container.appendChild(table);
 
+  // Edit button event
   container.querySelectorAll(".edit-btn").forEach(button => {
     button.addEventListener("click", () => onEditClick(button.dataset.id));
+  });
+
+  // Email button event
+  container.querySelectorAll(".email-btn").forEach(button => {
+    button.addEventListener("click", () => showStudentEmailDialog(button.dataset.id));
+  });
+
+  // Teacher Feedback button event (placeholder)
+  container.querySelectorAll(".teacher-feedback-btn").forEach(button => {
+    button.addEventListener("click", () => alert("Teacher Feedback: Coming soon!"));
   });
 }
 

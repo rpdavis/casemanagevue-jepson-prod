@@ -1,54 +1,64 @@
-// /views/add.js
+// admin.js
 
-import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js";
+import { showAddUsersSection } from "./admin/addUsers.js";
+import { showEditUsersSection } from "./admin/editUsers.js";
+import { showPeriodsSection } from "./admin/periods.js";
+import { showPermissionsSection } from "./admin/permissions.js";
+import { showPresentationSection } from "./admin/presentation.js";
 
-import {
-  renderStudentForm,
-  collectStudentFormData,
-  loadUserRoles
-} from "../components/studentForm.js"; // ✅ make sure this path is correct
-
-export async function showAddStudentView(main) {
-  const db = getFirestore();
-  const storage = getStorage();
-  const users = await loadUserRoles(db); // ✅ this is where it's called
-
-  const formHTML = renderStudentForm({}, users, "new");
-  const container = document.createElement("div");
-  container.innerHTML = `<h1>Add New Student</h1>${formHTML}`;
-
+/**
+ * Main admin panel view, now tabbed!
+ * @param {HTMLElement} main 
+ */
+export function showAdminView(main) {
   main.innerHTML = "";
-  main.appendChild(container);
 
-  const form = container.querySelector("#student-form");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const data = collectStudentFormData(form);
-    const id = `${data.first_name.toLowerCase()}_${data.last_name.toLowerCase()}_${Date.now()}`;
+  // Tab navigation
+  const tabBar = document.createElement("nav");
+  tabBar.className = "admin-tab-bar";
+  tabBar.innerHTML = `
+    <button data-tab="add" class="active">Add Users</button>
+    <button data-tab="edit">Edit Users</button>
+    <button data-tab="periods">Periods & Times</button>
+    <button data-tab="permissions">Permissions</button>
+    <button data-tab="presentation">Presentation</button>
+  `;
 
-    const storagePaths = {};
-    const bipFile = form.querySelector("#bip-upload").files[0];
-    if (bipFile) {
-      const bipPath = `bips/${id}.pdf`;
-      await uploadBytes(storageRef(storage, bipPath), bipFile);
-      storagePaths.bip_pdf_url = await getDownloadURL(storageRef(storage, bipPath));
-    }
+  // Section containers
+  const sectionMap = {
+    add: document.createElement("section"),
+    edit: document.createElement("section"),
+    periods: document.createElement("section"),
+    permissions: document.createElement("section"),
+    presentation: document.createElement("section"),
+  };
 
-    const ataglanceFile = form.querySelector("#ataglance-upload").files[0];
-    if (ataglanceFile) {
-      const path = `ataglance/${id}.pdf`;
-      const ref = storageRef(storage, path);
-      await uploadBytes(ref, ataglanceFile);
-      storagePaths.ataglance_pdf_url = await getDownloadURL(ref);
-    }
-
-    await setDoc(doc(db, "students", id), {
-      ...data,
-      ...storagePaths
-    });
-
-    alert("Student added.");
-    form.reset();
+  // Only show one at a time
+  Object.entries(sectionMap).forEach(([key, section]) => {
+    section.style.display = key === "add" ? "block" : "none";
+    section.className = "admin-section";
+    main.appendChild(section);
   });
+
+  // Handlers to show/hide sections
+  tabBar.addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") {
+      const tab = e.target.getAttribute("data-tab");
+      // Highlight active tab
+      tabBar.querySelectorAll("button").forEach(btn => btn.classList.toggle("active", btn === e.target));
+      // Show the selected section
+      Object.entries(sectionMap).forEach(([key, section]) => {
+        section.style.display = key === tab ? "block" : "none";
+      });
+    }
+  });
+
+  main.prepend(tabBar);
+
+  // Render each section once (you can optimize if needed)
+  showAddUsersSection(sectionMap.add);
+  showEditUsersSection(sectionMap.edit);
+  showPeriodsSection(sectionMap.periods);
+  showPermissionsSection(sectionMap.permissions);
+  showPresentationSection(sectionMap.presentation);
 }

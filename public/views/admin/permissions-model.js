@@ -1,13 +1,10 @@
-console.log("model");
+// permissions-model.js
+
 import {
-  VALID_ROLES,
-  STAFF_ROLES,
-  ADMIN_ONLY,
-  STUDENT_ACCESS_ROLES,
-  CASE_MANAGEMENT_ROLES
+  VALID_ROLES as BASE_VALID_ROLES
 } from '../../firebase/roles.js';
 
-// Define all permission actions here:
+// --- Permission Actions ---
 export const PERMISSION_ACTIONS = {
   VIEW_USERS: "view_users",
   EDIT_USER: "edit_user",
@@ -15,29 +12,56 @@ export const PERMISSION_ACTIONS = {
   MANAGE_SUBJECTS: "manage_subjects",
   MANAGE_ROLES: "manage_roles",
   VIEW_STUDENTS: "view_students",
-  EDIT_STUDENT: "edit_student"
-  // Add more as needed
+  EDIT_STUDENT_CM: "edit_student_CM",      // Case Manager: edit students on their caseload
+  EDIT_STUDENT_ALL: "edit_student_All",    // Sped Chair/Admin: edit any student
+  TESTING: "testing"
 };
 
-// Default permissions matrix for each role
+// --- Roles ---
+export const VALID_ROLES = [
+  "admin",
+  "administrator",
+  "administrator_504_CM",
+  "sped_chair",
+  "case_manager",
+  "teacher",
+  "service_provider",
+  // Add more if needed
+];
+
+// --- Permissions Matrix ---
 export const PERMISSIONS_MATRIX = {
   admin: [
     ...Object.values(PERMISSION_ACTIONS)
   ],
   administrator: [
-    ...Object.values(PERMISSION_ACTIONS)
+    PERMISSION_ACTIONS.VIEW_USERS,
+    PERMISSION_ACTIONS.EDIT_USER,
+    PERMISSION_ACTIONS.DELETE_USER,
+    PERMISSION_ACTIONS.MANAGE_SUBJECTS,
+    PERMISSION_ACTIONS.MANAGE_ROLES,
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.EDIT_STUDENT_ALL,
+    PERMISSION_ACTIONS.TESTING
   ],
   administrator_504_CM: [
-    ...Object.values(PERMISSION_ACTIONS)
+    PERMISSION_ACTIONS.VIEW_USERS,
+    PERMISSION_ACTIONS.EDIT_USER,
+    PERMISSION_ACTIONS.DELETE_USER,
+    PERMISSION_ACTIONS.MANAGE_SUBJECTS,
+    PERMISSION_ACTIONS.MANAGE_ROLES,
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.EDIT_STUDENT_ALL
   ],
   sped_chair: [
-    ...Object.values(PERMISSION_ACTIONS)
+    PERMISSION_ACTIONS.VIEW_USERS,
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.EDIT_STUDENT_ALL
   ],
   case_manager: [
     PERMISSION_ACTIONS.VIEW_USERS,
-    PERMISSION_ACTIONS.EDIT_USER,
     PERMISSION_ACTIONS.VIEW_STUDENTS,
-    PERMISSION_ACTIONS.EDIT_STUDENT
+    PERMISSION_ACTIONS.EDIT_STUDENT_CM
   ],
   teacher: [
     PERMISSION_ACTIONS.VIEW_USERS,

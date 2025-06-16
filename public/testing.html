@@ -13,11 +13,11 @@
     import "../firebase/config.js"; // Must come first!
     import { initPageWithNav } from "../components/init.js";
     import { showTestingView } from "../views/testing.js";
-    import { ADMIN_ROLES } from "../firebase/roles.js";
+    import { ADMIN_ONLY } from "../firebase/roles.js";
 
     // Use ADMIN_ROLES or any role set you want for access.
     initPageWithNav({
-      allowedRoles: ADMIN_ROLES,
+      allowedRoles: ADMIN_ONLY,
       defaultView: "testing",
       viewMap: {
         testing: showTestingView

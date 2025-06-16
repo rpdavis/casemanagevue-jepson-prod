@@ -7,6 +7,7 @@ import {
 import { showEditDialog } from "../components/studentDialogEdit.js";
 import { renderStudentTable, renderByClassView } from "../components/studentTable.js";
 import { renderFilters, setupFilterHandlers } from "../components/filters.js";
+import { showStudentEmailDialog } from "../components/studentEmailDialog.js";
 
 export async function showStudentsView(main) {
   main.innerHTML = "";
