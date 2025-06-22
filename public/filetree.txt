@@ -1,28 +1,52 @@
 .
 ├── assets
 │   ├── fonts
-│   └── images
-│       ├── favicon
-│       ├── bulk_upload_ex.png
-│       ├── email-1-svgrepo-com.svg
-│       ├── notes-notepad-svgrepo-com.svg
-│       ├── notes-outlined-pen-and-paper-svgrepo-com.svg
-│       └── user-check-svgrepo-com.svg
+│   ├── images
+│   │   ├── favicon
+│   │   │   ├── apple-touch-icon.png
+│   │   │   ├── favicon-96x96.png
+│   │   │   ├── favicon.ico
+│   │   │   ├── favicon.svg
+│   │   │   ├── site.webmanifest
+│   │   │   ├── web-app-manifest-192x192.png
+│   │   │   └── web-app-manifest-512x512.png
+│   │   ├── .DS_Store
+│   │   ├── bulk_upload_ex.png
+│   │   ├── email-1-svgrepo-com.svg
+│   │   ├── notes-notepad-svgrepo-com.svg
+│   │   ├── notes-outlined-pen-and-paper-svgrepo-com.svg
+│   │   └── user-check-svgrepo-com.svg
+│   └── .DS_Store
 ├── scripts
 │   ├── admin
-│   │   ├── addUsers.js
-│   │   ├── aeriesIntergration-UI.js
-│   │   ├── editStudents.js
-│   │   ├── editUsers.js
+│   │   ├── integrations
+│   │   │   ├── aeries
+│   │   │   │   ├── api.js
+│   │   │   │   └── ui.js
+│   │   │   └── .DS_Store
+│   │   ├── permissions
+│   │   │   ├── controller.js
+│   │   │   ├── model.js
+│   │   │   └── ui.js
+│   │   ├── students
+│   │   │   ├── .DS_Store
+│   │   │   ├── controller.js
+│   │   │   ├── edit.js
+│   │   │   ├── index.js
+│   │   │   ├── model.js
+│   │   │   └── ui.js
+│   │   ├── ui
+│   │   │   ├── .DS_Store
+│   │   │   ├── adminView.js
+│   │   │   └── tabBar.js
+│   │   ├── users
+│   │   │   ├── add.js
+│   │   │   ├── edit.js
+│   │   │   └── model.js
+│   │   ├── .DS_Store
 │   │   ├── index.js
 │   │   ├── periods.js
-│   │   ├── permissions-controller.js
-│   │   ├── permissions-model.js
-│   │   ├── permissions-ui.js
-│   │   ├── presentation.js
-│   │   ├── showAdminView.js
-│   │   ├── tabBar.js
-│   │   └── users-model.js
+│   │   └── presentation.js
 │   ├── components
 │   │   └── searchBar.js
 │   ├── config
@@ -35,14 +59,25 @@
 │   │   ├── init.js
 │   │   ├── nav.js
 │   │   └── session.js
-│   └── students
-│       ├── components
-│       ├── handlers
-│       ├── services
-│       ├── add.js
-│       ├── calendarView.js
-│       ├── index.js
-│       └── testing.js
+│   ├── students
+│   │   ├── components
+│   │   │   ├── .DS_Store
+│   │   │   ├── filters.js
+│   │   │   ├── studentDialogEdit.js
+│   │   │   ├── studentEmailDialog.js
+│   │   │   ├── studentExport.js
+│   │   │   ├── studentForm.js
+│   │   │   └── studentTable.js
+│   │   ├── handlers
+│   │   │   └── studentFormHandlers.js
+│   │   ├── services
+│   │   │   └── studentService.js
+│   │   ├── .DS_Store
+│   │   ├── add.js
+│   │   ├── calendarView.js
+│   │   ├── index.js
+│   │   └── testing.js
+│   └── .DS_Store
 ├── styles
 │   ├── base
 │   │   ├── admin-panel.css
@@ -51,14 +86,15 @@
 │   │   ├── n-tables.css
 │   │   ├── style.css
 │   │   └── tables.css
-│   └── modules
-│       └── permissions-ui.css
+│   ├── modules
+│   │   └── permissions-ui.css
+│   └── .DS_Store
 ├── utils
+├── .DS_Store
 ├── 404.html
 ├── OLD-admin.html
 ├── add.html
 ├── admin.html
-├── filemap.txt
 ├── filetree.txt
 ├── home.html
 ├── index.html
@@ -66,4 +102,4 @@
 ├── n-login.html
 └── testing.html
 
-18 directories, 49 files
+24 directories, 79 files

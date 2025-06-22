@@ -303,6 +303,18 @@ width: 100%;
 #bulk-upload-btn:hover {
   background-color: #333;
 }
+ /*--- SEIS Importer ---*/
+.seis-import {
+  padding: 1rem;
+}
+.seis-import input,
+.seis-import button {
+  margin: 0.5rem 0;
+}
+.status-msg {
+  margin-top: 0.5rem;
+  font-weight: bold;
+}
 
 
 
