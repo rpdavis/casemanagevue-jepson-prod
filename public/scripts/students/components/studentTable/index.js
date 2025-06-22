@@ -1,4 +1,5 @@
-// scripts/students/components/studentTable/index.js
+// Yes I can see this file!
+//scripts/students/components/studentTable/index.js
 
 import { renderInfoCell, renderServicesCell, renderScheduleCell,
          renderInstructionCell, renderAssessmentCell,
