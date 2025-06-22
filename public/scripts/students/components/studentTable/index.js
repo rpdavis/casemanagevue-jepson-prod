@@ -1,125 +1,86 @@
 // scripts/students/components/studentTable/index.js
-
-import { renderInfoCell, renderServicesCell, renderScheduleCell,
-         renderInstructionCell, renderAssessmentCell,
-         renderDocsCell, renderActionsCell } from "./renderers.js";
+import {
+  renderInfoCell,
+  renderServicesCell,
+  renderScheduleCell,
+  renderInstructionCell,
+  renderAssessmentCell,
+  renderDocsCell,
+  renderActionsCell
+} from "./renderers.js";  // :contentReference[oaicite:4]{index=4}
 import { showStudentEmailDialog } from "./studentEmailDialog.js";
 
 /**
- * Renders a table of students into the container.
- * @param {HTMLElement} container
- * @param {Array<Object>} students
- * @param {Object} userMap
- * @param {Object} currentUser
- * @param {Function} onEditClick
+ * @typedef {Object} StudentTableOptions
+ * @property {HTMLElement}   container
+ * @property {Array<Object>} data
+ * @property {Object}        userMap
+ * @property {Object}        currentUser
+ * @property {Function}      onEdit
  */
-export function renderStudentTable(container, students, userMap, currentUser, onEditClick) {
-  container.innerHTML = "";
-  const table = document.createElement("table");
-  table.className = "students-table";
 
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th class="print">Student Info</th>
-        <th class="print">Services</th>
-        <th class="print">Schedule</th>
-        <th class="print">Instruction Accom.</th>
-        <th class="print">Assessment Accom.</th>
-        <th class="print">Docs</th>
-        <th class="print">Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
-  const tbody = table.querySelector("tbody");
-
-  students.forEach(student => {
-    const row = document.createElement("tr");
-    row.innerHTML =
-      renderInfoCell(student, userMap) +
-      renderServicesCell(student, userMap) +
-      renderScheduleCell(student, userMap) +
-      renderInstructionCell(student) +
-      renderAssessmentCell(student) +
-      renderDocsCell(student) +
-      renderActionsCell(student, currentUser, onEditClick);
-    tbody.appendChild(row);
-  });
-
-  container.appendChild(table);
-
-  tbody.querySelectorAll(".edit-btn").forEach(btn =>
-    btn.addEventListener("click", () => onEditClick(btn.dataset.id))
-  );
-  tbody.querySelectorAll(".email-btn").forEach(btn =>
-    btn.addEventListener("click", () => showStudentEmailDialog(btn.dataset.id))
-  );
-  tbody.querySelectorAll(".teacher-feedback-btn").forEach(btn =>
-    btn.addEventListener("click", () => alert("Teacher Feedback: Coming soon!"))
-  );
-}
-/**
- * Renders students grouped by class/period for a selected teacher.
- */
-export function renderByClassView(container, filteredStudents, userMap, selectedTeacherId, onEditClick) {
-  container.innerHTML = "";
-  const periods = {};
-  filteredStudents.forEach(student => {
-    Object.entries(student.schedule||{}).forEach(([period, teacherId]) => {
-      if (teacherId !== selectedTeacherId) return;
-      const key = period === "SH" ? "SH" : `P${period}`;
-      periods[key] = periods[key] || [];
-      periods[key].push({ ...student });
-    });
-  });
-
-  const keys = Object.keys(periods).sort((a,b)=>(a==="SH"?1:(b==="SH"?-1:a.localeCompare(b))));
-  if (!keys.length) {
-    container.innerHTML = `<div class="no-results">⚠️ No students scheduled.</div>`;
-    return;
+export class StudentTable {
+  /**
+   * @param {StudentTableOptions} opts
+   */
+  constructor({ container, data, userMap, currentUser, onEdit }) {
+    this.container   = container;
+    this.data        = data || [];
+    this.userMap     = userMap;
+    this.currentUser = currentUser;
+    this.onEdit      = onEdit;
   }
-  keys.forEach(period => {
-    const section = document.createElement("section");
-    section.innerHTML = `<h2>${period}</h2>`;
-    const sub = document.createElement("div");
-    renderStudentTable(sub, periods[period], userMap, {id:selectedTeacherId}, onEditClick);
-    section.appendChild(sub);
-    container.appendChild(section);
-  });
-}
 
-export function renderByCaseManagerView(
-  container,
-  students,
-  userMap,
-  currentUser,
-  onEditClick
-) {
-  container.innerHTML = "";
+  render() {
+    this.container.innerHTML = "";
+    const table = document.createElement("table");
+    table.className = "students-table";
 
-  // Group by CM
-  const groups = students.reduce((acc, s) => {
-    (acc[s.casemanager_id] = acc[s.casemanager_id] || []).push(s);
-    return acc;
-  }, {});
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th class="print">Student Info</th>
+          <th class="print">Services</th>
+          <th class="print">Schedule</th>
+          <th class="print">Instruction Accom.</th>
+          <th class="print">Assessment Accom.</th>
+          <th class="print">Docs</th>
+          <th class="print">Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
 
-  // For each CM, render a section
-  Object.entries(groups).forEach(([cmId, cmStudents]) => {
-    const section = document.createElement("section");
-    const cmName = userMap[cmId]?.initials || userMap[cmId]?.fullName || cmId;
-    section.innerHTML = `<h2>Case Manager: ${cmName}</h2>`;
+    const tbody = table.querySelector("tbody");
+    this.data.forEach(student => {
+      const row = document.createElement("tr");
+      row.innerHTML =
+        renderInfoCell(student, this.userMap) +
+        renderServicesCell(student, this.userMap) +
+        renderScheduleCell(student, this.userMap) +
+        renderInstructionCell(student) +
+        renderAssessmentCell(student) +
+        renderDocsCell(student) +
+        renderActionsCell(student, this.currentUser, this.onEdit);
+      tbody.appendChild(row);
+    });
 
-    const subContainer = document.createElement("div");
-    renderStudentTable(
-      subContainer,
-      cmStudents,
-      userMap,
-      currentUser,
-      onEditClick
+    // wire up row buttons
+    tbody.querySelectorAll(".edit-btn").forEach(btn =>
+      btn.addEventListener("click", () => this.onEdit(btn.dataset.id))
+    );
+    tbody.querySelectorAll(".email-btn").forEach(btn =>
+      btn.addEventListener("click", () => showStudentEmailDialog(btn.dataset.id))
+    );
+    tbody.querySelectorAll(".teacher-feedback-btn").forEach(btn =>
+      btn.addEventListener("click", () => alert("Teacher Feedback: Coming soon!"))
     );
 
-    section.appendChild(subContainer);
-    container.appendChild(section);
-  });
+    this.container.appendChild(table);
+  }
+
+  update(data) {
+    this.data = data;
+    this.render();
+  }
 }
