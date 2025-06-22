@@ -1,39 +1,56 @@
 .
+├── 404.html
 ├── add.html
 ├── admin.html
-├── components
-│   ├── filters.js
-│   ├── init.js
-│   ├── nav.js
-│   ├── studentDialogEdit.js
-│   ├── studentFilters.js
-│   ├── studentForm.js
-│   └── studentTable.js
+├── assets
+│   ├── fonts
+│   └── images
 ├── filemap.txt
-├── firebase
-│   ├── config.js
-│   ├── roles.js
-│   └── session.js
 ├── home.html
+├── index.html
 ├── login.html
+├── scripts
+│   ├── admin
+│   │   ├── addUsers.js
+│   │   ├── editStudents.js
+│   │   ├── editUsers.js
+│   │   ├── index.js
+│   │   ├── periods.js
+│   │   ├── permissions-model.js
+│   │   ├── permissions-ui.js
+│   │   ├── permissions.js
+│   │   └── presentation.js
+│   ├── config
+│   │   ├── config.js
+│   │   ├── roles.js
+│   │   └── storage.js
+│   ├── core
+│   │   ├── init.js
+│   │   ├── nav.js
+│   │   └── session.js
+│   └── students
+│       ├── add.js
+│       ├── components
+│       │   ├── filters.js
+│       │   ├── studentDialogEdit.js
+│       │   ├── studentEmailDialog.js
+│       │   ├── studentExport.js
+│       │   ├── studentFilters.js
+│       │   ├── studentForm.js
+│       │   └── studentTable.js
+│       ├── handlers
+│       │   └── studentFormHandlers.js
+│       ├── index.js
+│       ├── services
+│       └── testing.js
 ├── styles
-│   ├── style.css
-│   └── tables.css
+│   ├── base
+│   │   ├── admin-panel.css
+│   │   ├── style.css
+│   │   └── tables.css
+│   └── modules
+│       └── permissions-ui.css
 ├── testing.html
-└── views
-    ├── OLD-admin.js
-    ├── add.js
-    ├── admin
-    │   ├── addUsers.js
-    │   ├── editUsers.js
-    │   ├── periods.js
-    │   ├── permissions-model.js
-    │   ├── permissions-ui.css
-    │   ├── permissions-ui.js
-    │   ├── permissions.js
-    │   └── presentation.js
-    ├── admin.js
-    ├── students.js
-    └── testing.js
+└── utils
 
-6 directories, 31 files
+16 directories, 38 files

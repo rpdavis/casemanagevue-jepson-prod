@@ -1,0 +1,38 @@
+.
+├── functions
+│   ├── all-users.json
+│   ├── firestore-debug.log
+│   ├── index.js
+│   ├── package-lock.json
+│   └── package.json
+├── public
+│   ├── assets
+│   │   ├── fonts
+│   │   └── images
+│   ├── scripts
+│   │   ├── admin
+│   │   ├── config
+│   │   ├── core
+│   │   └── students
+│   ├── styles
+│   │   ├── base
+│   │   └── modules
+│   ├── utils
+│   ├── 404.html
+│   ├── add.html
+│   ├── admin.html
+│   ├── filemap.txt
+│   ├── home.html
+│   ├── index.html
+│   ├── login.html
+│   └── testing.html
+├── seed
+│   └── firestore_seed_data.json
+├── LICENSE
+├── filemap.txt
+├── filetree.txt
+├── firebase.json
+├── firestore.indexes.json
+└── firestore.rules
+
+16 directories, 20 files

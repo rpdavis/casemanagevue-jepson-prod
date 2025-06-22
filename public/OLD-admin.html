@@ -14,7 +14,20 @@
     <h1>Admin Panel</h1>
     <!-- All admin sections will be dynamically rendered by showAdminView -->
   </main>
-<script type="module" src="./scripts/admin/index.js"></script>
+  <script type="module">
+   import "./scripts/config/config.js"; // Must come first
+    import { initPageWithNav } from "../scripts/core/init.js";
+    import { showAdminView  } from "../scripts/admin/index.js";
+    import { ADMIN_ONLY } from "../scripts/config/roles.js";
+
+    initPageWithNav({
+      allowedRoles: ADMIN_ONLY,
+      defaultView: "admin",
+      viewMap: {
+        admin: showAdminView
+      }
+    });
+  </script>
 </body>
 </html>
 

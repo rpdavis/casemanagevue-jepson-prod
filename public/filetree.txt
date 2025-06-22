@@ -1,0 +1,69 @@
+.
+├── assets
+│   ├── fonts
+│   └── images
+│       ├── favicon
+│       ├── bulk_upload_ex.png
+│       ├── email-1-svgrepo-com.svg
+│       ├── notes-notepad-svgrepo-com.svg
+│       ├── notes-outlined-pen-and-paper-svgrepo-com.svg
+│       └── user-check-svgrepo-com.svg
+├── scripts
+│   ├── admin
+│   │   ├── addUsers.js
+│   │   ├── aeriesIntergration-UI.js
+│   │   ├── editStudents.js
+│   │   ├── editUsers.js
+│   │   ├── index.js
+│   │   ├── periods.js
+│   │   ├── permissions-controller.js
+│   │   ├── permissions-model.js
+│   │   ├── permissions-ui.js
+│   │   ├── presentation.js
+│   │   ├── showAdminView.js
+│   │   ├── tabBar.js
+│   │   └── users-model.js
+│   ├── components
+│   │   └── searchBar.js
+│   ├── config
+│   │   ├── aeriesIntegration.js
+│   │   ├── config.js
+│   │   ├── roles.js
+│   │   └── storage.js
+│   ├── core
+│   │   ├── OLD-session.js
+│   │   ├── init.js
+│   │   ├── nav.js
+│   │   └── session.js
+│   └── students
+│       ├── components
+│       ├── handlers
+│       ├── services
+│       ├── add.js
+│       ├── calendarView.js
+│       ├── index.js
+│       └── testing.js
+├── styles
+│   ├── base
+│   │   ├── admin-panel.css
+│   │   ├── n-admin.css
+│   │   ├── n-style.css
+│   │   ├── n-tables.css
+│   │   ├── style.css
+│   │   └── tables.css
+│   └── modules
+│       └── permissions-ui.css
+├── utils
+├── 404.html
+├── OLD-admin.html
+├── add.html
+├── admin.html
+├── filemap.txt
+├── filetree.txt
+├── home.html
+├── index.html
+├── login.html
+├── n-login.html
+└── testing.html
+
+18 directories, 49 files

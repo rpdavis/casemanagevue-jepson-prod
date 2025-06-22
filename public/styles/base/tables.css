@@ -1,0 +1,462 @@
+/* Print  */
+
+ @media print {
+  table {
+    border-spacing: initial !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print th:nth-child(2),
+  .print th:nth-child(3),
+  .print th:nth-child(6),
+  .print th:nth-child(7),
+  .print td:nth-child(2),
+  .print td:nth-child(3),
+  .print td:nth-child(6),
+  .print td:nth-child(7) {
+    display: none !important;
+  }
+
+  td,
+  th {
+    border: 1px solid lightgrey !important;
+  }
+  button{
+    display: none;
+  }
+  .students-table tbody tr > td:first-child {
+            padding: .5rem .5rem 0 !important
+  }
+
+.students-table th, .students-table td {
+    padding: .6rem 0 0rem!important;
+  }
+#student-filters{
+  display:none;
+}
+  .bullet-list {
+    padding: 0.8rem;
+  }
+
+  .students-table td ul li {
+    line-height: 1;
+  }
+
+  .instruction-cell ul {
+    border: none !important;
+    box-shadow: none !important;
+      padding: .4rem .4rem .1rem 1.2rem !important;
+
+  
+  }
+
+  .print th:nth-child(1),
+  .print td:nth-child(1),
+  .print td:nth-child(2) {
+    width: 10%;
+  }
+
+  .print th:nth-child(4),
+  .print th:nth-child(5),
+  .print td:nth-child(4),
+  .print td:nth-child(5) {
+    width: 40%;
+  }
+
+  .printable,
+  .printable * {
+    visibility: visible !important;
+  }
+
+  .printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .student-dates,
+  .print-btn,
+  .nav-left,
+  .nav-right,
+  .filters,
+  .ex-button {
+    display: none !important;
+  }
+}
+
+
+
+
+/* ----- Student Table ----- */
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.students-table thead {
+  background: #dfe7f3;
+  color: #111;
+  font-weight: 600;
+}
+
+.students-table th,
+.students-table td {
+  padding: 0.9rem .4rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #d1d1d1;
+}
+
+td .student-name {
+  font-weight: 700;
+  color: #003366;
+  font-size: 1.2rem;
+}
+
+.students-table tbody tr:nth-child(even) {
+  background: #f8fafd;
+}
+
+.students-table a {
+  color: #005bb5;
+  text-decoration: none;
+}
+
+.students-table a:hover {
+  text-decoration: underline;
+}
+
+.students-table pre {
+  white-space: pre-wrap;
+  margin: 0;
+  font-family: inherit;
+  background: #edf1f7;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #222;
+}
+
+/* Custom bullets for lists */
+.students-table td ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.students-table td ul li {
+  position: relative;
+  padding-left: .2em;
+  line-height: 1.3;
+}
+
+.students-table td ul li::before {
+  position: absolute;
+  left: 0;
+  color: #333;
+}
+
+/* Column width balancing */
+.students-table th:nth-child(1) { width: 14%; }
+.students-table th:nth-child(2) { width: 10%; }
+
+.students-table th:nth-child(3) { width: 11%; }
+.students-table th:nth-child(4),
+.students-table th:nth-child(5) { width: 21%; }
+.students-table th:nth-child(6) { width: 8%; }
+.students-table th:nth-child(7) { width: 3%; }
+
+/* Schedule row limiter + toggle */
+.schedule-list {
+  max-height: 9.6em;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.schedule-list.expanded {
+  max-height: none;
+}
+
+.expand-toggle {
+  text-align: center;
+  cursor: pointer;
+  color: #005bb5;
+  font-size: 1.2em;
+  margin-top: 0.3em;
+  user-select: none;
+}
+.bullet-list {
+list-style: disc!important;
+background: linear-gradient(to top, #f4f6f9 100%, transparent);
+
+padding: .1rem 1.2rem!important;
+border-radius: .5rem;
+
+}
+
+.students-table .bullet-list li{
+padding-left:0!important;
+}
+
+
+
+  .instruction-cell, .with-flag{
+  position: relative;
+    padding-top: 1.2rem;
+}
+.instruction-cell  ul{
+  
+    background: #f6f8fb;
+    color: #003366;
+    padding: .4rem 1.2rem;
+ 
+    border-radius: 0.25rem;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    /* white-space: nowrap; */
+    border-left: 6px solid #e6ecf6;
+}
+.flag-overlay {
+position: absolute;
+top: 0;
+left: 0;
+background: #ffeeba;
+color: #333;
+font-size: 0.75rem;
+padding: 0 6px;
+z-index: 1;
+
+text-align: center;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+margin: .1rem .4rem;
+width: 90%;
+}
+.flag-separate-setting {
+ /*background: linear-gradient(to right, #ffeeba 80%, transparent);*/
+ background:#ffeeba ;
+}
+.flag-preferential-seating {
+/*background: radial-gradient(#babfff 75.63%, transparent);*/
+background:#babfff;
+
+}
+.flag-low {
+  background-color: #fff4cc; /* 0%: pale yellow */
+}
+.flag-mid {
+  background-color: #ffddbf; /* 25% */
+}
+.flag-medium {
+  background-color: #ffc6b2; /* 50% */
+}
+.flag-high {
+  background-color: #ffb0a6; /* 75% */
+}
+.flag-critical {
+  background-color: #ff9999; /* 100%: bright red */
+}
+/* only when a meeting_date exists */
+.meeting-date.date-set {
+  border: 2px solid green;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+.std-info-subheading{
+  font-size:.85em;
+color:#5c5c5c;
+maring-top:.4rem;
+}
+/* Make the first cell position:relative so its child can be positioned */
+.students-table tbody tr > td:first-child {
+  position: relative;
+  padding-bottom: 2.5em; /* give room for the Meeting Date at the bottom */
+}
+
+/* Pin the Meeting Date div to the bottom of that cell */
+.students-table tbody tr > td:first-child .meeting-date {
+  position: absolute;
+  bottom: 0.5em;  /* adjust as needed */
+  left: 0.5em;    /* match your cell’s padding */
+  right: 0.5em;   /* ensure it doesn’t overflow */
+  background: white; /* or whatever your cell background is */
+}
+/* --- badge container --- */
+.student-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .5rem;
+}
+
+/* --- pills --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: .85rem;
+  padding: .2rem .6rem;
+  border-radius: .25rem;
+  background: #f5f5f5;
+  color: #333;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.1);
+}
+
+/* use your existing flag- classes to color the left border */
+.badge.flag-critical,
+.badge.flag-high,
+.badge.flag-medium,
+.badge.flag-mid,
+.badge.flag-low, .badge.flag-prep, .badge-reeval.flag-prep-reeval  {
+  border-left-width: 8px;
+  border-left-style: solid;
+}
+.badge.flag-critical { border-left-color: #e53935; background:#ffc1bf; }  /* Red 600 */
+.badge.flag-high { border-left-color: #e53935; }  /* Red 600 */
+.badge.flag-medium     { border-left-color: #fb8c00; }  /* Orange 600 */
+.badge.flag-mid   { border-left-color: #fdd835; }  /* Amber 600 */
+.badge.flag-low      { border-left-color: #d0df30; }  /* Yellow-green */
+.badge.flag-prep     { border-left-color: #43a047; }  /* Green 600 */
+
+.badge-reeval.flag-prep-reeval { 
+border-left-color: #35d2e5; 
+
+
+}  /* does not show for plan review */
+
+
+/* subtle “set” state for meeting */
+.badge.badge-meeting.date-set {
+  background: #eef7ee;
+}
+
+/* pin the entire badge-row to the bottom of the first cell */
+.students-table tbody tr > td:first-child {
+  position: relative;
+  padding-bottom: 3em; /* room for the badges */
+}
+.students-table tbody tr > td:first-child .student-dates {
+  position: absolute;
+  bottom: inherit; /* adjust to match your <td> padding */
+  left: .4rem;
+  right: .4rem;
+}
+/* make sure each button can position a pseudo-element */
+.students-table button.edit-btn,
+.students-table button.email-btn,
+.students-table button.teacher-feedback-btn {
+  position: relative;
+  cursor: pointer;
+  align-items: center;
+  font-size: .85rem;
+  padding: 0 .6rem;
+ border-radius: 4px;
+  background: #f5f5f5;
+   border: 1px solid #a5d1ff;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.1);
+
+}
+
+/* common tooltip styling */
+#plan-review:hover::after,
+#reeval-due:hover::after,
+#meeting-date:hover::after,
+.students-table button.edit-btn:hover::after,
+.students-table button.email-btn:hover::after,
+.students-table button.teacher-feedback-btn:hover::after {
+  content: "";               /* will be overridden below */
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 1;
+}
+
+#meeting-date{
+   background-color: #e2efff;
+}
+.edit-btn {
+  background-color: #e2efff;
+  border: 1px solid #a5d1ff;
+  color: #004080;
+ 
+  
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background-color: #d0e8ff;
+}
+/* per-button tooltip text */
+.students-table button.edit-btn:hover::after {
+  content: "Edit student";
+
+}
+.students-table button.email-btn:hover::after {
+  content: "Email Team";
+
+}
+.students-table button.teacher-feedback-btn:hover::after {
+  content: "Teacher Feedback";
+
+}
+.docs-item a{
+  font-size: .8em;
+}
+
+#plan-review:hover::after {
+  content: "Plan Review Due";
+}
+
+#reeval-due:hover::after {
+  content: "Reevaluation Due";
+}
+
+#meeting-date:hover::after {
+  content: "Meeting Date";
+}
+
+
+/* Shared styling for all tooltips */
+
+
+/* Required parent for relative positioning */
+.student-dates {
+  position: relative;
+}
+
+.student-dates span {
+  position: relative;
+  margin-right: 1em;
+  cursor: help;
+}
+.service-pill {
+  background-color: #dee7f3;
+  padding: 2px 8px;
+  margin: 2px 4px 2px 0;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  display: inline-block;
+  white-space: nowrap;
+}
+

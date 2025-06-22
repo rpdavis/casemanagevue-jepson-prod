@@ -1,99 +1,13 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Login</title>
-  <link rel="stylesheet" href="./styles/style.css">
-</head>
-<body>
-  <main id="main-content">
-    <div class="login-container">
-      <h1>Case Manager Portal</h1>
-      <p>Please sign in with your school Google account:</p>
-      <button id="google-login" class="primary-btn">Sign in with Google</button>
-    </div>
-  </main>
-
-  <script type="module">
-    import { auth, db } from "./firebase/config.js";
-    import {
-      GoogleAuthProvider,
-      signInWithPopup
-    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
-    import {
-      doc,
-      getDoc,
-      query,
-      where,
-      collection,
-      getDocs,
-      setDoc
-    } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-    document.getElementById("google-login").addEventListener("click", async () => {
-      try {
-        const provider = new GoogleAuthProvider();
-        const result   = await signInWithPopup(auth, provider);
-        const user     = result.user;
-
-        // first try by UID
-        const userRefByUID = doc(db, "users", user.uid);
-        const userSnap     = await getDoc(userRefByUID);
-
-        if (userSnap.exists()) {
-          const role = userSnap.data().role;
-          const allowed = ["admin","teacher","case_manager","service_provider"];
-          if (allowed.includes(role)) {
-            window.location.href = "/home.html";
-          } else {
-            alert("Your role is pending. Please wait for admin approval.");
-          }
-          return;
-        }
-
-        // fallback: match by email and write UID doc
-        const q = query(
-          collection(db, "users"),
-          where("email", "==", user.email)
-        );
-        const querySnap = await getDocs(q);
-
-        if (!querySnap.empty) {
-          const matchedUser = querySnap.docs[0].data();
-          const allowed = ["admin","teacher","case_manager","service_provider"];
-          if (allowed.includes(matchedUser.role)) {
-            await setDoc(userRefByUID, {
-              name:  matchedUser.name,
-              email: matchedUser.email,
-              role:  matchedUser.role
-            });
-            window.location.href = "/home.html";
-          } else {
-            alert("Your role is pending. Please wait for admin approval.");
-          }
-          return;
-        }
-
-        // no user at all → kick out
-        alert("Access denied. Your email is not in the system.");
-        await auth.signOut();
-
-      } catch (err) {
-        console.error("Google login error:", err);
-        alert("Login failed: " + err.message);
-      }
-    });
-  </script>
-</body>
-</html>
- -->
 
  <!DOCTYPE html>
 <html lang="en">
 <head>
+
   <meta charset="UTF-8" />
   <title>Login</title>
-  <link rel="stylesheet" href="./styles/style.css" />
+   <!-- favicon -->
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon/favicon.ico" />
+   <link rel="stylesheet" href="./styles/base/style.css">
 </head>
 <body>
   <main id="main-content">
@@ -108,7 +22,7 @@
 
   <script type="module">
     // 1) grab your initialized auth & db
-    import { auth, db } from "./firebase/config.js";
+    import { auth, db } from "./scripts/config/config.js";
 
     // 2) pull in the auth-provider you need
     import {
@@ -133,6 +47,8 @@
         try {
           const provider = new GoogleAuthProvider();
           const { user } = await signInWithPopup(auth, provider);
+
+
 
           // look up by Firebase‐UID
           const userRef = doc(db, "users", user.uid);
