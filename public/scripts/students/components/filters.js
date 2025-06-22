@@ -1,11 +1,12 @@
+// scripts/students/components/filters.js
+
 export function renderFilters(caseManagers, currentUserRole, teachers = [], currentUserId = "") {
   const existing = document.getElementById("student-filters");
   if (existing) return existing;
 
-  const radioRow = document.createElement("div");
-  radioRow.classList.add("radio-row");
   const wrapper = document.createElement("div");
   wrapper.id = "student-filters";
+
   const showTeacherFilter = ["admin", "administrator", "administrator_504"].includes(currentUserRole);
   const showProviderRadios = ["case_manager", "administrator_504_CM", "Sped Chair"].includes(currentUserRole);
 
@@ -56,10 +57,21 @@ export function renderFilters(caseManagers, currentUserRole, teachers = [], curr
   return wrapper;
 }
 
-export function setupFilterHandlers(filters, students, user, renderListView, renderClassView) {
+/**
+ * @param {HTMLElement} filters — the filters container
+ * @param {Array} students — all student records
+ * @param {Object} user     — currentUser, with .role and .uid
+ * @param {Function} renderListView    (filtered, sortBy) => void
+ * @param {Function} renderClassView   (filtered, teacherId) => void
+ * @param {Function} renderCmView      (filtered) => void
+ */
+export function setupFilterHandlers(filters, students, user,
+                                    renderListView,
+                                    renderClassView,
+                                    renderCmView) {
   const nav = document.getElementById("nav");
 
-  // Remove old search input, toggle button, and radio row if they exist
+  // Clean up any old controls
   document.querySelectorAll("#search-name, #toggle-filters-btn, .radio-row").forEach(el => el.remove());
 
   // --- Search Bar ---
@@ -78,7 +90,6 @@ export function setupFilterHandlers(filters, students, user, renderListView, ren
   toggleButton.style.marginBottom = "0.5rem";
   filters.parentElement?.insertBefore(toggleButton, filters);
   filters.style.display = "none";
-
   toggleButton.addEventListener("click", () => {
     filters.style.display = filters.style.display === "none" ? "flex" : "none";
   });
@@ -98,54 +109,54 @@ export function setupFilterHandlers(filters, students, user, renderListView, ren
       <label><input type="radio" name="provider-view" value="case_manager"> Case Manager</label>
       <label><input type="radio" name="provider-view" value="service_provider"> Service Provider</label>
     `;
+    radioRow.innerHTML += `<span>|</span>`;
   }
 
-  radioRow.innerHTML += `<span>|</span>`;
-
+  // Add the 3 view-mode options: List / By Class / By Case Manager
   radioRow.innerHTML += `
     <label><input type="radio" name="view-mode" value="list" checked> List</label>
     <label><input type="radio" name="view-mode" value="class"> By Class</label>
+    <label><input type="radio" name="view-mode" value="cm"> By Case Manager</label>
   `;
 
   nav?.insertAdjacentElement("afterend", radioRow);
 
   // --- Filtering Logic ---
-
   function applyFilters() {
     const search = searchInput.value.toLowerCase();
-    const cm = filters.querySelector("#filter-cm")?.value;
-    const teacherId = filters.querySelector("#filter-teacher")?.value || "all";
-    const plan = filters.querySelector("#filter-plan").value;
-    const grade = filters.querySelector("#filter-grade").value;
-    const svc = filters.querySelector("#filter-service").value;
-    const providerView = document.querySelector('input[name="provider-view"]:checked')?.value || "all";
-    const viewMode = document.querySelector('input[name="view-mode"]:checked')?.value || "list";
-    const sortBy = filters.querySelector("#sort-by").value;
+    const cm         = filters.querySelector("#filter-cm")?.value;
+    const teacherId  = filters.querySelector("#filter-teacher")?.value || "all";
+    const plan       = filters.querySelector("#filter-plan").value;
+    const grade      = filters.querySelector("#filter-grade").value;
+    const svc        = filters.querySelector("#filter-service").value;
+    const providerV  = document.querySelector('input[name="provider-view"]:checked')?.value || "all";
+    const viewMode   = document.querySelector('input[name="view-mode"]:checked')?.value || "list";
+    const sortBy     = filters.querySelector("#sort-by").value;
 
+    // Start with all students
     let filtered = students;
 
-    if (providerView === "case_manager") {
-      filtered = students.filter(s => s.casemanager_id === user.uid);
-    } else if (providerView === "service_provider") {
-      filtered = students.filter(s =>
+    // Provider‐view (case_manager / service_provider)
+    if (providerV === "case_manager") {
+      filtered = filtered.filter(s => s.casemanager_id === user.uid);
+    } else if (providerV === "service_provider") {
+      filtered = filtered.filter(s =>
         (Object.values(s.schedule || {}).includes(user.uid) ||
          (s.services || []).includes(user.uid)) &&
         s.casemanager_id !== user.uid
       );
     }
 
-     if (cm !== "all") {
-       filtered = filtered.filter(s => s.casemanager_id === cm);
-     }
+    // CM filter
+    if (cm !== "all") {
+      filtered = filtered.filter(s => s.casemanager_id === cm);
+    }
+
+    // Text search + teacher + service + plan + grade filters...
     filtered = filtered.filter(s => {
       const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
       if (search && !fullName.includes(search)) return false;
-
-      if (teacherId !== "all") {
-        const teachesThisStudent = Object.values(s.schedule || {}).includes(teacherId);
-        if (!teachesThisStudent) return false;
-      }
-
+      if (teacherId !== "all" && !Object.values(s.schedule||{}).includes(teacherId)) return false;
       if (svc !== "all") {
         const match = (s.services || []).some(x => x.toLowerCase().includes(svc)) ||
                       (svc === "speech" && s.speech_id) ||
@@ -153,62 +164,64 @@ export function setupFilterHandlers(filters, students, user, renderListView, ren
                       (svc === "ot" && s.ot_id);
         if (!match) return false;
       }
-
       if (plan !== "all" && s.plan !== plan) return false;
       if (grade !== "all" && String(s.grade) !== grade) return false;
-
       return true;
     });
 
+    // Sort
     filtered.sort((a, b) => {
-      const parseDate = (d) => d ? new Date(d).getTime() : 0;
       if (["review_date", "reeval_date", "meeting_date"].includes(sortBy)) {
-        return parseDate(a[sortBy]) - parseDate(b[sortBy]);
-      } else {
-        const valA = a[sortBy]?.toLowerCase?.() || "";
-        const valB = b[sortBy]?.toLowerCase?.() || "";
-        return valA.localeCompare(valB);
+        const pa = a[sortBy] ? new Date(a[sortBy]).getTime() : 0;
+        const pb = b[sortBy] ? new Date(b[sortBy]).getTime() : 0;
+        return pa - pb;
       }
+      const va = (a[sortBy] || "").toString().toLowerCase();
+      const vb = (b[sortBy] || "").toString().toLowerCase();
+      return va.localeCompare(vb);
     });
 
+    // View‐mode dispatch
     if (viewMode === "class") {
       renderClassView(filtered, teacherId !== "all" ? teacherId : user.uid);
+    } else if (viewMode === "cm") {
+      renderCmView(filtered);
     } else {
       renderListView(filtered, sortBy);
     }
   }
 
-  filters.querySelectorAll("select, input[type='checkbox']").forEach(el => {
-    el.addEventListener("input", applyFilters);
-  });
-
-  document.querySelectorAll("input[name='view-mode'], input[name='provider-view']").forEach(el => {
-    el.addEventListener("input", applyFilters);
-  });
-
+  // Wire up
+  filters.querySelectorAll("select, input[type='checkbox']").forEach(el => el.addEventListener("input", applyFilters));
+  document.querySelectorAll("input[name='view-mode'], input[name='provider-view']").forEach(el => el.addEventListener("input", applyFilters));
   searchInput.addEventListener("input", applyFilters);
 
-  filters.querySelector("#clear-filters").addEventListener("click", () => {
-    searchInput.value = "";
-    // const cmEl = filters.querySelector("#filter-cm");
-    // if (cmEl && !cmEl.disabled && cmEl.getAttribute("data-locked") !== "true") cmEl.value = "all";
+ filters.querySelector("#clear-filters").addEventListener("click", () => {
+  // reset search
+  searchInput.value = "";
 
-    const cmEl = filters.querySelector("#filter-cm");
-    if (cmEl) cmEl.value = "all";
+  // reset selects safely
+  const cmEl        = filters.querySelector("#filter-cm");
+  const teacherEl   = filters.querySelector("#filter-teacher");
+  const planEl      = filters.querySelector("#filter-plan");
+  const gradeEl     = filters.querySelector("#filter-grade");
+  const serviceEl   = filters.querySelector("#filter-service");
+  const sortEl      = filters.querySelector("#sort-by");
 
-    const teacherEl = filters.querySelector("#filter-teacher");
-    if (teacherEl) teacherEl.value = "all";
+  if (cmEl)      cmEl.value = "all";
+  if (teacherEl) teacherEl.value = "all";
+  if (planEl)    planEl.value = "all";
+  if (gradeEl)   gradeEl.value = "all";
+  if (serviceEl) serviceEl.value = "all";
+  if (sortEl)    sortEl.value = "first_name";
 
-    filters.querySelector("#filter-plan").value = "all";
-    filters.querySelector("#filter-grade").value = "all";
-    filters.querySelector("#filter-service").value = "all";
-    const providerRadio = document.querySelector("input[name='provider-view'][value='all']");
-    if (providerRadio) providerRadio.checked = true;
-    const viewRadio = document.querySelector("input[name='view-mode'][value='list']");
-    if (viewRadio) viewRadio.checked = true;
-    filters.querySelector("#sort-by").value = "first_name";
-    applyFilters();
-  });
+  // reset radios safely
+  const provRadio = document.querySelector('input[name="provider-view"][value="all"]');
+  const viewRadio = document.querySelector('input[name="view-mode"][value="list"]');
+
+  if (provRadio) provRadio.checked = true;
+  if (viewRadio) viewRadio.checked = true;
 
   applyFilters();
+});
 }

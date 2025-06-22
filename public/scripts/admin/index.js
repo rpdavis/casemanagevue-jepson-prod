@@ -10,7 +10,6 @@ import "./users/edit.js";
 import "./permissions/model.js";
 import "./permissions/controller.js";
 import "./permissions/ui.js";
-import "./integrations/aeries/api.js";
 import "./integrations/aeries/ui.js";
 import "./periods.js";
 

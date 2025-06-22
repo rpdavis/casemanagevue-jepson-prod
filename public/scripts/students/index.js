@@ -10,13 +10,12 @@ import { db } from "../config/config.js";
 //import { collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 import { showEditDialog } from "./components/studentDialogEdit.js";
-import { renderStudentTable, renderByClassView } from "./components/studentTable.js";
+import { renderStudentTable, renderByClassView, renderByCaseManagerView } from "./components/studentTable/index.js";
 import { renderFilters, setupFilterHandlers } from "./components/filters.js";
-import { showStudentEmailDialog } from "./components/studentEmailDialog.js";
+import { showStudentEmailDialog } from "./components//studentTable/studentEmailDialog.js";
 import { showExportDialog } from "./components/studentExport.js";
 
 export async function showStudentsView(main) {
-
 
   main.innerHTML = "";
 
@@ -109,63 +108,45 @@ exportButton.innerHTML = `<button id="export-button">Export</button>`;
       alert("An unexpected error occurred during export. Please try again.");
     }
   });
-//   // Calendar Button and Modal
-//   const calendarBtn = document.createElement("button");
-//   calendarBtn.textContent = "📅 View Calendar";
-//   calendarBtn.id = "open-calendar-btn";
-//   calendarBtn.style.margin = "1rem";
 
-//   const calendarDialog = document.createElement("dialog");
-//   calendarDialog.id = "calendar-modal";
-//   calendarDialog.innerHTML = `
-//     <div style="display: flex; justify-content: space-between; align-items: center;">
-//       <h2>Google Calendar</h2>
-//       <button id="close-calendar-btn" style="padding: 0.5rem;">✕</button>
-//     <button id="find-time-btn">Find Free/Busy</button>
-// <pre id="freebusy-output" style="white-space: pre-wrap;"></pre>
-//     </div>
-//     <div id="calendar-container" style="margin-top: 1rem;">
-//       <div id="calendar" style="width: 100%; height: 600px;"></div>
-//     </div>
-//   `;
+  
 
-//   main.appendChild(calendarBtn);
-//   main.appendChild(calendarDialog);
+ 
+setupFilterHandlers(
+  filters,
+  students,
+  window.currentUser,
 
-//   // Button Listeners
-//   calendarBtn.addEventListener("click", async () => {
-//     const dialog = document.getElementById("calendar-modal");
-//     dialog.showModal();
-
-//     try {
-//       const { initCalendarView } = await import("./calendarView.js");
-//       await initCalendarView();
-//     } catch (error) {
-//       console.error("Failed to initialize calendar:", error);
-//       alert("Failed to load calendar. Please ensure you're signed in with Google.");
-//     }
-//   });
-
-//   document.getElementById("close-calendar-btn").addEventListener("click", () => {
-//     document.getElementById("calendar-modal").close();
-//   });
-  setupFilterHandlers(
-    filters,
-    students,
-    window.currentUser,
-    (filtered, sortBy) => renderStudentTable(container, filtered, userMap, window.currentUser, studentId => {
-      showEditDialog(main, studentId, () => showStudentsView(main));
-    }),
-    (filtered, selectedTeacherId) => renderByClassView(
+  // 1) List view
+  (filtered, sortBy) =>
+    renderStudentTable(
       container,
       filtered,
       userMap,
-      selectedTeacherId || window.currentUser?.uid,
-      studentId => {
-        showEditDialog(main, studentId, () => showStudentsView(main));
-      }
+      window.currentUser,
+      studentId => showEditDialog(main, studentId, () => showStudentsView(main))
+    ),
+
+  // 2) By Class view
+  (filtered, selectedTeacherId) =>
+    renderByClassView(
+      container,
+      filtered,
+      userMap,
+      selectedTeacherId || window.currentUser.uid,
+      studentId => showEditDialog(main, studentId, () => showStudentsView(main))
+    ),
+
+  // 3) By Case Manager view
+  filtered =>
+    renderByCaseManagerView(
+      container,
+      filtered,
+      userMap,
+      window.currentUser,
+      studentId => showEditDialog(main, studentId, () => showStudentsView(main))
     )
-  );
+);
 
 
   cmSelect?.dispatchEvent(new Event("input", { bubbles: true }));

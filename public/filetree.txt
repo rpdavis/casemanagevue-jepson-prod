@@ -22,6 +22,10 @@
 │   │   ├── integrations
 │   │   │   ├── aeries
 │   │   │   │   ├── api.js
+│   │   │   │   ├── importer.js
+│   │   │   │   └── ui.js
+│   │   │   ├── seis
+│   │   │   │   ├── importer.js
 │   │   │   │   └── ui.js
 │   │   │   └── .DS_Store
 │   │   ├── permissions
@@ -46,7 +50,8 @@
 │   │   ├── .DS_Store
 │   │   ├── index.js
 │   │   ├── periods.js
-│   │   └── presentation.js
+│   │   ├── presentation.js
+│   │   └── studentUtils.js
 │   ├── components
 │   │   └── searchBar.js
 │   ├── config
@@ -61,13 +66,16 @@
 │   │   └── session.js
 │   ├── students
 │   │   ├── components
+│   │   │   ├── studentTable
+│   │   │   │   ├── helpers.js
+│   │   │   │   ├── index.js
+│   │   │   │   ├── renderers.js
+│   │   │   │   └── studentEmailDialog.js
 │   │   │   ├── .DS_Store
 │   │   │   ├── filters.js
 │   │   │   ├── studentDialogEdit.js
-│   │   │   ├── studentEmailDialog.js
 │   │   │   ├── studentExport.js
-│   │   │   ├── studentForm.js
-│   │   │   └── studentTable.js
+│   │   │   └── studentForm.js
 │   │   ├── handlers
 │   │   │   └── studentFormHandlers.js
 │   │   ├── services
@@ -77,6 +85,7 @@
 │   │   ├── calendarView.js
 │   │   ├── index.js
 │   │   └── testing.js
+│   ├── utils
 │   └── .DS_Store
 ├── styles
 │   ├── base
@@ -89,7 +98,6 @@
 │   ├── modules
 │   │   └── permissions-ui.css
 │   └── .DS_Store
-├── utils
 ├── .DS_Store
 ├── 404.html
 ├── OLD-admin.html
@@ -102,4 +110,4 @@
 ├── n-login.html
 └── testing.html
 
-24 directories, 79 files
+26 directories, 85 files

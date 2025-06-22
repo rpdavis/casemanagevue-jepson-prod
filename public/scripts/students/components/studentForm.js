@@ -1,3 +1,11 @@
+// scripts/students/components/studentForm.js
+
+import {
+  getSourceValue,
+  getDisplayValue,
+  labelize
+} from "../../utils/studentUtils.js";
+
 import {
   getFirestore,
   collection,
@@ -12,37 +20,43 @@ export async function loadUserRoles(db) {
   const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
   return {
-
-    teachers: users.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role)),
-
-
+    teachers:     users.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role)),
     caseManagers: users.filter(u => ["case_manager", "sped_chair", "administrator_504_CM"].includes(u.role)),
-
-
-
-    speech: users.filter(u => /speech|slp/i.test(u.title || "")),
-    ot: users.filter(u => /ot|occupational/i.test(u.title || "")),
-    mh: users.filter(u => /mental|counselor|therapist/i.test(u.title || ""))
+    speech:       users.filter(u => /speech|slp/i.test(u.title || "")),
+    ot:           users.filter(u => /ot|occupational/i.test(u.title || "")),
+    mh:           users.filter(u => /mental|counselor|therapist/i.test(u.title || ""))
   };
 }
 
-
-
 export function renderStudentForm(student = {}, users, mode = "new") {
-  const periods = ["1", "2", "3", "4", "5", "6", "SH"];
+  //――――――――――――――――――――――――――――――――――――――
+  // 1) Dynamic Periods override
+  //――――――――――――――――――――――――――――――――――――――
+  const DEFAULT_PERIODS = ["1","2","3","4","5","6"];
+  const rawNumOverride = getDisplayValue(student, "num_periods", "");
+  const numOverride    = parseInt(rawNumOverride, 10);
+  const periodNumbers  = (Number.isInteger(numOverride) && numOverride > 0)
+    ? Array.from({ length: numOverride }, (_, i) => String(i + 1))
+    : DEFAULT_PERIODS;
+  const periods = [...periodNumbers, "SH"];
+
+  //――――――――――――――――――――――――――――――――――――――
+  // 2) Helper for provider selects
+  //――――――――――――――――――――――――――――――――――――――
   const teacherOptions = (selected = "") =>
     users.teachers.map(t =>
       `<option value="${t.id}" ${selected === t.id ? "selected" : ""}>${t.name || t.email || t.id}</option>`
     ).join("");
 
-
-
-
   const serviceSelect = (id, list, label) => `
     <label>${label}: 
       <select id="${id}">
         <option value="">--</option>
-        ${list.map(p => `<option value="${p.id}" ${p.id === student[`${id}_id`] ? "selected" : ""}>${p.name}</option>`).join("")}
+        ${list.map(p => `
+          <option value="${p.id}" ${p.id === student[`${id}_id`] ? "selected" : ""}>
+            ${p.name}
+          </option>
+        `).join("")}
       </select>
     </label>`;
 
@@ -57,13 +71,22 @@ export function renderStudentForm(student = {}, users, mode = "new") {
       </div>
     </fieldset>`;
 
+  //――――――――――――――――――――――――――――――――――――――
+  // 3) Render the form
+  //――――――――――――――――――――――――――――――――――――――
   return `
     <form id="student-form">
+
+      <!-- Student Info -->
       <fieldset class="form-col">
         <legend>Student Info</legend>
         <div class="inner-grid-3">
-          <label>First Name: <input type="text" id="first" value="${student.first_name || ""}" required></label>
-          <label>Last Name: <input type="text" id="last" value="${student.last_name || ""}" required></label>
+          <label>First Name: 
+            <input type="text" id="first" value="${student.first_name || ""}" required>
+          </label>
+          <label>Last Name:  
+            <input type="text" id="last"  value="${student.last_name  || ""}" required>
+          </label>
           <label>Grade:
             <select id="grade">
               <option value="7" ${student.grade == 7 ? "selected" : ""}>7</option>
@@ -75,19 +98,47 @@ export function renderStudentForm(student = {}, users, mode = "new") {
               <option value="IEP" ${student.plan === "IEP" ? "selected" : ""}>IEP</option>
               <option value="504" ${student.plan === "504" ? "selected" : ""}>504</option>
             </select>
-
           </label>
-          <label>Review Date: <input type="date" id="review" value="${student.review_date || ""}"></label>
-          <label>Reevaluation Date: <input type="date" id="reeval" value="${student.reeval_date || ""}"></label>
-          <label>Meeting Date: <input type="date" id="meet-date" value="${student.meeting_date || ""}"></label>
+          <label>Review Date:
+            <input type="date" id="review" value="${student.review_date || ""}">
+          </label>
+          <label>Reevaluation Date:
+            <input type="date" id="reeval" value="${student.reeval_date || ""}">
+          </label>
+          <label>Meeting Date:
+            <input type="date" id="meet-date" value="${student.meeting_date || ""}">
+          </label>
           <label>Case Manager:
             <select id="cm">
-              ${users.caseManagers.map(cm => `<option value="${cm.id}" ${cm.id === student.casemanager_id ? "selected" : ""}>${cm.name}</option>`).join("")}
+              ${users.caseManagers.map(cm => `
+                <option value="${cm.id}" ${cm.id === student.casemanager_id ? "selected" : ""}>
+                  ${cm.name}
+                </option>`).join("")}
             </select>
           </label>
         </div>
       </fieldset>
 
+      <!-- Admin Overrides (num_periods) -->
+      <fieldset class="form-col override-section">
+        <legend>Admin Overrides</legend>
+        <div class="inner-grid-3">
+          <label>
+            ${labelize("num_periods")}:
+            <span class="source-value">Src: ${getSourceValue(student, "num_periods")}</span><br>
+            <input
+              type="number"
+              id="override-num_periods"
+              min="1"
+              max="12"
+              value="${student.overrides?.num_periods || ""}"
+              placeholder="Override # of periods…"
+            />
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Schedule -->
       <fieldset class="form-col">
         <legend>Schedule</legend>
         <div class="inner-grid-3">
@@ -102,31 +153,33 @@ export function renderStudentForm(student = {}, users, mode = "new") {
         </div>
       </fieldset>
         
+      <!-- Services: classes -->
       <fieldset class="form-col">
         <legend>Services: classes</legend>
         <div class="inner-grid-3">
           ${serviceCheckboxGroup("Co-teach", ["English", "Math"])}
-          ${serviceCheckboxGroup("RSP", ["English", "Math"])}
-          ${serviceCheckboxGroup("SDC", ["English", "Math", "History", "Science"])}
-          ${serviceCheckboxGroup("FA", [""])}
+          ${serviceCheckboxGroup("RSP",      ["English", "Math"])}
+          ${serviceCheckboxGroup("SDC",      ["English", "Math", "History", "Science"])}
+          ${serviceCheckboxGroup("FA",       [""])}
         </div>
       </fieldset>
 
+      <!-- Services: providers -->
       <fieldset>
         <legend>Services: providers</legend>
         <div class="inner-grid-3">
           ${serviceSelect("speech", users.speech, "Speech Provider")}
-          ${serviceSelect("ot", users.ot, "OT Provider")}
-          ${serviceSelect("mh", users.mh, "Mental Health Provider")}
-          <input type="text" id="other-input" value="${(student.services || []).find(s => !s.includes(":")) || ""}" placeholder="Other service...">
-          <input type="text" id="other-input2" value="${(student.services || []).find(s => !s.includes(":")) || ""}" placeholder="Other service...">
-          <input type="text" id="other-input3" value="${(student.services || []).find(s => !s.includes(":")) || ""}" placeholder="Other service...">
+          ${serviceSelect("ot",     users.ot,     "OT Provider")}
+          ${serviceSelect("mh",     users.mh,     "Mental Health Provider")}
+          <input type="text" id="other-input"  value="${(student.services||[]).find(s=>!s.includes(":"))||""}" placeholder="Other service...">
+          <input type="text" id="other-input2" value="${(student.services||[]).find(s=>!s.includes(":"))||""}" placeholder="Other service...">
+          <input type="text" id="other-input3" value="${(student.services||[]).find(s=>!s.includes(":"))||""}" placeholder="Other service...">
         </div>
       </fieldset>
 
+      <!-- Documents -->
       <fieldset class="form-col">
         <legend>Documents</legend>
-        <!-- BIP Upload & Actions -->
         <div class="document-section">
           <label for="bip-upload">BIP:</label>
           <div class="file-input-wrapper">
@@ -142,8 +195,6 @@ export function renderStudentForm(student = {}, users, mode = "new") {
             </div>
           </div>
         </div>
-
-        <!-- At-A-Glance Upload & Actions -->
         <div class="document-section">
           <label for="ataglance-upload">At-A-Glance PDF:</label>
           <div class="file-input-wrapper">
@@ -161,20 +212,24 @@ export function renderStudentForm(student = {}, users, mode = "new") {
         </div>
       </fieldset>
 
+      <!-- Accommodations -->
       <fieldset class="form-col">
         <legend>Accommodations</legend>
         <div class="inner-grid-2">
-          <label>Instruction:<textarea id="instruction">${student.instruction || ""}</textarea></label>
-          <label>Assessment:<textarea id="assessment">${student.assessment || ""}</textarea></label>
+          <label>Instruction:
+            <textarea id="instruction">${student.instruction || ""}</textarea>
+          </label>
+          <label>Assessment:
+            <textarea id="assessment">${student.assessment || ""}</textarea>
+          </label>
         </div>
       </fieldset>
 
+      <!-- Flags -->
       <fieldset>
         <legend>Flags</legend>
-        <div>
-          <label><input type="checkbox" name="flag1" id="flag1" ${student.flag1 ? 'checked' : ''}> Separate setting</label>
-          <label><input type="checkbox" name="flag2" id="flag2" ${student.flag2 ? 'checked' : ''}> Preferential seating</label>
-        </div>
+        <label><input type="checkbox" name="flag1" id="flag1" ${student.flag1 ? 'checked' : ''}> Separate setting</label>
+        <label><input type="checkbox" name="flag2" id="flag2" ${student.flag2 ? 'checked' : ''}> Preferential seating</label>
       </fieldset>
 
       ${mode === "new" ? `<button type="submit">Add Student</button>` : ``}
@@ -183,36 +238,38 @@ export function renderStudentForm(student = {}, users, mode = "new") {
 }
 
 export function collectStudentFormData(formElement) {
+  // 1) Schedule
   const schedule = {};
   formElement.querySelectorAll(".sched").forEach(sel => {
     if (sel.value) schedule[sel.dataset.period] = sel.value;
   });
 
-  // The file inputs will be handled dynamically with event listeners now,
-  // so we'll collect the file objects directly in studentDialogEdit.js
-  // and pass them separately to the save function.
-  // These will now just represent the *current* selection, not necessarily files for upload.
-  const bipInput = formElement.querySelector('#bip-upload');
-  const bipFile = bipInput?.files?.[0] || null;
+  // 2) Override
+  const overrides = {};
+  const npInput = formElement.querySelector("#override-num_periods");
+  if (npInput?.value) {
+    overrides.num_periods = parseInt(npInput.value, 10);
+  }
 
-  const ataglanceInput = formElement.querySelector('#ataglance-upload');
-  const atAGlanceFile = ataglanceInput?.files?.[0] || null;
-
+  // 3) File inputs
+  const bipFile        = formElement.querySelector('#bip-upload')?.files[0] || null;
+  const ataglanceFile  = formElement.querySelector('#ataglance-upload')?.files[0] || null;
 
   return {
-    flag1: formElement.querySelector('[name="flag1"]').checked,
-    flag2: formElement.querySelector('[name="flag2"]').checked,
-    first_name: formElement.querySelector("#first").value.trim(),
-    last_name: formElement.querySelector("#last").value.trim(),
-    grade: formElement.querySelector("#grade").value,
-    plan: formElement.querySelector("#plan").value,
-    review_date: formElement.querySelector("#review").value,
-    reeval_date: formElement.querySelector("#reeval").value,
-    meeting_date: formElement.querySelector("#meet-date").value,
-    casemanager_id: formElement.querySelector("#cm").value,
-    speech_id: formElement.querySelector("#speech")?.value || null,
-    ot_id: formElement.querySelector("#ot")?.value || null,
-    mh_id: formElement.querySelector("#mh")?.value || null,
+    overrides,
+    flag1:         formElement.querySelector('[name="flag1"]').checked,
+    flag2:         formElement.querySelector('[name="flag2"]').checked,
+    first_name:    formElement.querySelector("#first").value.trim(),
+    last_name:     formElement.querySelector("#last").value.trim(),
+    grade:         formElement.querySelector("#grade").value,
+    plan:          formElement.querySelector("#plan").value,
+    review_date:   formElement.querySelector("#review").value,
+    reeval_date:   formElement.querySelector("#reeval").value,
+    meeting_date:  formElement.querySelector("#meet-date").value,
+    casemanager_id:formElement.querySelector("#cm").value,
+    speech_id:     formElement.querySelector("#speech")?.value || null,
+    ot_id:         formElement.querySelector("#ot")?.value     || null,
+    mh_id:         formElement.querySelector("#mh")?.value     || null,
     schedule,
     services: [
       ...Array.from(formElement.querySelectorAll(".service-check"))
@@ -222,12 +279,10 @@ export function collectStudentFormData(formElement) {
       formElement.querySelector("#other-input2")?.value.trim(),
       formElement.querySelector("#other-input3")?.value.trim()
     ].filter(Boolean),
-    instruction: formElement.querySelector("#instruction").value.trim(),
-    assessment:  formElement.querySelector("#assessment").value.trim(),
-    created_at: serverTimestamp(), 
-    // bipFile and atAGlanceFile are still collected here, but their state management
-    // (clearing, displaying selection) will be done in the parent component.
+    instruction:   formElement.querySelector("#instruction").value.trim(),
+    assessment:    formElement.querySelector("#assessment").value.trim(),
     bipFile,
-    atAGlanceFile
+    ataglanceFile,
+    created_at:    serverTimestamp()
   };
 }

@@ -7,7 +7,7 @@ import { showPermissionsSection }  from "../permissions/controller.js";
 import { showPeriodsSection }      from "../periods.js";
 import { showAdminStudents }       from "../students/index.js";
 import { showSeisImport } from "../integrations/seis/ui.js"; // ADD THIS
-
+import { showAeriesImport } from "../integrations/aeries/ui.js";
 
 export function showAdminView() {
   const main = document.getElementById("main-content");
@@ -15,22 +15,25 @@ export function showAdminView() {
 
   // 1) Create hidden section containers
   const sections = {
-    seis:        createSection(main, "SEIS Import"),
     usersAdd:    createSection(main, "Add Users"),
     usersEdit:   createSection(main, "Edit Users"),
     students:    createSection(main, "Students"),
     permissions: createSection(main, "Permissions"),
     periods:     createSection(main, "Periods"),
+    seis:        createSection(main, "SEIS Import"),
+    aeries: createSection(main, "Aeries Import"),
   };
 
   // 2) Define tab order & labels (match keys above)
   const tabs = [
-    { key: "seis", label: "SEIS Import" },
+    
     { key: "usersAdd",    label: "Add Users"    },
     { key: "usersEdit",   label: "Edit Users"   },
     { key: "students",    label: "Students"     },
     { key: "permissions", label: "Permissions"  },
     { key: "periods",     label: "Periods"      },
+    { key: "seis",        label: "SEIS Import"  },
+    { key: "aeries",      label: "Aeries Import"},
   ];
 
   // 3) Render tab bar and wire show/hide
@@ -48,6 +51,7 @@ export function showAdminView() {
   showPermissionsSection(sections.permissions);
   showPeriodsSection(sections.periods);
   showSeisImport(sections.seis); 
+  showAeriesImport(sections.aeries);
 }
 
 // Helper: create a section with an <h2> title, hidden by default

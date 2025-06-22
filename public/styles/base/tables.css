@@ -344,13 +344,13 @@ border-left-color: #35d2e5;
 /* pin the entire badge-row to the bottom of the first cell */
 .students-table tbody tr > td:first-child {
   position: relative;
-  padding-bottom: 3em; /* room for the badges */
+  padding-bottom: 1em; /* room for the badges */
 }
 .students-table tbody tr > td:first-child .student-dates {
-  position: absolute;
+/*  position: absolute;
   bottom: inherit; /* adjust to match your <td> padding */
-  left: .4rem;
-  right: .4rem;
+ /* left: .4rem;
+  right: .4rem;*/
 }
 /* make sure each button can position a pseudo-element */
 .students-table button.edit-btn,
