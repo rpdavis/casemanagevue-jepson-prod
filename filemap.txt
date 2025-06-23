@@ -1,62 +1,22 @@
-.
-├── LICENSE
-├── filemap.txt
-├── firebase.json
-├── firestore.indexes.json
-├── firestore.rules
-├── functions
-│   ├── firestore-debug.log
-│   ├── index.js
-│   ├── package-lock.json
-│   └── package.json
-├── public
-│   ├── add.html
-│   ├── admin.html
-│   ├── components
-│   │   ├── Handlers
-│   │   │   └── studentFormHandlers.js
-│   │   ├── filters.js
-│   │   ├── init.js
-│   │   ├── nav.js
-│   │   ├── studentDialogEdit.js
-│   │   ├── studentEmailDialog.js
-│   │   ├── studentExport.js
-│   │   ├── studentFilters.js
-│   │   ├── studentForm.js
-│   │   └── studentTable.js
-│   ├── filemap.txt
-│   ├── firebase
-│   │   ├── config.js
-│   │   ├── roles.js
-│   │   ├── session.js
-│   │   └── storage.js
-│   ├── home.html
-│   ├── login.html
-│   ├── styles
-│   │   ├── OLD-style.css
-│   │   ├── OLD-tables.css
-│   │   ├── admin-panel.css
-│   │   ├── style.css
-│   │   └── tables.css
-│   ├── testing.html
-│   └── views
-│       ├── OLD-admin.js
-│       ├── add.js
-│       ├── admin
-│       │   ├── OLD-addUsers.js
-│       │   ├── addUsers.js
-│       │   ├── editStudents.js
-│       │   ├── editUsers.js
-│       │   ├── periods.js
-│       │   ├── permissions-model.js
-│       │   ├── permissions-ui.css
-│       │   ├── permissions-ui.js
-│       │   ├── permissions.js
-│       │   └── presentation.js
-│       ├── admin.js
-│       ├── students.js
-│       └── testing.js
-└── seed
-    └── firestore_seed_data.json
-
-10 directories, 50 files
+project-root/
+├─ public/                    Static entry-point HTML
+│   ├─ index.html             Mounts <HomeView/>
+│   ├─ admin.html             Mounts <AdminView/>
+│   ├─ login.html             Mounts <LoginView/>
+│   ├─ testing.html           Mounts <TestingView/>
+│   └─ assets/                Favicons and static images
+│
+├─ src/                       Application source
+│   ├─ main.js                Vue app bootstrap & auth mount
+│   ├─ firebase.js            Firebase init (auth, db, storage)
+│   ├─ router/
+│   │   └─ index.js           Vue Router config (routes & guards)
+│   ├─ store/                 Pinia stores (authStore.js, userStore.js…)
+│   ├─ composables/           Composables (useAuth.js, useUsers.js…)
+│   ├─ components/            Vue components (forms, tables, dialogs…)
+│   ├─ views/                 Page-level views (HomeView.vue, AdminView.vue…)
+│   └─ assets/
+│       └─ style.css          Global styles
+│
+├─ vite.config.js             Vite config (multi-page entries)
+└─ package.json               Project manifest & dependencies
