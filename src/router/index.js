@@ -1,60 +1,53 @@
-// src/router/index.js
-import { createRouter, createWebHistory } from 'vue-router'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '../firebase'
-import LoginView from '../views/LoginView.vue'
-import HomeView from '../views/HomeView.vue'
-import AdminView from '../views/AdminView.vue'
-import { guards } from '@/router/guardPage'
-
-
-
+import { createRouter, createWebHistory } from 'vue-router';
+import HomeView from '@/views/HomeView.vue';
+import LoginView from '@/views/LoginView.vue';
+import AdminView from '@/views/AdminView.vue';
+import StudentsView from '@/views/StudentsView.vue';
+import { setupGuards } from './guards';
+import { STUDENT_ACCESS_ROLES, ADMIN_ONLY } from '@/config/roles';
 
 const routes = [
-  { path: '/login', name: 'Login', component: LoginView },
+  {
+    path: '/login',
+    name: 'Login',
+    component: LoginView,
+  },
   {
     path: '/',
     name: 'Home',
     component: HomeView,
-    meta: { requiresAuth: true }
+    meta: {
+      requiresAuth: true,
+      allowedRoles: STUDENT_ACCESS_ROLES,
+    },
   },
-{
-  path: '/admin',
-  name: 'Admin',
-  component: AdminView,
-  beforeEnter: (to, from, next) =>
-    guardPage(['admin', 'sped_chair'], router, next)
-}
-]
+  {
+    path: '/students',
+    name: 'Students',
+    component: StudentsView,
+    meta: {
+      requiresAuth: true,
+      allowedRoles: STUDENT_ACCESS_ROLES,
+    },
+  },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: AdminView,
+    meta: {
+      requiresAuth: true,
+      allowedRoles: ADMIN_ONLY,
+    },
+  },
+  // ... add other routes here with their own meta fields
+];
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes
-})
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+});
 
-// Protect routes that require authentication
-router.beforeEach(async (to, from, next) => {
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+// Set up the navigation guards
+setupGuards(router);
 
-  const getCurrentUser = () => {
-    return new Promise((resolve, reject) => {
-      const removeListener = onAuthStateChanged(auth, user => {
-        removeListener()
-        resolve(user)
-      }, reject)
-    })
-  }
-
-  if (requiresAuth) {
-    const user = await getCurrentUser()
-    if (user) {
-      next()
-    } else {
-      next('/login')
-    }
-  } else {
-    next()
-  }
-})
-
-export default router
+export default router;

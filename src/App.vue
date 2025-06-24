@@ -1,8 +1,10 @@
-<!-- src/App.vue -->
 <template>
-  <router-view />
+  <div id="main-content">
+    <router-view />
+  </div>
 </template>
 
 <script setup>
-// Nothing needed here yet
+// This is the main App component.
+// It will render the component for the current route.
 </script>

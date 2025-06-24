@@ -1,37 +1,32 @@
-// src/guards/guardPage.js
-import { auth, db } from '@/firebase'
-import { onAuthStateChanged, getIdTokenResult } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { USER_ROLES } from '@/config/roles' // adjust this path to wherever your roles live
+import { useAuth } from '@/composables/useAuth';
 
-export async function guardPage(allowedRoles, router, next) {
-  onAuthStateChanged(auth, async (firebaseUser) => {
-    if (!firebaseUser) {
-      return router.push('/login')
-    }
+/**
+ * Sets up a global navigation guard.
+ * @param {object} router - The Vue router instance.
+ */
+export function setupGuards(router) {
+  const { waitForAuthInit } = useAuth();
 
-    try {
-      await getIdTokenResult(firebaseUser, true)
-    } catch (err) {
-      console.error('❌ Error refreshing ID token:', err)
-    }
+  // Wait for the initial auth state to be resolved before guarding routes
+  waitForAuthInit.then(() => {
+    router.beforeEach((to, from, next) => {
+      const { currentUser } = useAuth(); // Get the reactive user state
 
-    const udoc = await getDoc(doc(db, 'users', firebaseUser.uid))
-    if (!udoc.exists()) {
-      alert('User not found')
-      return router.push('/login')
-    }
+      const requiresAuth = to.meta.requiresAuth;
+      const allowedRoles = to.meta.allowedRoles;
 
-    const data = udoc.data()
-    if (!allowedRoles.includes(data.role)) {
-      alert('No permission')
-      return router.push('/login')
-    }
-
-    // Save user globally if needed
-    sessionStorage.setItem('googleAccessToken', auth.currentUser?.stsTokenManager?.accessToken)
-
-    // Call `next()` to allow routing
-    next()
-  })
+      if (requiresAuth && !currentUser.value) {
+        // Not authenticated, redirect to login
+        next({ name: 'Login' });
+      } else if (requiresAuth && allowedRoles && !allowedRoles.includes(currentUser.value.role)) {
+        // Authenticated, but does not have the required role
+        console.warn(`User with role '${currentUser.value.role}' tried to access restricted route: ${to.path}`);
+        // Redirect to a 'not-authorized' page or home
+        next({ name: 'Home' });
+      } else {
+        // All good, proceed
+        next();
+      }
+    });
+  });
 }
