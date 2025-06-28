@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home - Case Manger App</title>
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon/favicon.ico" />
+  <link rel="stylesheet" href="./styles/base/style.css">
+  <link rel="stylesheet" href="./styles/base/tables.css">
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
+
+
+</head>
+<body>
+  
+  <div class= "printable print"><main id="main-content"></main></div><div>
+
+
+  <script type="module">
+    import "./scripts/config/config.js"; // Must come first
+    import { initPageWithNav } from "../scripts/core/init.js";
+    import { STUDENT_ACCESS_ROLES } from "../scripts/config/roles.js";
+    import { showStudentsView } from "../scripts/students/index.js";
+
+    initPageWithNav({
+      allowedRoles: STUDENT_ACCESS_ROLES,
+      defaultView: "students",
+      viewMap: {
+        students: showStudentsView
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,333 @@
+/* Base layout */
+body {
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  background: #f4f6f9;
+  color: #1c1c1c;
+  margin: 2rem;
+}
+
+/* Typography */
+h1 {
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+  color: #222;
+}
+
+/* Navigation Bar */
+#nav {
+  background: #005bb5;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 8px;
+  color: white;
+  margin-bottom: .1rem !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+#nav button {
+  background-color: white;
+  border: none;
+  color: #005bb5;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#nav button:hover {
+  background-color: #dbe9ff;
+}
+
+#nav #logout {
+  margin-left: auto;
+  background-color: #f44336;
+  color: white;
+}
+
+#nav #logout:hover {
+  background-color: #d32f2f;
+}
+#user-info {
+  font-weight: 600;
+  margin-right: auto;
+  color: white;
+  font-size: 0.95rem;
+}
+
+/* Filter Toolbar */
+#search-name {
+  width: 300px;  /* Adjust as needed */
+  font-size: 1rem;
+  padding: 0.4rem 0.6rem;
+  margin:.3rem;
+}
+
+/* Buttons */
+
+
+/* Dialog / Modal */
+/*-----------*/
+
+/* Small laptop / large tablet */
+
+/* Tablet / small laptop */
+
+/* Phones (if ever used) */
+
+/* Forms */
+form#student-form {
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  max-width: 800px;
+  margin: auto;
+  font-size: 0.9rem;
+}
+
+form#student-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+form#student-form input[type="text"],
+form#student-form input[type="date"],
+form#student-form select,
+form#student-form textarea {
+  width: 100%;
+  padding: 0.5rem 0.1rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-top: 0.25rem;
+}
+
+form#student-form textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
+form#student-form fieldset {
+  border: 1px solid #ccd6e0;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 6px;
+  background: #f9fbfd;
+  font-size: 0.9rem;
+}
+
+form#student-form fieldset legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #003366;
+  margin-bottom: 0.4rem;
+}
+
+form#student-form input[type="checkbox"] {
+  margin-right: 0.4rem;
+}
+
+form#student-form button[type="submit"] {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.75rem;
+}
+
+form#student-form button[type="submit"]:hover {
+  background-color: #004799;
+}
+
+.form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.inner-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1rem;
+  align-items: start;
+}
+.inner-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.checkbox-inline-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+.flag-separate-setting {
+  background-color: #ffebcc; /* light orange */
+   font-size: .9em!important;
+   margin:.2rem;
+   width: 65%;
+}
+
+.flag-preferential-seating {
+  font-size: .9em!important;
+  background-color: #d6f5d6; /* light green */
+   margin:.2rem;
+   width: %;
+}
+.login-container {
+  max-width: 420px;
+  margin: 5rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.login-container h1 {
+  margin-bottom: 1rem;
+}
+
+.primary-btn {
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #005bb5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background-color: #004a99;
+}
+#nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #005bb5;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.nav-left, .nav-right {
+  display: flex;
+  align-items: center;
+}
+
+.dropdown {
+  position: relative;
+}
+
+.dropbtn {
+  background-color: white;
+  color: #005bb5;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #005bb5;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: white;
+  margin-bottom: 0.1rem !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.nav-left, .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+#user-info {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: white;
+}
+
+/* Dropdown menu and button */
+.dropdown {
+  position: relative;
+}
+
+.dropbtn {
+  background-color: white;
+  color: #005bb5;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 2.5rem;
+  left: 0;
+  background-color: white;
+  min-width: 160px;
+  z-index: 1;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dropdown-content a {
+  color: #005bb5;
+  padding: 10px 14px;
+  text-decoration: none;
+  display: block;
+  font-weight: 500;
+}
+
+.dropdown-content a:hover {
+  background-color: #f4f4f4;
+}
+
+.students-table th:nth-child(3) { grid-column: 3 / 3;
+  grid-row: 1;
+  gap: 1.2rem 1.6rem;
+  align-items: start;}
+
+.students-table th:nth-child(4) { grid-column: 4 / 4;
+  grid-row: 1;
+  gap: 1.2rem 1.6rem;
+  align-items: start;}
+.students-table th:nth-child(5) { grid-column: 5 / 5;
+  grid-row: 1;
+  gap: 1.2rem 1.6rem;
+  align-items: start; }
+.students-table th:nth-child(6) { grid-column: 1 / 1;
+  grid-row: 2;
+  gap: 1.2rem 1.6rem;
+  align-items: start;}
+
+.ex-button {
+  display: flex;
+  justify-content: flex-end;
+    align-items: flex-start; 
+}

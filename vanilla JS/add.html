@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Student</title>
+   <!-- favicon -->
+  <link rel="icon" type="image/x-icon" href="/assets/images/favicon/favicon.ico" />
+  <link rel="stylesheet" href="./styles/base/style.css">
+</head>
+<body>
+  <main id="main-content"></main>
+
+  <script type="module">
+    import "./scripts/config/config.js";
+    import { initPageWithNav } from "./scripts/core/init.js";
+    import { CASE_MANAGEMENT_ROLES } from "./scripts/config/roles.js";
+    import { showAddStudentView } from "./scripts/students/add.js";
+
+
+
+    initPageWithNav({
+      allowedRoles: CASE_MANAGEMENT_ROLES,
+      defaultView: "add",
+      viewMap: {
+        add: showAddStudentView
+      }
+    });
+  </script>
+</body>
+</html>

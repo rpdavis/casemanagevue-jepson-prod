@@ -1,20 +1,24 @@
 {
-  "name": "CaseManageVue",
-  "version": "1.0.0",
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview"
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
   },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
   "dependencies": {
-    "firebase": "^9.22.1",
-    "vue": "^3.4.0",
-    "vue-router": "^4.2.0",
-    "pinia": "^2.0.0",
-    "@vueuse/core": "^10.0.0"
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^5.1.1",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
-    "vite": "^4.4.0",
-    "@vitejs/plugin-vue": "^4.0.0"
-  }
+    "firebase-functions-test": "^3.4.1"
+  },
+  "private": true
 }

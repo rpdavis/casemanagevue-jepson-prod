@@ -1,3 +1,5 @@
+// /Users/rd/CaseManageVue/src/composables/useUsers.js
+
 import { ref, computed } from 'vue'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -19,6 +21,16 @@ export default function useUsers() {
     userList.value = allUsers
   }
 
+  const userRoles = computed(() => {
+    return {
+      teachers: userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role)),
+      caseManagers: userList.value.filter(u => ["case_manager", "sped_chair", "administrator_504_CM"].includes(u.role)),
+      speech: userList.value.filter(u => /speech|slp/i.test(u.title || "")),
+      ot: userList.value.filter(u => /ot|occupational/i.test(u.title || "")),
+      mh: userList.value.filter(u => /mental|counselor|therapist/i.test(u.title || ""))
+    }
+  })
+
   const caseManagers = computed(() => {
     return userList.value.filter(u => ["case_manager", "sped_chair", "administrator_504_CM"].includes(u.role))
   })
@@ -27,5 +39,11 @@ export default function useUsers() {
     return userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role))
   })
 
-  return { users, fetchUsers, caseManagers, teacherList }
+  return { 
+    users, 
+    fetchUsers, 
+    caseManagers, 
+    teacherList,
+    userRoles
+  }
 }

@@ -1,64 +1,66 @@
+// Users/rd/CaseManageVue/src/components/students/StudentEditDialog.vue
+
 <template>
-  <div class="dialog-backdrop">
+  <div v-if="student && Object.keys(student).length > 0">
+    <StudentForm
+      :student="student"
+      :users="users"
+      mode="edit"
+      @close="$emit('close')"
+      @saved="handleSaved"
+    />
+  </div>
+  <div v-else class="loading-dialog">
     <div class="dialog">
       <header>
-        <h2>Edit Student: {{ studentData.first_name }} {{ studentData.last_name }}</h2>
-        <button @click="$emit('close')">X</button>
+        <h2>Loading Student Data...</h2>
       </header>
-      <main>
-        <form @submit.prevent="save">
-          <label for="first_name">First Name:</label>
-          <input type="text" id="first_name" v-model="studentData.first_name">
-
-          <label for="last_name">Last Name:</label>
-          <input type="text" id="last_name" v-model="studentData.last_name">
-
-          <label for="grade">Grade:</label>
-          <input type="text" id="grade" v-model="studentData.grade">
-          
-          <label for="plan">Plan:</label>
-          <input type="text" id="plan" v-model="studentData.plan">
-
-          <label for="instruction">Instruction:</label>
-          <textarea id="instruction" v-model="studentData.instruction"></textarea>
-
-          <label for="assessment">Assessment:</label>
-          <textarea id="assessment" v-model="studentData.assessment"></textarea>
-
-        </form>
-      </main>
-      <footer>
-        <button @click="$emit('close')">Cancel</button>
-        <button @click="save">Save</button>
-      </footer>
+      <div class="content">
+        <p>Please wait while we load the student information.</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, onMounted } from 'vue'
+import useStudents from '@/composables/useStudents'
+import StudentForm from './StudentForm.vue'
 
 const props = defineProps({
-  student: Object
+  studentId: { type: String, required: true },
+  users: { type: Object, required: true }
 })
 
-const emit = defineEmits(['close', 'save'])
+const emit = defineEmits(['close', 'saved'])
 
-const studentData = ref({})
+const { students, fetchStudents } = useStudents()
 
-watch(() => props.student, (newStudent) => {
-  // Create a copy to avoid mutating the prop directly
-  studentData.value = { ...newStudent }
-}, { immediate: true })
+// Get student data from the students list
+const student = computed(() => {
+  const foundStudent = students.value.find(s => s.id === props.studentId)
+  console.log('StudentEditDialog - studentId:', props.studentId)
+  console.log('StudentEditDialog - all students:', students.value)
+  console.log('StudentEditDialog - found student:', foundStudent)
+  return foundStudent || {}
+})
 
+// Fetch students if not already loaded
+onMounted(async () => {
+  if (students.value.length === 0) {
+    console.log('StudentEditDialog - fetching students...')
+    await fetchStudents()
+  }
+})
 
-function save() {
-  emit('save', studentData.value)
+function handleSaved(studentData) {
+  console.log('StudentEditDialog - student saved:', studentData)
+  emit('saved', studentData)
 }
 </script>
 
 <style scoped>
-.dialog-backdrop {
+.loading-dialog {
   position: fixed;
   top: 0;
   left: 0;
@@ -68,12 +70,37 @@ function save() {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
 .dialog {
   background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  width: 400px;
+  max-width: 90%;
+}
+
+header {
   padding: 20px;
-  border-radius: 5px;
-  width: 500px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+header h2 {
+  margin: 0;
+  color: #333;
+  text-align: center;
+}
+
+.content {
+  padding: 20px;
+  text-align: center;
+}
+
+.content p {
+  margin: 0;
+  color: #666;
 }
 </style>

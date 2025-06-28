@@ -1,3 +1,5 @@
+// /Users/rd/CaseManageVue/src/composables/useAuth.js
+
 import { ref } from 'vue';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -14,18 +16,37 @@ export function useAuth() {
   const waitForAuthInit = new Promise(resolve => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, fetch their profile from Firestore
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        // Corrected line: pass the reference to getDoc()
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
+        try {
+          // User is signed in, fetch their profile from usersByUID collection
+          const userDocRef = doc(db, 'usersByUID', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            currentUser.value = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              ...userDoc.data()
+            };
+          } else {
+            // User exists in Auth but not in Firestore
+            console.warn(`User ${firebaseUser.uid} exists in Auth but not in usersByUID collection`);
+            currentUser.value = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              role: null // No role assigned
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching user document:', error);
+          // Fallback to basic user info if Firestore fails
           currentUser.value = {
             uid: firebaseUser.uid,
-            ...userDoc.data()
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            role: null
           };
-        } else {
-          // User exists in Auth but not in Firestore. This is an edge case.
-          currentUser.value = null;
         }
       } else {
         // User is signed out
