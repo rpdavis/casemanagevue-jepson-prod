@@ -2,7 +2,6 @@
 
 <template>
   <div id="app">
-    <NavBar /> <!-- Always show navbar -->
     <div id="main-content">
       <router-view />
     </div>
@@ -10,7 +9,7 @@
 </template>
 
 <script setup>
-import NavBar from '@/components/NavBar.vue'
+// NavBar removed
 </script>
 
 <style>

@@ -17,8 +17,8 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          // User is signed in, fetch their profile from usersByUID collection
-          const userDocRef = doc(db, 'usersByUID', firebaseUser.uid);
+          // User is signed in, fetch their profile from users collection
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
@@ -30,7 +30,7 @@ export function useAuth() {
             };
           } else {
             // User exists in Auth but not in Firestore
-            console.warn(`User ${firebaseUser.uid} exists in Auth but not in usersByUID collection`);
+            console.warn(`User ${firebaseUser.uid} exists in Auth but not in users collection`);
             currentUser.value = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,

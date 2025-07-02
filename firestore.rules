@@ -1,6 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users can only access their own data, or admins can access any
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (
+        request.auth.uid == userId ||
+        (request.auth.token.role == "admin" || request.auth.token.role == "administrator" || request.auth.token.role == "administrator_504_CM" || request.auth.token.role == "sped_chair")
+      );
+      
+      // Aeries configuration - users can only access their own encrypted config
+      match /aeries_config/{configId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Students collection - allow read/write for authenticated users
+    match /students/{studentId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default rule - allow all reads and writes for authenticated users
     match /{document=**} {
       allow read, write: if request.auth != null;
     }

@@ -33,6 +33,7 @@
             <th>Title</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Provider Type</th>
             <th style="text-align:center;">Actions</th>
           </tr>
         </thead>
@@ -76,6 +77,22 @@
                   {{ role.replace(/_/g, ' ') }}
                 </option>
               </select>
+            </td>
+            <td v-if="providersLoaded">
+              <span v-if="activeRowId !== user.id">
+                {{ user.provider || '—' }}
+              </span>
+              <span v-else>
+                <select v-model="editingUser.provider">
+                  <option value="">None</option>
+                  <option v-for="abbr in serviceProviders" :key="abbr" :value="abbr">
+                    {{ abbr }}
+                  </option>
+                </select>
+              </span>
+            </td>
+            <td v-else>
+              <span>Loading...</span>
             </td>
             <td class="action-btns">
               <button v-if="activeRowId !== user.id" class="edit-btn" @click="startEdit(user.id)">
@@ -127,6 +144,7 @@ import {
   deleteDoc 
 } from 'firebase/firestore'
 import { VALID_ROLES } from '../config/roles.js'
+import { useAppSettings } from '@/composables/useAppSettings'
 
 const PAGE_SIZE = 20
 
@@ -147,6 +165,17 @@ export default {
     const editingUser = ref(null)
 
     const validRoles = VALID_ROLES
+    const appSettingsComposable = useAppSettings()
+    const appSettings = appSettingsComposable.appSettings
+    const loadAppSettings = appSettingsComposable.loadAppSettings
+
+    const providersLoaded = computed(() =>
+      Array.isArray(appSettings.value?.serviceProviders) && appSettings.value.serviceProviders.length > 0
+    )
+
+    const serviceProviders = computed(() => {
+      return appSettings.value?.serviceProviders || []
+    })
 
     const showStatus = (message, error = false) => {
       statusMessage.value = message
@@ -239,11 +268,14 @@ export default {
       if (!editingUser.value || editingUser.value.id !== userId) return
 
       try {
-        await updateDoc(doc(db, 'users', userId), {
-          name: editingUser.value.name?.trim(),
-          title: editingUser.value.title?.trim(),
-          role: editingUser.value.role
-        })
+        // Filter out undefined values and prepare the update data
+        const updateData = {}
+        if (editingUser.value.name !== undefined) updateData.name = editingUser.value.name?.trim() || null
+        if (editingUser.value.title !== undefined) updateData.title = editingUser.value.title?.trim() || null
+        if (editingUser.value.role !== undefined) updateData.role = editingUser.value.role
+        if (editingUser.value.provider !== undefined) updateData.provider = editingUser.value.provider || null
+
+        await updateDoc(doc(db, 'users', userId), updateData)
         showStatus('✅ User updated.')
         activeRowId.value = null
         editingUser.value = null
@@ -297,7 +329,31 @@ export default {
       }
     }
 
-    onMounted(() => {
+    const getProviderLabel = (abbr) => {
+      if (!abbr) return ''
+      const allProviders = [
+        ...(appSettings.value?.serviceProviders || []),
+        ...(appSettings.value?.customServiceProviders || [])
+      ]
+      const defaultList = [
+        { name: 'Speech-Language Therapy', abbreviation: 'SLP' },
+        { name: 'Occupational Therapy', abbreviation: 'OT' },
+        { name: 'Physical Therapy', abbreviation: 'PT' },
+        { name: 'School Counseling', abbreviation: 'SC' },
+        { name: 'School-Based Mental Health Services', abbreviation: 'MH' },
+        { name: 'Adapted PE', abbreviation: 'APE' },
+        { name: 'Assistive Technology', abbreviation: 'AT' },
+        { name: 'Deaf/Hard of Hearing', abbreviation: 'DHH' },
+        { name: 'Vision Services', abbreviation: 'VI' },
+        { name: 'Orientation & Mobility', abbreviation: 'OM' },
+        { name: 'Other', abbreviation: 'OTHER' }
+      ]
+      const found = defaultList.find(p => p.abbreviation === abbr)
+      return found ? `${found.name} (${found.abbreviation})` : abbr
+    }
+
+    onMounted(async () => {
+      await loadAppSettings()
       fetchUsers()
     })
 
@@ -319,7 +375,12 @@ export default {
       deleteUser,
       deleteAllUsers,
       loadNextPage,
-      loadPreviousPage
+      loadPreviousPage,
+      getProviderLabel,
+      appSettings,
+      editingUser,
+      providersLoaded,
+      serviceProviders
     }
   }
 }

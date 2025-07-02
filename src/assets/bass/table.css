@@ -298,3 +298,237 @@
   padding-left: 0;
   margin-left: 0;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide everything except the table and user info */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the table and user info */
+  .students-table,
+  .students-table *,
+  .header .user-info,
+  .header .user-info *,
+  .view-container,
+  .view-container *,
+  .group-section,
+  .group-section *,
+  .group-header,
+  .group-header * {
+    visibility: visible !important;
+  }
+
+  /* Position the printable content */
+  .students-table {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* When not in group view, position table absolutely */
+  .content > .students-table {
+    position: absolute !important;
+    top: 40px !important;
+  }
+
+  /* Show user info at the top */
+  .header .user-info {
+    position: absolute !important;
+    top: 10px !important;
+    right: 20px !important;
+    font-size: 14px !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    visibility: visible !important;
+  }
+
+  /* Hide docs and actions columns */
+  .students-table th:nth-child(6),
+  .students-table td:nth-child(6),
+  .students-table th:nth-child(7),
+  .students-table td:nth-child(7) {
+    display: none !important;
+  }
+
+  /* Table styling for print */
+  .students-table {
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+    width: 95% !important;
+    max-width: 95% !important;
+    table-layout: fixed !important;
+  }
+
+  .students-table th,
+  .students-table td {
+    border: 1px solid #ccc !important;
+    padding: 6px 4px !important;
+    text-align: left !important;
+    vertical-align: top !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .students-table thead {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+  }
+
+  .students-table tbody tr:nth-child(even) {
+    background: #f9f9f9 !important;
+  }
+
+  /* Hide non-essential elements */
+  .student-dates,
+  .print-btn,
+  .edit-btn,
+  .email-btn,
+  .teacher-feedback-btn,
+  .expand-toggle,
+  .flag-overlay,
+  .badge,
+  .docs-item,
+  .header h1,
+  .header-actions,
+  .controls,
+  .filters,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  /* Simplify student info for print */
+  .student-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+  }
+
+  .std-info-subheading {
+    font-size: 11px !important;
+    color: #666 !important;
+    margin-top: 2px !important;
+  }
+
+  /* Adjust column widths for print (without docs/actions) */
+  .students-table th:nth-child(1),
+  .students-table td:nth-child(1) {
+    width: 22% !important;
+  }
+
+  .students-table th:nth-child(2),
+  .students-table td:nth-child(2) {
+    width: 13% !important;
+  }
+
+  .students-table th:nth-child(3),
+  .students-table td:nth-child(3) {
+    width: 18% !important;
+  }
+
+  .students-table th:nth-child(4),
+  .students-table td:nth-child(4) {
+    width: 18% !important;
+  }
+
+  .students-table th:nth-child(5),
+  .students-table td:nth-child(5) {
+    width: 18% !important;
+  }
+
+  /* Testing view specific print styles */
+  .testing-view th:nth-child(3),
+  .testing-view td:nth-child(3) {
+    width: 45% !important;
+  }
+
+  /* Simplify bullet lists for print */
+  .bullet-list {
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  .bullet-list ul {
+    padding-left: 15px !important;
+    margin: 0 !important;
+  }
+
+  .bullet-list li {
+    line-height: 1.2 !important;
+    margin-bottom: 1px !important;
+  }
+
+  /* Simplify schedule for print */
+  .schedule-list {
+    max-height: none !important;
+  }
+
+  .schedule-list ul {
+    padding-left: 10px !important;
+    margin: 0 !important;
+  }
+
+  .schedule-list li {
+    line-height: 1.2 !important;
+    margin-bottom: 1px !important;
+  }
+
+  /* Service pills for print */
+  .service-pill {
+    background: #e0e0e0 !important;
+    color: #333 !important;
+    padding: 1px 3px !important;
+    border-radius: 2px !important;
+    font-size: 10px !important;
+  }
+
+  /* Remove shadows and decorative elements */
+  .instruction-cell {
+    background: none !important;
+    border-left: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1in;
+    size: letter;
+  }
+
+  /* Ensure text is readable */
+  * {
+    color: #000 !important;
+    text-shadow: none !important;
+  }
+
+  /* Group section styling for print */
+  .view-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 40px !important;
+    width: 100% !important;
+  }
+
+  .group-section {
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .group-header {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #333 !important;
+    margin: 0 0 10px 0 !important;
+    padding: 8px 0 !important;
+    border-bottom: 2px solid #333 !important;
+    background: #f0f0f0 !important;
+    padding-left: 10px !important;
+  }
+}

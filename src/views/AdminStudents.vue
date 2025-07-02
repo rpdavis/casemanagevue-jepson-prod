@@ -75,10 +75,10 @@
           <td>
             <input 
               class="editable-input" 
-              data-field="casemanager_id" 
-              :value="student.casemanager_id || ''" 
+              data-field="caseManagerId" 
+              :value="student.caseManagerId || ''" 
               :disabled="activeEditId !== student.id"
-              @input="updateStudentField(student.id, 'casemanager_id', $event.target.value)"
+              @input="updateStudentField(student.id, 'caseManagerId', $event.target.value)"
             />
           </td>
           <td>{{ formatDate(student.created_at) }}</td>

@@ -106,9 +106,9 @@ function mapAeriesField(csvFieldName) {
 function mapSeisField(csvFieldName) {
   const fieldMap = {
     'SSID': 'ssid',
-    'FirstName': 'first_name',
-    'LastName': 'last_name',
-    'MiddleName': 'middle_name',
+    'FirstName': 'firstName',
+    'LastName': 'lastName',
+    'MiddleName': 'middleName',
     'Grade': 'grade',
     'DOB': 'dob',
     'Gender': 'gender',
@@ -117,34 +117,34 @@ function mapSeisField(csvFieldName) {
     'Address': 'address',
     'City': 'city',
     'State': 'state',
-    'ZipCode': 'zip_code',
+    'ZipCode': 'zipCode',
     'Phone': 'phone',
-    'ParentName': 'parent_name',
-    'ParentPhone': 'parent_phone',
-    'ParentEmail': 'parent_email',
+    'ParentName': 'parentName',
+    'ParentPhone': 'parentPhone',
+    'ParentEmail': 'parentEmail',
     'ELL': 'ell',
     '504': '504',
     'IEP': 'iep',
-    'CaseManager': 'case_manager',
+    'CaseManager': 'caseManager',
     'Disability': 'disability',
-    'ServiceMinutes': 'service_minutes',
+    'ServiceMinutes': 'serviceMinutes',
     'Goals': 'goals',
     'Notes': 'notes',
     'Plan': 'plan',
-    'ReviewDate': 'review_date',
-    'ReevalDate': 'reeval_date',
-    'MeetingDate': 'meeting_date',
-    'SpeechProvider': 'speech_provider',
-    'MHProvider': 'mh_provider',
-    'OTProvider': 'ot_provider',
+    'ReviewDate': 'reviewDate',
+    'ReevalDate': 'reevalDate',
+    'MeetingDate': 'meetingDate',
+    'SpeechProvider': 'speechProvider',
+    'MHProvider': 'mhProvider',
+    'OTProvider': 'otProvider',
     'InstructionAccommodations': 'instruction',
     'AssessmentAccommodations': 'assessment',
     'Flag1': 'flag1',
     'Flag2': 'flag2',
-    'IEP_Services': 'iep_services'
+    'IEP_Services': 'iepServices'
   }
   
-  return fieldMap[csvFieldName] || toSnakeCase(csvFieldName)
+  return fieldMap[csvFieldName] || toCamelCase(csvFieldName)
 }
 
 /**
@@ -296,7 +296,7 @@ export async function importFilteredSeisRecords(data, fieldsToImport) {
       }
     }
 
-    record.last_imported = new Date().toISOString()
+    record.lastImported = new Date().toISOString()
 
     try {
       const studentRef = doc(db, 'students', ssid)

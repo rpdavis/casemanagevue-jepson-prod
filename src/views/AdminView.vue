@@ -3,6 +3,9 @@
   <div>
     <h1>Admin Panel</h1>
     
+    <!-- Temporary: User Role Sync Component -->
+    <UserRoleSync />
+    
     <!-- Tab Bar -->
     <TabBar 
       :tabs="tabs" 
@@ -44,7 +47,14 @@
 
       <!-- Aeries Import Tab -->
       <div v-if="activeTab === 'aeries'" class="admin-section">
+        <AeriesAPIConnector />
+        <hr style="margin: 2rem 0; border: 1px solid #ddd;">
         <AeriesImport />
+      </div>
+
+      <!-- App Settings Tab -->
+      <div v-if="activeTab === 'appSettings'" class="admin-section">
+        <AppSettings />
       </div>
     </div>
   </div>
@@ -61,6 +71,9 @@ import AdminPeriods from './AdminPeriods.vue'
 import AdminStudents from './AdminStudents.vue'
 import SeisImport from '../components/SeisImport.vue'
 import AeriesImport from '../components/AeriesImport.vue'
+import AeriesAPIConnector from '../components/AeriesAPIConnector.vue'
+import UserRoleSync from '../components/UserRoleSync.vue'
+import AppSettings from './AppSettings.vue'
 
 export default {
   name: 'AdminView',
@@ -72,7 +85,10 @@ export default {
     AdminPeriods,
     AdminStudents,
     SeisImport,
-    AeriesImport
+    AeriesImport,
+    AeriesAPIConnector,
+    UserRoleSync,
+    AppSettings
   },
   setup() {
     const activeTab = ref('usersAdd')
@@ -84,7 +100,8 @@ export default {
       { key: 'permissions', label: 'Permissions' },
       { key: 'periods', label: 'Periods' },
       { key: 'seis', label: 'SEIS Import' },
-      { key: 'aeries', label: 'Aeries Import' }
+      { key: 'aeries', label: 'Aeries API & Import' },
+      { key: 'appSettings', label: 'App Settings' }
     ]
 
     const handleTabChange = (tabKey) => {

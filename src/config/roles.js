@@ -93,7 +93,7 @@ export const PERMISSIONS_MATRIX = {
 export function canEditStudent(student, currentUser) {
   if (!currentUser || !student) return false;
 
-  const isOwnCase = student.casemanager_id === currentUser.uid;
+  const isOwnCase = student.caseManagerId === currentUser.uid;
 
   switch (currentUser.role) {
     case "admin":

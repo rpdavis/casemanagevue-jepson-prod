@@ -1,114 +1,171 @@
 <template>
-  <table class="students-table">
+  <table class="students-table" :class="{ 'testing-view': testingView }">
     <thead>
       <tr>
-        <th class="print">Student Info</th>
-        <th class="print">Services</th>
-        <th class="print">Schedule</th>
-        <th class="print">Instruction Accom.</th>
-        <th class="print">Assessment Accom.</th>
-        <th class="print">Docs</th>
-        <th class="print">Actions</th>
+        <!-- Testing View Headers -->
+        <template v-if="testingView">
+          <th class="print">Student Info</th>
+          <th class="print">Schedule</th>
+          <th class="print">Assessment Accom.</th>
+        </template>
+        <!-- Regular View Headers -->
+        <template v-else>
+          <th class="print">Student Info</th>
+          <th class="print">Services</th>
+          <th class="print">Schedule</th>
+          <th class="print">Instruction Accom.</th>
+          <th class="print">Assessment Accom.</th>
+          <th class="print">Docs</th>
+          <th class="print">Actions</th>
+        </template>
       </tr>
     </thead>
     <tbody>
       <tr v-for="student in students" :key="student.id">
-        <!-- Student Info Cell -->
-        <td>
-          <div class="student-name"><strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong></div>
-          <div class="std-info-subheading">
-            <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
-            <div>CM: {{ getUserName(student.casemanager_id) }}</div>
-          </div>
-          <div class="student-dates print">
-            <span class="badge badge-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
-            <span class="badge badge-reeval" :class="getReevalUrgencyClass(student)">RE: {{ formatDate(getDisplayValue(student, 'reevalDate')) }}</span>
-            <span class="badge badge-meeting" :class="[getMeetingUrgencyClass(student), getDisplayValue(student, 'meetingDate') ? 'date-set' : '']">
-              🗓 {{ formatDate(getDisplayValue(student, 'meetingDate')) || 'Not set' }}
-            </span>
-          </div>
+        <!-- Testing View Cells -->
+        <template v-if="testingView">
+          <!-- Student Info Cell (same format as regular view) -->
+          <td>
+            <div class="student-name"><strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong></div>
+            <div class="std-info-subheading">
+              <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
+              <div>CM: {{ getUserName(student.caseManagerId || student.casemanager_id) }}</div>
+            </div>
+            
+            <!-- Flags -->
+            <div v-if="student.flags && student.flags.length > 0" class="flag-overlay">
+              <div v-for="flag in student.flags" :key="flag" :class="getFlagClass(flag)">
+                {{ flag }}
+              </div>
+            </div>
+          </td>
           
-          <!-- Flags -->
-          <div v-if="student.flags && student.flags.length > 0" class="flag-overlay">
-            <div v-for="flag in student.flags" :key="flag" :class="getFlagClass(flag)">
-              {{ flag }}
+          <!-- Schedule Cell (same as regular view) -->
+          <td>
+            <div v-if="student.schedule" class="schedule-list" :class="{ expanded: expandedSchedules.has(student.id) }">
+              <ul>
+                <li v-for="(teacherId, period) in student.schedule" :key="period">
+                  <span class="service-pill">{{ period }}:</span> {{ getUserInitialLastName(teacherId) }}
+                </li>
+              </ul>
             </div>
-          </div>
-        </td>
-        
-        <!-- Services Cell -->
-        <td>
-          <template v-if="Array.isArray(student.services) || Array.isArray(student.other_services)">
-            <div v-if="getClassServices(student).length > 0">
-              <strong>Class Services:</strong>
-              <span v-for="service in getClassServices(student)" :key="service" class="service-pill">{{ service }}</span>
+            <div v-if="student.schedule && Object.keys(student.schedule).length > 6" 
+                 class="expand-toggle" 
+                 @click="toggleSchedule(student.id)">
+              {{ expandedSchedules.has(student.id) ? 'Show Less' : 'Show More' }}
             </div>
-            <div v-if="getOtherServices(student).length > 0 || student.speech_id || student.mh_id || student.ot_id">
-              <strong>Related Services:</strong>
-              <span v-for="other in getOtherServices(student)" :key="other" class="service-pill">{{ other }}</span>
-              <span v-if="student.speech_id" class="service-pill">SP ({{ getUserInitials(student.speech_id) }})</span>
-              <span v-if="student.mh_id" class="service-pill">MH ({{ getUserInitials(student.mh_id) }})</span>
-              <span v-if="student.ot_id" class="service-pill">OT ({{ getUserInitials(student.ot_id) }})</span>
+            <div v-else-if="!student.schedule">—</div>
+          </td>
+          
+          <!-- Assessment Accommodations Cell (same as regular view) -->
+          <td class="instruction-cell" :class="{ 'with-flag': student.flag2 }">
+            <div v-if="student.flag2" class="flag-overlay flag-separate-setting">Separate setting</div>
+            <div v-if="getDisplayValue(student, 'assessment')" class="bullet-list">
+              <div v-html="formatListFromText(getDisplayValue(student, 'assessment'))"></div>
             </div>
-            <div v-if="getClassServices(student).length === 0 && getOtherServices(student).length === 0 && !student.speech_id && !student.mh_id && !student.ot_id">—</div>
-          </template>
-          <template v-else>
-            —
-          </template>
-        </td>
+            <div v-else>—</div>
+          </td>
+        </template>
         
-        <!-- Schedule Cell -->
-        <td>
-          <div v-if="student.schedule" class="schedule-list" :class="{ expanded: expandedSchedules.has(student.id) }">
-            <ul>
-              <li v-for="(teacherId, period) in student.schedule" :key="period">
-                <span class="service-pill">{{ period }}:</span> {{ getUserInitialLastName(teacherId) }}
-              </li>
-            </ul>
-          </div>
-          <div v-if="student.schedule && Object.keys(student.schedule).length > 6" 
-               class="expand-toggle" 
-               @click="toggleSchedule(student.id)">
-            {{ expandedSchedules.has(student.id) ? 'Show Less' : 'Show More' }}
-          </div>
-          <div v-else-if="!student.schedule">—</div>
-        </td>
-        
-        <!-- Instruction Accom. Cell -->
-        <td class="instruction-cell" :class="{ 'with-flag': student.flag1 }">
-          <div v-if="student.flag1" class="flag-overlay flag-preferential-seating">Preferential Seating</div>
-          <div v-if="getDisplayValue(student, 'instruction')" class="bullet-list">
-            <div v-html="formatListFromText(getDisplayValue(student, 'instruction'))"></div>
-          </div>
-          <div v-else>—</div>
-        </td>
-        
-        <!-- Assessment Accom. Cell -->
-        <td class="instruction-cell" :class="{ 'with-flag': student.flag2 }">
-          <div v-if="student.flag2" class="flag-overlay flag-separate-setting">Separate setting</div>
-          <div v-if="getDisplayValue(student, 'assessment')" class="bullet-list">
-            <div v-html="formatListFromText(getDisplayValue(student, 'assessment'))"></div>
-          </div>
-          <div v-else>—</div>
-        </td>
-        
-        <!-- Docs Cell -->
-        <td>
-          <div class="docs-item">
-            <a v-if="student.ataglance_pdf_url" :href="student.ataglance_pdf_url" target="_blank">At-A-Glance</a>
-            <a v-if="student.bip_pdf_url" :href="student.bip_pdf_url" target="_blank">BIP</a>
-          </div>
-        </td>
-        
-        <!-- Actions Cell -->
-        <td>
-          <button class="edit-btn" @click="$emit('edit', student.id)" title="Edit Student">✏️</button>
-          <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
-          <button v-if="currentUser?.role === 'teacher'" 
-                  class="teacher-feedback-btn" 
-                  @click="$emit('teacher-feedback', student.id)" 
-                  title="Teacher Feedback">📝</button>
-        </td>
+        <!-- Regular View Cells -->
+        <template v-else>
+          <!-- Student Info Cell -->
+          <td>
+            <div class="student-name"><strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong></div>
+            <div class="std-info-subheading">
+              <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
+              <div>CM: {{ getUserName(student.caseManagerId || student.casemanager_id) }}</div>
+            </div>
+            <div class="student-dates print">
+              <span class="badge badge-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
+              <span class="badge badge-reeval" :class="getReevalUrgencyClass(student)">RE: {{ formatDate(getDisplayValue(student, 'reevalDate')) }}</span>
+              <span class="badge badge-meeting" :class="[getMeetingUrgencyClass(student), getDisplayValue(student, 'meetingDate') ? 'date-set' : '']">
+                🗓 {{ formatDate(getDisplayValue(student, 'meetingDate')) || 'Not set' }}
+              </span>
+            </div>
+            
+            <!-- Flags -->
+            <div v-if="student.flags && student.flags.length > 0" class="flag-overlay">
+              <div v-for="flag in student.flags" :key="flag" :class="getFlagClass(flag)">
+                {{ flag }}
+              </div>
+            </div>
+          </td>
+          
+          <!-- Services Cell -->
+          <td>
+            <template v-if="Array.isArray(student.services) || Array.isArray(student.other_services)">
+              <div v-if="getClassServices(student).length > 0">
+                <strong>Class Services:</strong>
+                <span v-for="service in getClassServices(student)" :key="service" class="service-pill">{{ service }}</span>
+              </div>
+              <div v-if="getOtherServices(student).length > 0 || student.speechId || student.speech_id || student.mhId || student.mh_id || student.otId || student.ot_id">
+                <strong>Related Services:</strong>
+                <span v-for="other in getOtherServices(student)" :key="other" class="service-pill">{{ other }}</span>
+                <span v-if="student.speechId || student.speech_id" class="service-pill">SP ({{ getUserInitials(student.speechId || student.speech_id) }})</span>
+                <span v-if="student.mhId || student.mh_id" class="service-pill">MH ({{ getUserInitials(student.mhId || student.mh_id) }})</span>
+                <span v-if="student.otId || student.ot_id" class="service-pill">OT ({{ getUserInitials(student.otId || student.ot_id) }})</span>
+              </div>
+              <div v-if="getClassServices(student).length === 0 && getOtherServices(student).length === 0 && !student.speechId && !student.speech_id && !student.mhId && !student.mh_id && !student.otId && !student.ot_id">—</div>
+            </template>
+            <template v-else>
+              —
+            </template>
+          </td>
+          
+          <!-- Schedule Cell -->
+          <td>
+            <div v-if="student.schedule" class="schedule-list" :class="{ expanded: expandedSchedules.has(student.id) }">
+              <ul>
+                <li v-for="(teacherId, period) in student.schedule" :key="period">
+                  <span class="service-pill">{{ period }}:</span> {{ getUserInitialLastName(teacherId) }}
+                </li>
+              </ul>
+            </div>
+            <div v-if="student.schedule && Object.keys(student.schedule).length > 6" 
+                 class="expand-toggle" 
+                 @click="toggleSchedule(student.id)">
+              {{ expandedSchedules.has(student.id) ? 'Show Less' : 'Show More' }}
+            </div>
+            <div v-else-if="!student.schedule">—</div>
+          </td>
+          
+          <!-- Instruction Accom. Cell -->
+          <td class="instruction-cell" :class="{ 'with-flag': student.flag1 }">
+            <div v-if="student.flag1" class="flag-overlay flag-preferential-seating">Preferential Seating</div>
+            <div v-if="getDisplayValue(student, 'instruction')" class="bullet-list">
+              <div v-html="formatListFromText(getDisplayValue(student, 'instruction'))"></div>
+            </div>
+            <div v-else>—</div>
+          </td>
+          
+          <!-- Assessment Accom. Cell -->
+          <td class="instruction-cell" :class="{ 'with-flag': student.flag2 }">
+            <div v-if="student.flag2" class="flag-overlay flag-separate-setting">Separate setting</div>
+            <div v-if="getDisplayValue(student, 'assessment')" class="bullet-list">
+              <div v-html="formatListFromText(getDisplayValue(student, 'assessment'))"></div>
+            </div>
+            <div v-else>—</div>
+          </td>
+          
+          <!-- Docs Cell -->
+          <td>
+            <div class="docs-item">
+              <a v-if="student.ataglancePdfUrl" :href="student.ataglancePdfUrl" target="_blank">At-A-Glance</a>
+              <a v-if="student.bipPdfUrl" :href="student.bipPdfUrl" target="_blank">BIP</a>
+            </div>
+          </td>
+          
+          <!-- Actions Cell -->
+          <td>
+            <button class="edit-btn" @click="$emit('edit', student.id)" title="Edit Student">✏️</button>
+            <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
+            <button v-if="currentUser?.role === 'teacher'" 
+                    class="teacher-feedback-btn" 
+                    @click="$emit('teacher-feedback', student.id)" 
+                    title="Teacher Feedback">📝</button>
+          </td>
+        </template>
       </tr>
     </tbody>
   </table>
@@ -130,6 +187,10 @@ const props = defineProps({
   currentUser: {
     type: Object,
     default: null
+  },
+  testingView: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -238,5 +299,13 @@ function getOtherServices(student) {
   return arr.filter(s => typeof s === 'string' && !s.includes(':'))
 }
 </script>
+
+<style scoped>
+/* Testing view column widths */
+.students-table.testing-view th:nth-child(3),
+.students-table.testing-view td:nth-child(3) {
+  width: 50%;
+}
+</style>
 
 // Styles removed for migration to external CSS files
