@@ -5,6 +5,7 @@ import './assets/bass/style.css'
 import './assets/bass/table.css'
 // import './assets/bass/admin-panel.css' // Only include in admin section
 import { createPinia } from 'pinia'
+import './assets/aide-schedule.css'
 
 const app = createApp(App)
 const pinia = createPinia()

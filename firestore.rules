@@ -14,9 +14,40 @@ service cloud.firestore {
       }
     }
     
+    // App Settings collection - allow admin users to read/write
+    match /appSettings/{document} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair"
+      );
+    }
+    
+    // Config collection - for permissions matrix and other config
+    match /config/{configId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair"
+      );
+    }
+    
     // Students collection - allow read/write for authenticated users
     match /students/{studentId} {
       allow read, write: if request.auth != null;
+    }
+    
+    // Aide Schedules collection - allow read/write for admins
+    match /aideSchedules/{aideId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair"
+      );
     }
     
     // Default rule - allow all reads and writes for authenticated users

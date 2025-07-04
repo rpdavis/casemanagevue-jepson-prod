@@ -15,6 +15,10 @@
         <option value="all">All Teachers</option>
         <option v-for="t in teachers" :key="t.id" :value="t.id">{{ t.name || t.email || t.id }}</option>
       </select>
+      <select v-model="filters.paraeducator" @change="emitFilters">
+        <option value="all">All Paraeducators</option>
+        <option v-for="p in paraeducators" :key="p.id" :value="p.id">{{ p.name || p.email || p.id }}</option>
+      </select>
       <input type="text" v-model="filters.search" @input="emitFilters" placeholder="Search students...">
       <button @click="clearFilters">Clear Filters</button>
     </div>
@@ -66,6 +70,7 @@ import { ref, reactive, computed } from 'vue'
 const props = defineProps({
   caseManagers: Array,
   teachers: Array,
+  paraeducators: Array,
   currentUserRole: String,
   currentUserId: String
 })
@@ -76,6 +81,7 @@ const filters = reactive({
   sortBy: 'first_name',
   cm: 'all',
   teacher: 'all',
+  paraeducator: 'all',
   search: '',
   providerView: 'all',
   viewMode: 'list'
@@ -95,6 +101,7 @@ function clearFilters() {
   filters.sortBy = 'first_name'
   filters.cm = 'all'
   filters.teacher = 'all'
+  filters.paraeducator = 'all'
   filters.search = ''
   filters.providerView = 'all'
   filters.viewMode = 'list'

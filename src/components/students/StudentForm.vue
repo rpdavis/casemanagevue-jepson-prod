@@ -51,12 +51,7 @@
         <!-- Admin Overrides -->
         <fieldset class="form-col override-section">
           <legend>Admin Overrides</legend>
-          <div class="inner-grid-3">
-            <label>
-              # of Periods:
-              <input v-model.number="form.overrides.numPeriods" type="number" min="1" max="12" placeholder="Override # of periods…" />
-            </label>
-          </div>
+          <!-- Removed periods override since we removed the periods admin panel -->
         </fieldset>
 
         <!-- Schedule -->
@@ -221,12 +216,10 @@ onMounted(async () => {
   await loadAppSettings()
 })
 
-// Dynamic periods
-const DEFAULT_PERIODS = ['1', '2', '3', '4', '5', '6']
+// Dynamic periods - use fixed number since we removed periods admin panel
+const DEFAULT_PERIODS = ['1', '2', '3', '4', '5', '6', '7']
 const periods = computed(() => {
-  if (appSettings.value && appSettings.value.periods) {
-    return appSettings.value.periods
-  }
+  // Use fixed periods since we removed the periods admin panel
   return DEFAULT_PERIODS
 })
 
@@ -263,7 +256,6 @@ const form = reactive({
   reevalDate: getDisplayValue(props.student, 'reevalDate') || '',
   meetingDate: getDisplayValue(props.student, 'meetingDate') || '',
   caseManagerId: props.student.caseManagerId || props.student.casemanager_id || '',
-  overrides: { numPeriods: props.student.overrides?.numPeriods || '' },
   schedule: { ...props.student.schedule } || {},
   services: props.student.services ? props.student.services.filter(s => s.includes(':')) : [],
   speechId: props.student.speechId || props.student.speech_id || '',
@@ -301,7 +293,6 @@ watch(() => props.student, (newStudent) => {
     form.reevalDate = getDisplayValue(newStudent, 'reevalDate') || ''
     form.meetingDate = getDisplayValue(newStudent, 'meetingDate') || ''
     form.caseManagerId = newStudent.caseManagerId || newStudent.casemanager_id || ''
-    form.overrides = { numPeriods: newStudent.overrides?.numPeriods || '' }
     form.schedule = { ...newStudent.schedule } || {}
     form.services = newStudent.services ? newStudent.services.filter(s => s.includes(':')) : []
     form.speechId = newStudent.speechId || newStudent.speech_id || ''
@@ -545,7 +536,6 @@ async function handleSubmit() {
       assessment: form.assessment,
       flag1: form.flag1,
       flag2: form.flag2,
-      overrides: { numPeriods: form.overrides.numPeriods },
       bipPdfUrl: bipPdfUrl,
       ataglancePdfUrl: ataglancePdfUrl,
       updatedAt: serverTimestamp()

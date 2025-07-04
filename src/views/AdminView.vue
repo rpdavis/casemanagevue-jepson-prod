@@ -1,10 +1,12 @@
 <!-- src/views/AdminView.vue -->
 <template>
   <div>
-    <h1>Admin Panel</h1>
-    
-    <!-- Temporary: User Role Sync Component -->
-    <UserRoleSync />
+    <div class="admin-header">
+      <h1>Admin Panel</h1>
+      <button @click="goToStudents" class="return-btn">
+        <span>←</span> Return to Students
+      </button>
+    </div>
     
     <!-- Tab Bar -->
     <TabBar 
@@ -32,12 +34,22 @@
 
       <!-- Permissions Tab -->
       <div v-if="activeTab === 'permissions'" class="admin-section">
-        <PermissionsMatrix />
+        <AdminPermissions />
       </div>
 
-      <!-- Periods Tab -->
-      <div v-if="activeTab === 'periods'" class="admin-section">
-        <AdminPeriods />
+      <!-- Aide Assignment Tab -->
+      <div v-if="activeTab === 'aide-assignment'" class="admin-section">
+        <AdminAideAssignment />
+      </div>
+
+      <!-- Aide Schedule Tab -->
+      <div v-if="activeTab === 'aide-schedule'" class="admin-section">
+        <AdminAideSchedule />
+      </div>
+
+      <!-- Time Table Tab -->
+      <div v-if="activeTab === 'time-table'" class="admin-section">
+        <AdminTimeTable />
       </div>
 
       <!-- SEIS Import Tab -->
@@ -53,7 +65,7 @@
       </div>
 
       <!-- App Settings Tab -->
-      <div v-if="activeTab === 'appSettings'" class="admin-section">
+      <div v-if="activeTab === 'settings'" class="admin-section">
         <AppSettings />
       </div>
     </div>
@@ -63,17 +75,22 @@
 <script>
 import '../assets/bass/admin-panel.css'
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import TabBar from '../components/TabBar.vue'
 import UserAddForm from '../components/UserAddForm.vue'
 import UserTable from '../components/UserTable.vue'
 import PermissionsMatrix from '../components/PermissionsMatrix.vue'
-import AdminPeriods from './AdminPeriods.vue'
 import AdminStudents from './AdminStudents.vue'
+
+import AdminPermissions from './AdminPermissions.vue'
 import SeisImport from '../components/SeisImport.vue'
 import AeriesImport from '../components/AeriesImport.vue'
 import AeriesAPIConnector from '../components/AeriesAPIConnector.vue'
-import UserRoleSync from '../components/UserRoleSync.vue'
+
 import AppSettings from './AppSettings.vue'
+import AdminAideAssignment from './AdminAideAssignment.vue'
+import AdminTimeTable from './AdminTimeTable.vue'
+import AdminAideSchedule from './AdminAideSchedule.vue'
 
 export default {
   name: 'AdminView',
@@ -82,36 +99,47 @@ export default {
     UserAddForm,
     UserTable,
     PermissionsMatrix,
-    AdminPeriods,
     AdminStudents,
+
+    AdminPermissions,
     SeisImport,
     AeriesImport,
     AeriesAPIConnector,
-    UserRoleSync,
-    AppSettings
+    AppSettings,
+    AdminAideAssignment,
+    AdminTimeTable,
+    AdminAideSchedule
   },
   setup() {
+    const router = useRouter()
     const activeTab = ref('usersAdd')
 
     const tabs = [
-      { key: 'usersAdd', label: 'Add Users' },
-      { key: 'usersEdit', label: 'Edit Users' },
-      { key: 'students', label: 'Students' },
-      { key: 'permissions', label: 'Permissions' },
-      { key: 'periods', label: 'Periods' },
-      { key: 'seis', label: 'SEIS Import' },
-      { key: 'aeries', label: 'Aeries API & Import' },
-      { key: 'appSettings', label: 'App Settings' }
+      { key: 'usersAdd', label: 'Add Users', category: 'users-students' },
+      { key: 'usersEdit', label: 'Manage Users', category: 'users-students' },
+      { key: 'students', label: 'Students', category: 'users-students' },
+      { key: 'aide-assignment', label: 'Aide Assignment', category: 'aide-management' },
+      { key: 'aide-schedule', label: 'Aide Schedule', category: 'aide-management' },
+      { key: 'time-table', label: 'Time Table', category: 'aide-management' },
+      { key: 'permissions', label: 'Permissions', category: 'system-config' },
+      { key: 'seis', label: 'SEIS Import', category: 'system-config' },
+      { key: 'aeries', label: 'Aeries API & Import', category: 'system-config' },
+      { key: 'settings', label: 'App Settings', category: 'system-config' }
     ]
 
     const handleTabChange = (tabKey) => {
       activeTab.value = tabKey
     }
 
+    const goToStudents = () => {
+      router.push('/students')
+    }
+
     return {
       activeTab,
       tabs,
-      handleTabChange
+      handleTabChange,
+      goToStudents
     }
   }
 }
@@ -119,4 +147,42 @@ export default {
 
 <style scoped>
 /* Styles are in admin-panel.css */
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.return-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.return-btn:hover {
+  background: #545b62;
+}
+
+.return-btn span {
+  font-size: 1.2rem;
+}
 </style>

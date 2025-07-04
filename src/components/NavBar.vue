@@ -34,7 +34,6 @@
         <div class="dropdown-content">
           <a v-if="isAdmin" @click="navigateTo('/admin/users')">Manage Users</a>
           <a v-if="isAdmin" @click="navigateTo('/admin/permissions')">Permissions</a>
-          <a v-if="isAdmin" @click="navigateTo('/admin/periods')">Periods</a>
           <a @click="navigateTo('/students')">All Students</a>
           <a @click="showExport = true">Export Data</a>
           <a @click="printPage">Print View</a>

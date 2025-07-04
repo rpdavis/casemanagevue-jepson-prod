@@ -1,13 +1,19 @@
 <template>
   <div class="admin-tab-bar">
-    <button
-      v-for="(tab, index) in tabs"
-      :key="tab.key"
-      :class="{ active: activeTab === tab.key }"
-      @click="$emit('tab-change', tab.key)"
-    >
-      {{ tab.label }}
-    </button>
+    <!-- Category Headers -->
+    <div class="tab-category" v-for="category in categories" :key="category.key">
+      <div class="category-header">{{ category.label }}</div>
+      <div class="category-tabs">
+        <button
+          v-for="tab in getTabsForCategory(category.key)"
+          :key="tab.key"
+          :class="{ active: activeTab === tab.key }"
+          @click="$emit('tab-change', tab.key)"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -25,7 +31,21 @@ export default {
       required: true
     }
   },
-  emits: ['tab-change']
+  emits: ['tab-change'],
+  computed: {
+    categories() {
+      return [
+        { key: 'users-students', label: 'Users & Students' },
+        { key: 'aide-management', label: 'Aide Management' },
+        { key: 'system-config', label: 'System Configuration' }
+      ]
+    }
+  },
+  methods: {
+    getTabsForCategory(categoryKey) {
+      return this.tabs.filter(tab => tab.category === categoryKey)
+    }
+  }
 }
 </script>
 

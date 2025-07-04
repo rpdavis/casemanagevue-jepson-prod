@@ -17,24 +17,6 @@
         </div>
       </section>
 
-      <!-- Periods -->
-      <section class="settings-section">
-        <h3>Periods</h3>
-        <div class="periods-input">
-          <label>
-            Number of Periods:
-            <input type="number" v-model.number="settings.numPeriods" min="1" max="12" @change="updatePeriods" />
-          </label>
-        </div>
-        <div class="periods-list">
-          <div v-for="(period, idx) in settings.periods" :key="idx" class="period-item">
-            <label>Period {{ idx + 1 }}:
-              <input type="text" v-model="settings.periods[idx]" maxlength="3" />
-            </label>
-          </div>
-        </div>
-      </section>
-
       <!-- Class Services -->
       <section class="settings-section">
         <h3>Class Services</h3>
@@ -142,6 +124,8 @@
         </div>
       </section>
 
+
+
       <!-- Save/Load/Reset -->
       <section class="settings-section">
         <button type="submit" :disabled="loading">💾 Save Settings</button>
@@ -196,8 +180,6 @@ const DEFAULT_SERVICE_PROVIDERS = [
 const { saveAppSettings, loadAppSettings, resetAppSettings, loading, error } = useAppSettings()
 const settings = ref({
   grades: [],
-  numPeriods: 6,
-  periods: ['1', '2', '3', '4', '5', '6'],
   classServices: [
     { name: 'SDC', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
     { name: 'Co-teach', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
@@ -218,24 +200,14 @@ const customServiceProvider = ref('')
 const status = ref('')
 const statusError = ref(false)
 
+
+
 const allGradesSelected = computed(() => settings.value.grades.length === gradeOptions.length)
 const toggleAllGrades = () => {
   if (allGradesSelected.value) {
     settings.value.grades = []
   } else {
     settings.value.grades = gradeOptions.map(g => g.value)
-  }
-}
-
-const updatePeriods = () => {
-  const n = Math.max(1, Math.min(12, settings.value.numPeriods))
-  settings.value.numPeriods = n
-  if (settings.value.periods.length < n) {
-    for (let i = settings.value.periods.length; i < n; i++) {
-      settings.value.periods.push((i + 1).toString())
-    }
-  } else if (settings.value.periods.length > n) {
-    settings.value.periods = settings.value.periods.slice(0, n)
   }
 }
 
@@ -296,8 +268,6 @@ function normalizeSettings(loaded) {
   ]
   const merged = {
     grades: loaded.grades || [],
-    numPeriods: loaded.numPeriods || 6,
-    periods: loaded.periods || ['1', '2', '3', '4', '5', '6'],
     classServices: Array.isArray(loaded.classServices) ? loaded.classServices.map((svc, i) => ({
       name: svc.name || defaultClassServices[i]?.name || '',
       subcategories: Array.isArray(svc.subcategories) ? svc.subcategories : (defaultClassServices[i]?.subcategories || []),
@@ -347,8 +317,6 @@ const loadSettings = async () => {
 const resetSettings = () => {
   settings.value = {
     grades: [],
-    numPeriods: 6,
-    periods: ['1', '2', '3', '4', '5', '6'],
     classServices: [
       { name: 'SDC', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
       { name: 'Co-teach', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
@@ -389,18 +357,6 @@ onMounted(loadSettings)
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-}
-.periods-input {
-  margin-bottom: 1rem;
-}
-.periods-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-.period-item input {
-  width: 60px;
-  text-align: center;
 }
 .class-services-subcats {
   margin: 1rem 0 0 0;
@@ -485,4 +441,6 @@ button:disabled {
   font-size: 1rem;
   padding: 0.25em 0.5em;
 }
+
+
 </style> 

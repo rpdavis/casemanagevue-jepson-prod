@@ -52,6 +52,7 @@ export default function useUsers() {
 
   return { 
     users, 
+    userList,
     fetchUsers, 
     caseManagers, 
     teacherList,

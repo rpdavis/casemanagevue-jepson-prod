@@ -84,6 +84,11 @@
               </span>
             </div>
             
+            <!-- Direct Assignment Badge for Paraeducators -->
+            <div v-if="currentUser?.role === 'paraeducator' && isDirectAssignment(student.id)" class="direct-assignment-badge">
+              <span class="badge badge-direct">Direct Assignment</span>
+            </div>
+            
             <!-- Flags -->
             <div v-if="student.flags && student.flags.length > 0" class="flag-overlay">
               <div v-for="flag in student.flags" :key="flag" :class="getFlagClass(flag)">
@@ -191,6 +196,10 @@ const props = defineProps({
   testingView: {
     type: Boolean,
     default: false
+  },
+  aideSchedule: {
+    type: Object,
+    default: () => ({})
   }
 })
 
@@ -297,6 +306,30 @@ function getOtherServices(student) {
   }
   const arr = Array.isArray(student.services) ? student.services : []
   return arr.filter(s => typeof s === 'string' && !s.includes(':'))
+}
+
+function isDirectAssignment(studentId) {
+  if (!props.currentUser || props.currentUser.role !== 'paraeducator') {
+    return false
+  }
+  
+  // The currentUser from auth store has uid, but we need to find the user in userMap
+  // to get the correct ID that matches the aide schedule
+  const aideId = props.currentUser.uid
+  
+  // Check if the aide schedule uses the current user's UID directly
+  let aideData = props.aideSchedule[aideId]
+  
+  // If not found, try to find the user in userMap to get the correct ID
+  if (!aideData) {
+    const userEntry = Object.entries(props.userMap).find(([id, user]) => user.uid === aideId || user.email === props.currentUser.email)
+    if (userEntry) {
+      const [correctAideId] = userEntry
+      aideData = props.aideSchedule[correctAideId]
+    }
+  }
+  
+  return aideData?.directAssignment === studentId
 }
 </script>
 

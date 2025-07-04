@@ -26,6 +26,7 @@
 │   │   ├── notes-notepad-svgrepo-com.svg
 │   │   ├── notes-outlined-pen-and-paper-svgrepo-com.svg
 │   │   └── user-check-svgrepo-com.svg
+│   ├── .DS_Store
 │   ├── admin.html
 │   ├── index.html
 │   ├── login.html
@@ -37,6 +38,9 @@
 │   │   └── students.js
 │   ├── assets
 │   │   ├── bass
+│   │   │   ├── OLD- style.css
+│   │   │   ├── OLD-table.css
+│   │   │   ├── admin-panel.css
 │   │   │   ├── style.css
 │   │   │   └── table.css
 │   │   ├── images
@@ -54,29 +58,46 @@
 │   │   │   ├── notes-notepad-svgrepo-com.svg
 │   │   │   ├── notes-outlined-pen-and-paper-svgrepo-com.svg
 │   │   │   └── user-check-svgrepo-com.svg
-│   │   └── .DS_Store
+│   │   ├── .DS_Store
+│   │   └── aide-schedule.css
 │   ├── components
 │   │   ├── students
+│   │   │   ├── ServiceCheckboxGroup.vue
+│   │   │   ├── ServiceSelect.vue
 │   │   │   ├── StudentEditDialog.vue
 │   │   │   ├── StudentFilters.vue
 │   │   │   ├── StudentForm.vue
 │   │   │   ├── StudentTable.vue
-│   │   │   └── studentsEmailDialog.vue
+│   │   │   └── StudentsEmailDialog.vue
 │   │   ├── .DS_Store
+│   │   ├── AeriesAPIConnector.vue
+│   │   ├── AeriesImport.vue
+│   │   ├── AideScheduleEditDialog.vue
+│   │   ├── AideScheduleMasterTable.vue
+│   │   ├── AssignmentDialog.vue
 │   │   ├── ExportDialog.vue
 │   │   ├── FileUploader.vue
 │   │   ├── NavBar.vue
 │   │   ├── PermissionsMatrix.vue
 │   │   ├── SearchBar.vue
+│   │   ├── SeisImport.vue
 │   │   ├── TabBar.vue
 │   │   ├── UserAddForm.vue
-│   │   └── UserTable.vue
+│   │   ├── UserRoleSync.vue
+│   │   ├── UserTable.vue
+│   │   └── VerticalTimeGrid.vue
 │   ├── composables
 │   │   ├── useAeries.js
+│   │   ├── useAeriesAPI.js
+│   │   ├── useAideAssignment.js
+│   │   ├── useAideSchedule.js
+│   │   ├── useAppSettings.js
 │   │   ├── useAuth.js
+│   │   ├── useImporters.js
 │   │   ├── usePermissions.js
 │   │   ├── useStorage.js
 │   │   ├── useStudents.js
+│   │   ├── useTimeTable.js
 │   │   └── useUsers.js
 │   ├── config
 │   │   └── roles.js
@@ -93,11 +114,15 @@
 │   │   └── studentUtils.js
 │   ├── views
 │   │   ├── AddStudentView.vue
-│   │   ├── AdminPeriods.vue
+│   │   ├── AdminAideAssignment.vue
+│   │   ├── AdminAideSchedule.vue
 │   │   ├── AdminPermissions.vue
 │   │   ├── AdminStudents.vue
+│   │   ├── AdminTimeTable.vue
 │   │   ├── AdminUsers.vue
 │   │   ├── AdminView.vue
+│   │   ├── AideScheduleView.vue
+│   │   ├── AppSettings.vue
 │   │   ├── HomeView.vue
 │   │   ├── LoginView.vue
 │   │   ├── StudentsView.vue
@@ -106,11 +131,124 @@
 │   ├── App.vue
 │   ├── firebase.js
 │   └── main.js
+├── vanilla JS
+│   ├── assets
+│   │   ├── fonts
+│   │   ├── images
+│   │   │   ├── favicon
+│   │   │   │   ├── apple-touch-icon.png
+│   │   │   │   ├── favicon-96x96.png
+│   │   │   │   ├── favicon.ico
+│   │   │   │   ├── favicon.svg
+│   │   │   │   ├── site.webmanifest
+│   │   │   │   ├── web-app-manifest-192x192.png
+│   │   │   │   └── web-app-manifest-512x512.png
+│   │   │   ├── .DS_Store
+│   │   │   ├── bulk_upload_ex.png
+│   │   │   ├── email-1-svgrepo-com.svg
+│   │   │   ├── notes-notepad-svgrepo-com.svg
+│   │   │   ├── notes-outlined-pen-and-paper-svgrepo-com.svg
+│   │   │   └── user-check-svgrepo-com.svg
+│   │   └── .DS_Store
+│   ├── scripts
+│   │   ├── admin
+│   │   │   ├── integrations
+│   │   │   │   ├── aeries
+│   │   │   │   │   ├── api.js
+│   │   │   │   │   ├── importer.js
+│   │   │   │   │   └── ui.js
+│   │   │   │   ├── seis
+│   │   │   │   │   ├── importer.js
+│   │   │   │   │   └── ui.js
+│   │   │   │   └── .DS_Store
+│   │   │   ├── permissions
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── model.js
+│   │   │   │   └── ui.js
+│   │   │   ├── students
+│   │   │   │   ├── .DS_Store
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── edit.js
+│   │   │   │   ├── index.js
+│   │   │   │   ├── model.js
+│   │   │   │   └── ui.js
+│   │   │   ├── ui
+│   │   │   │   ├── .DS_Store
+│   │   │   │   ├── adminView.js
+│   │   │   │   └── tabBar.js
+│   │   │   ├── users
+│   │   │   │   ├── add.js
+│   │   │   │   ├── edit.js
+│   │   │   │   └── model.js
+│   │   │   ├── .DS_Store
+│   │   │   ├── index.js
+│   │   │   ├── periods.js
+│   │   │   ├── presentation.js
+│   │   │   └── studentUtils.js
+│   │   ├── components
+│   │   │   └── searchBar.js
+│   │   ├── config
+│   │   │   ├── aeriesIntegration.js
+│   │   │   ├── config.js
+│   │   │   ├── roles.js
+│   │   │   └── storage.js
+│   │   ├── core
+│   │   │   ├── OLD-session.js
+│   │   │   ├── init.js
+│   │   │   ├── nav.js
+│   │   │   └── session.js
+│   │   ├── students
+│   │   │   ├── components
+│   │   │   │   ├── studentTable
+│   │   │   │   │   ├── helpers.js
+│   │   │   │   │   ├── index.js
+│   │   │   │   │   ├── renderers.js
+│   │   │   │   │   └── studentEmailDialog.js
+│   │   │   │   ├── .DS_Store
+│   │   │   │   ├── filters.js
+│   │   │   │   ├── studentDialogEdit.js
+│   │   │   │   ├── studentExport.js
+│   │   │   │   └── studentForm.js
+│   │   │   ├── handlers
+│   │   │   │   └── studentFormHandlers.js
+│   │   │   ├── services
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── model.js
+│   │   │   │   └── ui.js
+│   │   │   ├── .DS_Store
+│   │   │   ├── add.js
+│   │   │   ├── index.js
+│   │   │   └── testing.js
+│   │   ├── utils
+│   │   │   └── studentUtils.js
+│   │   └── .DS_Store
+│   ├── styles
+│   │   ├── base
+│   │   │   ├── admin-panel.css
+│   │   │   ├── n-admin.css
+│   │   │   ├── n-style.css
+│   │   │   ├── n-tables.css
+│   │   │   ├── style.css
+│   │   │   └── tables.css
+│   │   ├── modules
+│   │   │   └── permissions-ui.css
+│   │   └── .DS_Store
+│   ├── .DS_Store
+│   ├── 404.html
+│   ├── add.html
+│   ├── admin.html
+│   ├── filetree.txt
+│   ├── home.html
+│   ├── index.html
+│   ├── login.html
+│   ├── n-login.html
+│   └── testing.html
 ├── .DS_Store
 ├── .firebaserc
 ├── .gitignore
 ├── LICENSE
 ├── README.md
+├── STUDENT_FIELD_REFERENCE.md
 ├── filemap.txt
 ├── filetree.txt
 ├── firebase.json
@@ -119,6 +257,9 @@
 ├── index.html
 ├── package-lock.json
 ├── package.json
+├── sample_students_aeries.csv
+├── sample_users_bulk.csv
+├── setUserRole.js
 └── vite.config.js
 
-21 directories, 101 files
+47 directories, 216 files

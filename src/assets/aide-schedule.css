@@ -1,0 +1,367 @@
+/* Shared styles for Aide Schedule components */
+
+.admin-aide-schedule-detailed {
+  padding: 20px;
+}
+
+.admin-aide-schedule-detailed .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.admin-aide-schedule-detailed .header h1 {
+  margin: 0;
+  color: #333;
+}
+
+.admin-aide-schedule-detailed .header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.schedule-border {
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.master-schedule {
+  padding: 0;
+}
+.schedule-table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.master-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+.master-schedule-table th,
+.master-schedule-table td {
+  border: 1px solid #dee2e6;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.master-schedule-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.aide-name-header {
+  min-width: 200px;
+}
+.time-block-header {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 0.75em;
+  font-weight: 500;
+  color: #333;
+  border-right: 1px solid #dee2e6;
+  text-align: center;
+  padding: 4px;
+  box-sizing: border-box;
+}
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+}
+.time-range {
+  font-weight: 600;
+  font-size: 0.9em;
+  color: #333;
+}
+.block-name {
+  font-size: 0.8em;
+  color: #666;
+  text-transform: capitalize;
+}
+.aide-name-cell {
+  background: #f8f9fa;
+  font-weight: 500;
+}
+.aide-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.aide-name {
+  font-weight: 600;
+  color: #333;
+}
+.edit-btn {
+  align-self: flex-start;
+  padding: 4px 8px;
+  font-size: 0.8em;
+}
+.time-block-cell {
+  background: white;
+  min-height: 80px;
+}
+.time-block-cell.period {
+  border-left: 4px solid #007bff;
+}
+.time-block-cell.break {
+  border-left: 4px solid #ffc107;
+}
+.time-block-cell.lunch {
+  border-left: 4px solid #28a745;
+}
+.cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+}
+.assignment-display {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.assignment-text {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9em;
+}
+.assignment-source {
+  font-size: 0.7em;
+  color: #666;
+  font-style: italic;
+}
+.custom-time-indicator {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 2px;
+}
+.no-assignment {
+  color: #bbb;
+  font-style: italic;
+  font-size: 0.9em;
+}
+.vertical-time-grid {
+  position: relative;
+  min-width: 200px;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  user-select: none;
+  min-height: 600px;
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+}
+.vertical-time-grid.static {
+  margin-right: 24px;
+}
+.time-tick-row {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  width: 100%;
+}
+.time-tick-row .tick-label {
+  width: 40px;
+  text-align: right;
+  font-size: 0.9em;
+  color: #333;
+  padding-right: 6px;
+}
+.time-tick-row .tick-line {
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+.time-tick-row.active .tick-label {
+  color: #333;
+  font-weight: 500;
+}
+.time-tick-row.inactive {
+  background: #f3f3f3;
+}
+.time-tick-row.inactive .tick-label {
+  color: #bbb;
+  font-weight: 400;
+}
+.time-tick-row.inactive .tick-line {
+  background: #ededed;
+}
+.assignment-box {
+  position: absolute;
+  left: 20px;
+  width: 160px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #333;
+  border: 2px solid #b3c6e0;
+  box-shadow: 0 2px 8px rgba(42,121,201,0.08);
+  cursor: grab;
+  z-index: 2;
+  transition: top 0.2s;
+  background: #e0e0e0;
+}
+.assignment-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.assignment-time {
+  font-size: 0.9em;
+  font-weight: 500;
+}
+.assignment-label {
+  font-size: 0.9em;
+}
+.resize-handle {
+  width: 100%;
+  height: 8px;
+  background: #b3c6e0;
+  border-radius: 0 0 6px 6px;
+  cursor: ns-resize;
+  margin-top: 2px;
+}
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.2);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.edit-dialog {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  max-width: 900px;
+  width: 900px;
+  padding: 0 0 20px 0;
+  position: relative;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 10px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.dialog-content {
+  padding: 20px 24px 0 24px;
+  overflow-x: auto;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 0 24px;
+}
+.import-assignments-row {
+  margin-bottom: 12px;
+}
+.add-assignment-row {
+  margin-top: 18px;
+}
+.add-assignment-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+.btn-primary:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+.btn-secondary:hover {
+  background: #545b62;
+}
+.btn-small {
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+.no-data-message, .loading, .error-message {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+.time-table-tab-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tab-btn {
+  padding: 8px 18px;
+  border-radius: 6px 6px 0 0;
+  background: #f8f9fa;
+  color: #333;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  border-bottom: none;
+  transition: background 0.2s;
+}
+.tab-btn.active {
+  background: #fff;
+  color: #007bff;
+  border-bottom: 2px solid #007bff;
+}
+
+.dialog-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.dialog-header-actions .btn {
+  padding: 6px 12px;
+  font-size: 0.9em;
+} 

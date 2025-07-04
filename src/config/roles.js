@@ -5,7 +5,8 @@ export const VALID_ROLES = [
   "sped_chair",
   "case_manager",
   "teacher",
-  "service_provider"
+  "service_provider",
+  "paraeducator"
 ];
 
 // Useful role groups for route guards
@@ -16,7 +17,8 @@ export const STUDENT_ACCESS_ROLES = [
   "sped_chair",
   "case_manager",
   "teacher",
-  "service_provider"
+  "service_provider",
+  "paraeducator"
 ];
 
 export const ADMIN_ONLY = [
@@ -78,6 +80,10 @@ export const PERMISSIONS_MATRIX = {
     PERMISSION_ACTIONS.VIEW_STUDENTS
   ],
   service_provider: [
+    PERMISSION_ACTIONS.VIEW_USERS,
+    PERMISSION_ACTIONS.VIEW_STUDENTS
+  ],
+  paraeducator: [
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.VIEW_STUDENTS
   ]

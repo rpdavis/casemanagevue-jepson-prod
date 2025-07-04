@@ -4,25 +4,65 @@
 
 .admin-tab-bar {
   display: flex;
-  gap: 0.5em;
-  margin-bottom: 1em;
-  border-bottom: 2px solid #ddd;
-  background: #f8f8f8;
-  padding: 0.5em;
+  flex-direction: row;
+  gap: 2em;
+  margin-bottom: 1.5em;
+  border-bottom: 2px solid #e0e0e0;
+  background: #f8f9fa;
+  padding: 1em;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 .admin-tab-bar button {
-  background: none;
-  border: none;
-  padding: 0.7em 1.4em;
-  font-size: 1.05em;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 0.5em 1em;
+  font-size: 0.9em;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: border 0.2s;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: #555;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 .admin-tab-bar button.active {
-  border-bottom-color: #2a79c9;
+  background: #2a79c9;
+  border-color: #2a79c9;
+  color: white;
   font-weight: bold;
+  box-shadow: 0 2px 4px rgba(42, 121, 201, 0.3);
+}
+
+.admin-tab-bar button:hover:not(.active) {
+  background: #f8f9fa;
+  border-color: #2a79c9;
   color: #2a79c9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Category Styles */
+.tab-category {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  min-width: 200px;
+}
+
+.category-header {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #666;
+  padding: 0.3em 0;
+  margin-bottom: 0.3em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #ddd;
+}
+
+.category-tabs {
+  display: flex;
+  gap: 0.4em;
+  flex-wrap: wrap;
 }
 
 .admin-section {
@@ -413,71 +453,4 @@ width: 100%;
   text-align: center;
 }
 
-/* Periods Management */
-.periods-form {
-  margin-bottom: 1rem;
-}
-
-.periods-form input {
-  margin: 0.5rem;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.periods-form button {
-  margin: 0.5rem;
-  padding: 0.3rem 0.8rem;
-  background: #005bb5;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.periods-form button:hover {
-  background: #004a95;
-}
-
-.periods-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.periods-table th,
-.periods-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-.periods-table th {
-  background-color: #f4f6f9;
-  font-weight: 600;
-}
-
-.periods-table button {
-  margin: 0.2rem;
-  padding: 0.2rem 0.5rem;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.periods-table .edit-period {
-  background: #1976d2;
-  color: white;
-}
-
-.periods-table .delete-period {
-  background: #d32f2f;
-  color: white;
-}
-
-.periods-table .edit-period:hover {
-  background: #1565c0;
-}
-
-.periods-table .delete-period:hover {
-  background: #c62828;
-} 
+ 

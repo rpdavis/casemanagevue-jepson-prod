@@ -128,6 +128,17 @@
   border-left-color: #1976d2;
 }
 
+.badge-direct {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border-left-color: #4caf50;
+  margin-top: 0.3rem;
+}
+
+.direct-assignment-badge {
+  margin-top: 0.3rem;
+}
+
 .badge-reeval {
   background: #fff3e0;
   color: #ef6c00;

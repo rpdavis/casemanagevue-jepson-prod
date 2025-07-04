@@ -1,6 +1,6 @@
 // src/store/authStore.js
 import { defineStore } from 'pinia'
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
@@ -83,14 +83,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Set user manually (for debugging/testing)
+  const setUser = (user) => {
+    currentUser.value = user
+  }
+
+  // Computed property for user
+  const user = computed(() => currentUser.value)
+
   // Initialize auth state when store is created
   initAuth()
 
   return { 
     currentUser, 
+    user,
     errorMsg, 
     isLoading,
     loginWithGoogle, 
-    logout 
+    logout,
+    setUser
   }
 })

@@ -5,7 +5,7 @@ import { ref, watch } from 'vue'
 import { db } from '@/firebase'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { useAuthStore } from './authStore'
-import { PERMISSIONS_BY_ROLE } from '@/config/roles'
+import { PERMISSIONS_MATRIX } from '@/config/roles'
 
 export const usePermissionStore = defineStore('permission', () => {
   const { currentUser } = useAuthStore()
@@ -15,7 +15,7 @@ export const usePermissionStore = defineStore('permission', () => {
   function derivePermissions(roles) {
     const perms = {}
     roles.forEach(role => {
-      const rolePerms = PERMISSIONS_BY_ROLE[role] || []
+      const rolePerms = PERMISSIONS_MATRIX[role] || []
       rolePerms.forEach(p => perms[p] = true)
     })
     return perms

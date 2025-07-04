@@ -4,8 +4,6 @@ import { getFirestore } from 'firebase/firestore'
 
 const DEFAULT_SETTINGS = {
   grades: [],
-  numPeriods: 6,
-  periods: ['1', '2', '3', '4', '5', '6'],
   classServices: [],
   sdcSubcategories: [],
   customClassServices: [],

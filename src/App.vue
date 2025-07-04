@@ -5,11 +5,12 @@
     <div id="main-content">
       <router-view />
     </div>
+    <UserRoleSwitcher />
   </div>
 </template>
 
 <script setup>
-// NavBar removed
+import UserRoleSwitcher from '@/components/UserRoleSwitcher.vue'
 </script>
 
 <style>
