@@ -98,12 +98,14 @@ import useStudents from '@/composables/useStudents.js'
 import { useAuthStore } from '@/store/authStore'
 import { getDisplayValue } from '@/utils/studentUtils'
 import useAideAssignment from '@/composables/useAideAssignment.js'
+import { useAppSettings } from '@/composables/useAppSettings'
 
 const router = useRouter()
 const { users: userMap, userList, fetchUsers } = useUsers()
 const { students, fetchStudents } = useStudents()
 const authStore = useAuthStore()
 const { aideAssignment, loadAideAssignments, saveAllAideAssignments } = useAideAssignment()
+const { appSettings, loadAppSettings } = useAppSettings()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -122,9 +124,13 @@ const teachers = computed(() => {
 })
 
 const periods = computed(() => {
-  // Use a fixed number of periods since we removed the periods admin panel
-  const numPeriods = 7
-  return Array.from({ length: numPeriods }, (_, i) => (i + 1).toString())
+  // Use app settings for periods
+  if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
+    return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
+  }
+  
+  // Fallback to default periods
+  return ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
 })
 
 function getAideId(aide) {
@@ -227,11 +233,12 @@ async function loadData() {
     await Promise.all([
       fetchUsers(),
       fetchStudents(),
-      loadAideAssignments()
+      loadAideAssignments(),
+      loadAppSettings()
     ])
     loading.value = false
   } catch (error) {
-    console.error('Error loading aide assignments:', error)
+    console.error('Error loading data:', error)
     loading.value = false
   }
 }

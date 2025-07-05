@@ -81,6 +81,15 @@ const routes = [
       allowedRoles: ['paraeducator'],
     },
   },
+  {
+    path: '/testing',
+    name: 'Testing',
+    component: () => import('@/views/TestingView.vue'),
+    meta: {
+      requiresAuth: true,
+      allowedRoles: ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'],
+    },
+  },
   // ... add other routes here with their own meta fields
 ];
 

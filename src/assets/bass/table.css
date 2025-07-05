@@ -58,22 +58,7 @@
 }
 
 .schedule-list {
-  max-height: 9.6em;
-  
-  transition: max-height 0.3s ease;
-}
-
-.schedule-list.expanded {
-  max-height: none;
-}
-
-.expand-toggle {
-  text-align: center;
-  cursor: pointer;
-  color: #005bb5;
-  font-size: 1.2em;
-  margin-top: 0.3em;
-  user-select: none;
+  /* Container for schedule items */
 }
 
 .bullet-list {
@@ -401,7 +386,6 @@
   .edit-btn,
   .email-btn,
   .teacher-feedback-btn,
-  .expand-toggle,
   .flag-overlay,
   .badge,
   .docs-item,

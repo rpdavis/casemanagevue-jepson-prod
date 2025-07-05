@@ -2,42 +2,126 @@
 
 <template>
   <div class="students-view">
-    <div class="header">
+    <!-- Navigation Menu -->
+    <StudentNavMenu
+      :current-user="currentUser"
+      :is-admin="isAdmin"
+      @action="handleNavAction"
+    />
+    
+    <!-- Page Header with Search -->
+    <div class="page-header">
       <div class="header-left">
         <h1>Student Management</h1>
-        <div class="user-info">
-          {{ currentUser?.name || currentUser?.email || 'User' }}
-          <span v-if="currentUser?.role">({{ currentUser.role }})</span>
+        <div class="search-container">
+          <input 
+            type="text" 
+            v-model="currentFilters.search" 
+            @input="debouncedApplyFilters"
+            placeholder="Search students..."
+            class="search-input"
+          >
         </div>
       </div>
-      <div class="header-actions">
-        <button @click="showExport = true" class="btn btn-secondary">
-          <span>📊</span> Export
+      <div class="header-controls">
+        <!-- Filter Toggle Button -->
+        <button @click="toggleFilters" class="filter-toggle-btn" :class="{ active: showFilters }">
+          <span>🔍</span> Filters
         </button>
-        <button v-if="isAdmin" @click="navigateToAdmin" class="btn btn-secondary">
-          <span>⚙️</span> Admin
-        </button>
-        <button v-if="currentUser?.role === 'paraeducator'" @click="navigateToAideSchedule" class="btn btn-secondary">
-          <span>📅</span> My Schedule
-        </button>
-        <button @click="showAddStudent = true" class="btn btn-primary">
-          <span>➕</span> Add Student
-        </button>
-        <button @click="handleLogout" class="btn btn-secondary">
-          <span>🚪</span> Logout
+
+        <!-- Provider View (for case managers) -->
+        <div v-if="showProviderView" class="filter-group">
+          <div class="radio-group">
+            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'all' }">
+              <input type="radio" v-model="currentFilters.providerView" value="all" @change="applyFilters">
+              All
+            </label>
+            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'case_manager' }">
+              <input type="radio" v-model="currentFilters.providerView" value="case_manager" @change="applyFilters">
+              CM
+            </label>
+            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'service_provider' }">
+              <input type="radio" v-model="currentFilters.providerView" value="service_provider" @change="applyFilters">
+              SP
+            </label>
+          </div>
+        </div>
+
+        <!-- View Mode -->
+        <div class="filter-group">
+          <div class="radio-group">
+            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'list' }">
+              <input type="radio" v-model="currentFilters.viewMode" value="list" @change="applyFilters()">
+              List
+            </label>
+            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'class' }">
+              <input type="radio" v-model="currentFilters.viewMode" value="class" @change="applyFilters()">
+              Class
+            </label>
+            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
+              <input type="radio" v-model="currentFilters.viewMode" value="testing" @change="applyFilters()">
+              Test
+            </label>
+          </div>
+        </div>
+
+        <!-- Reset Filters -->
+        <button @click="clearFilters" class="reset-btn" title="Reset all filters">
+          🔄
         </button>
       </div>
     </div>
-    
-    <div class="controls">
-      <StudentFilters
-        :case-managers="caseManagers"
-        :teachers="teacherList"
-        :paraeducators="paraeducators"
-        :current-user-role="currentUser?.role"
-        :current-user-id="currentUser?.uid"
-        @filter="applyFilters"
-      />
+
+    <!-- Hidden Filters Panel -->
+    <div v-if="showFilters" class="filters-panel">
+      <div class="filters-content">
+        <!-- Sort By -->
+        <div class="filter-group">
+          <label>Sort By</label>
+          <select v-model="currentFilters.sortBy" @change="applyFilters()" class="filter-select">
+            <option value="first_name">First Name</option>
+            <option value="last_name">Last Name</option>
+            <option value="grade">Grade</option>
+            <option value="plan">Plan</option>
+            <option value="reviewDate">Review Date</option>
+            <option value="reevalDate">Re-evaluation Date</option>
+            <option value="meetingDate">Meeting Date</option>
+          </select>
+        </div>
+
+        <!-- Case Manager Filter -->
+        <div class="filter-group">
+          <label>Case Manager</label>
+          <select v-model="currentFilters.cm" @change="applyFilters()" class="filter-select">
+            <option value="all">All Case Managers</option>
+            <option v-for="cm in caseManagers" :key="cm.id" :value="cm.id">
+              {{ cm.name || cm.email || cm.id }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Teacher Filter -->
+        <div class="filter-group">
+          <label>Teacher</label>
+          <select v-model="currentFilters.teacher" @change="applyFilters()" class="filter-select">
+            <option value="all">All Teachers</option>
+            <option v-for="t in teacherList" :key="t.id" :value="t.id">
+              {{ t.name || t.email || t.id }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Paraeducator Filter -->
+        <div class="filter-group">
+          <label>Paraeducator</label>
+          <select v-model="currentFilters.paraeducator" @change="applyFilters()" class="filter-select">
+            <option value="all">All Paraeducators</option>
+            <option v-for="p in paraeducators" :key="p.id" :value="p.id">
+              {{ p.name || p.email || p.id }}
+            </option>
+          </select>
+        </div>
+      </div>
     </div>
     
     <div class="content">
@@ -132,7 +216,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '@/firebase'
@@ -141,7 +225,7 @@ import useUsers from '@/composables/useUsers.js'
 import useAideAssignment from '@/composables/useAideAssignment.js'
 import { useAuthStore } from '@/store/authStore'
 import { getDisplayValue } from '@/utils/studentUtils'
-import StudentFilters from '@/components/students/StudentFilters.vue'
+import StudentNavMenu from '@/components/students/StudentNavMenu.vue'
 import StudentTable from '@/components/students/StudentTable.vue'
 import StudentEditDialog from '@/components/students/StudentEditDialog.vue'
 import StudentsEmailDialog from '@/components/students/StudentsEmailDialog.vue'
@@ -263,6 +347,32 @@ const editingStudentId = ref(null)
 const emailingStudentId = ref(null)
 const showExport = ref(false)
 const showAddStudent = ref(false)
+const showFilters = ref(false)
+
+// Debounced apply filters for search
+let debounceTimer = null
+const debouncedApplyFilters = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    applyFilters()
+  }, 300) // 300ms delay
+}
+
+// Current filters state
+const currentFilters = reactive({
+  sortBy: 'first_name',
+  cm: 'all',
+  teacher: 'all',
+  paraeducator: 'all',
+  search: '',
+  providerView: 'all',
+  viewMode: 'list'
+})
+
+// Check if provider view should be shown
+const showProviderView = computed(() => {
+  return ['case_manager', 'administrator_504_CM', 'sped_chair'].includes(currentUser.value?.role)
+})
 
 const userMapObj = computed(() => userMap.value || {})
 
@@ -302,9 +412,22 @@ function getCaseManagerName(caseManagerId) {
   return user ? (user.name || user.email || caseManagerId) : caseManagerId
 }
 
-function applyFilters(filters) {
-  console.log('applyFilters called with:', filters)
-  console.log('Initial students count:', students.value.length)
+function toggleFilters() {
+  showFilters.value = !showFilters.value
+}
+
+function clearFilters() {
+  currentFilters.sortBy = 'first_name'
+  currentFilters.cm = 'all'
+  currentFilters.teacher = 'all'
+  currentFilters.paraeducator = 'all'
+  currentFilters.search = ''
+  currentFilters.providerView = 'all'
+  currentFilters.viewMode = 'list'
+  applyFilters()
+}
+
+function applyFilters(filters = currentFilters) {
   let result = students.value
 
   // Apply provider view filtering (for case managers)
@@ -356,47 +479,17 @@ function applyFilters(filters) {
 
   // Apply paraeducator filter
   if (filters.paraeducator && filters.paraeducator !== 'all') {
-    console.log('Filtering by paraeducator:', filters.paraeducator)
-    console.log('Students before paraeducator filter:', result.length)
-    console.log('Aide assignments loaded:', Object.keys(aideAssignment.value).length > 0)
-    console.log('Aide assignments data:', aideAssignment.value)
-    
     // Track the current paraeducator filter
     currentParaeducatorFilter.value = filters.paraeducator
     
-    // Get the aide's schedule data
-    const aideData = aideAssignment.value[filters.paraeducator]
-    console.log('Selected aide data:', aideData)
-    
     result = result.filter(s => {
       try {
-            // Debug: Log the actual student data structure
-    console.log('Student data:', {
-      id: s.id,
-      firstName: s.first_name,
-      lastName: s.last_name,
-      firstNameDisplay: getDisplayValue(s, 'firstName'),
-      lastNameDisplay: getDisplayValue(s, 'lastName'),
-      plan: s.plan,
-      schedule: s.schedule,
-      // Check all possible field names
-      allFields: Object.keys(s).filter(key => key.includes('name') || key.includes('first') || key.includes('last'))
-    })
-        
-        const shouldSee = shouldAideSeeStudent(filters.paraeducator, s.id, students.value, userMap.value)
-        if (shouldSee) {
-          console.log('Paraeducator can see student:', getDisplayValue(s, 'firstName'), getDisplayValue(s, 'lastName'))
-        } else {
-          console.log('Paraeducator cannot see student:', getDisplayValue(s, 'firstName'), getDisplayValue(s, 'lastName'))
-        }
-        return shouldSee
+        return shouldAideSeeStudent(filters.paraeducator, s.id, students.value, userMap.value)
       } catch (error) {
         console.error('Error filtering student for paraeducator:', error)
         return false
       }
     })
-    
-    console.log('Students after paraeducator filter:', result.length)
   }
 
   // Apply sorting
@@ -418,11 +511,9 @@ function applyFilters(filters) {
 
   // Store the filtered results
   filteredStudents.value = result
-  console.log('Final filtered students count:', result.length)
   
   // Handle view mode
   currentViewMode.value = filters.viewMode || 'list'
-  console.log('View mode set to:', currentViewMode.value)
 }
 
 function editStudent(studentId) {
@@ -453,8 +544,38 @@ function navigateToAdmin() {
   router.push('/admin')
 }
 
+function navigateToTesting() {
+  router.push('/testing')
+}
+
 function navigateToAideSchedule() {
   router.push('/aide-schedule')
+}
+
+async function handleNavAction(action) {
+  switch (action) {
+    case 'add-student':
+      showAddStudent.value = true
+      break
+    case 'export':
+      showExport.value = true
+      break
+    case 'print':
+      window.print()
+      break
+    case 'admin':
+      navigateToAdmin()
+      break
+    case 'testing':
+      navigateToTesting()
+      break
+    case 'aide-schedule':
+      navigateToAideSchedule()
+      break
+    case 'logout':
+      handleLogout()
+      break
+  }
 }
 
 async function handleLogout() {
@@ -469,7 +590,7 @@ async function handleLogout() {
 // Helper function to get current filters
 function getCurrentFilters() {
   return {
-    paraeducator: currentParaeducatorFilter.value
+    paraeducator: currentFilters.paraeducator
   }
 }
 </script>
@@ -477,74 +598,238 @@ function getCurrentFilters() {
 <style scoped>
 .students-view {
   padding: 20px;
+  padding-top: 30px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
   padding-bottom: 15px;
   border-bottom: 2px solid #e0e0e0;
+  gap: 20px;
 }
 
 .header-left {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 20px;
 }
 
-.header h1 {
+.header-left h1 {
   margin: 0;
   color: #333;
   font-size: 2rem;
+  white-space: nowrap;
 }
 
-.user-info {
-  font-size: 0.9rem;
-  color: #666;
-  font-style: italic;
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
+.search-container {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  min-width: 250px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
   cursor: pointer;
+  font-size: 0.9rem;
   font-weight: 500;
+  transition: all 0.2s;
+  color: #495057;
+}
+
+.filter-toggle-btn:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.filter-toggle-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.filter-toggle-btn.active:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+}
+
+.radio-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.radio-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+  color: #6c757d;
+  position: relative;
+}
+
+.radio-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.radio-btn.active {
+  background: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.radio-btn.active:hover {
+  background: #0056b3;
+  color: white;
+}
+
+.radio-btn input[type="radio"] {
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.reset-btn {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 1rem;
   transition: all 0.2s;
 }
 
-.btn-primary {
-  background: #007bff;
-  color: white;
+.reset-btn:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
 }
 
-.btn-primary:hover {
-  background: #0056b3;
-}
-
-.btn-secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background: #545b62;
-}
-
-.controls {
+/* Filters Panel */
+.filters-panel {
   margin-bottom: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+}
+
+.filters-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.filters-content .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filters-content .filter-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  width: 100%;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Responsive design for filters */
+@media (max-width: 1200px) {
+  .header-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .filter-group {
+    justify-content: flex-start;
+  }
+  
+  .search-input {
+    min-width: 100%;
+  }
+  
+  .filter-select {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .header-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .radio-group {
+    justify-content: center;
+  }
 }
 
 .content {

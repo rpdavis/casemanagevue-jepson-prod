@@ -10,6 +10,20 @@
         <fieldset class="form-col">
           <legend>Student Info</legend>
           <div class="inner-grid-3">
+            <label v-if="mode === 'new'" class="ssid-field">
+              <span class="field-label">SSID (State Student ID) *</span>
+              <input 
+                v-model="form.ssid" 
+                type="text" 
+                required 
+                placeholder="Enter student SSID" 
+                class="ssid-input"
+              />
+              <div class="field-help">
+                <strong>Required:</strong> This can be found in your Student Information System (SIS) such as Aeries, or in SEIS. 
+                The SSID is used to link student data across different systems.
+              </div>
+            </label>
             <label>First Name:
               <input v-model="form.firstName" type="text" required />
             </label>
@@ -48,18 +62,14 @@
           </div>
         </fieldset>
 
-        <!-- Admin Overrides -->
-        <fieldset class="form-col override-section">
-          <legend>Admin Overrides</legend>
-          <!-- Removed periods override since we removed the periods admin panel -->
-        </fieldset>
+
 
         <!-- Schedule -->
         <fieldset class="form-col">
           <legend>Schedule</legend>
           <div class="inner-grid-3">
             <template v-for="p in periods" :key="p">
-              <label>Period {{ p }}:
+              <label>{{ p }}:
                 <select v-model="form.schedule[p]" class="sched">
                   <option value="">--</option>
                   <option v-for="t in userRoles.teachers" :key="t.id" :value="t.id">
@@ -75,21 +85,37 @@
         <fieldset class="form-col">
           <legend>Services: classes</legend>
           <div class="inner-grid-3">
-            <template v-if="appSettings && appSettings.value && appSettings.value.classServices">
+            <!-- Loading state -->
+            <template v-if="appSettingsLoading">
+              <div class="loading-message">
+                <span class="loading-spinner">⏳</span> Loading app settings...
+              </div>
+            </template>
+            
+            <!-- Error state -->
+            <template v-else-if="appSettingsError">
+              <div class="error-message">
+                <span class="error-icon">⚠️</span> Error loading app settings: {{ appSettingsError }}
+              </div>
+            </template>
+            
+            <!-- Success state -->
+            <template v-else-if="availableClassServices.length > 0">
               <ServiceCheckboxGroup
-                v-for="service in appSettings.value.classServices"
+                v-for="service in availableClassServices"
                 :key="service.name"
                 :label="service.name"
-                :items="service.enabledSubcategories || service.subcategories"
+                :items="service.enabledSubcategories"
                 v-model="form.services"
               />
             </template>
+            
+            <!-- No services state -->
             <template v-else>
-              <!-- fallback to default -->
-              <ServiceCheckboxGroup label="Co-teach" :items="['English', 'Math']" v-model="form.services" />
-              <ServiceCheckboxGroup label="RSP" :items="['English', 'Math']" v-model="form.services" />
-              <ServiceCheckboxGroup label="SDC" :items="['English', 'Math', 'History', 'Science']" v-model="form.services" />
-              <ServiceCheckboxGroup label="FA" :items="['']" v-model="form.services" />
+              <div class="no-services-message">
+                <span class="info-icon">ℹ️</span> No class services configured. 
+                <a href="/admin" class="settings-link">Configure in App Settings</a>
+              </div>
             </template>
           </div>
         </fieldset>
@@ -99,10 +125,6 @@
           <legend>Services: providers</legend>
           <div class="inner-grid-3">
             <template v-if="serviceProviders.length > 0">
-              <!-- Debug info -->
-              <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Debug: Found {{ serviceProviders.length }} service providers in app settings
-              </div>
               <ServiceSelect
                 v-for="abbr in serviceProviders"
                 :key="abbr"
@@ -121,12 +143,9 @@
               />
             </template>
             <template v-else>
-              <!-- Debug info -->
-              <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
-                Debug: No service providers configured in app settings
-              </div>
-              <div style="font-size: 12px; color: #999; font-style: italic;">
-                Please configure service providers in App Settings to see provider options here.
+              <div class="no-services-message">
+                <span class="info-icon">ℹ️</span> No service providers configured. 
+                <a href="/admin" class="settings-link">Configure in App Settings</a>
               </div>
             </template>
           </div>
@@ -211,24 +230,51 @@ const props = defineProps({
 const emit = defineEmits(['close', 'saved'])
 
 // Load app settings
-const { appSettings, loadAppSettings } = useAppSettings()
+const { appSettings, loadAppSettings, loading: appSettingsLoading, error: appSettingsError } = useAppSettings()
 onMounted(async () => {
-  await loadAppSettings()
+  try {
+    console.log('StudentForm: Starting to load app settings...')
+    await loadAppSettings()
+    console.log('StudentForm: App settings loaded successfully:', appSettings.value)
+    console.log('StudentForm: App settings loading state:', appSettingsLoading.value)
+    console.log('StudentForm: App settings error:', appSettingsError.value)
+  } catch (error) {
+    console.error('StudentForm: Error loading app settings:', error)
+  }
 })
 
-// Dynamic periods - use fixed number since we removed periods admin panel
-const DEFAULT_PERIODS = ['1', '2', '3', '4', '5', '6', '7']
+// Dynamic periods - use app settings only
 const periods = computed(() => {
-  // Use fixed periods since we removed the periods admin panel
-  return DEFAULT_PERIODS
+  // Use app settings periods
+  if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
+    return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
+  }
+  
+  // Fallback to default periods
+  return ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
 })
 
 // Grades options
 const gradeOptions = computed(() => {
   if (appSettings.value && appSettings.value.grades && appSettings.value.grades.length > 0) {
+    console.log('StudentForm: Using app settings grades:', appSettings.value.grades)
     return appSettings.value.grades
   }
+  console.log('StudentForm: Using fallback grades: [7, 8]')
   return ['7', '8']
+})
+
+// Class services for template - reactive to app settings
+const availableClassServices = computed(() => {
+  if (appSettings.value && appSettings.value.classServices && appSettings.value.classServices.length > 0) {
+    const enabledServices = appSettings.value.classServices.filter(s => 
+      s.enabledSubcategories && s.enabledSubcategories.length > 0
+    )
+    console.log('StudentForm: Available class services:', enabledServices.length, 'services')
+    return enabledServices
+  }
+  console.log('StudentForm: No class services available')
+  return []
 })
 
 // Use the new userRoles structure that matches vanilla JS
@@ -248,6 +294,7 @@ const userRoles = computed(() => {
 
 // Form state - use hierarchy for fields that could have duplicate data
 const form = reactive({
+  ssid: props.student.id || '',
   firstName: getDisplayValue(props.student, 'firstName') || '',
   lastName: getDisplayValue(props.student, 'lastName') || '',
   grade: getDisplayValue(props.student, 'grade') || '7',
@@ -255,27 +302,29 @@ const form = reactive({
   reviewDate: getDisplayValue(props.student, 'reviewDate') || '',
   reevalDate: getDisplayValue(props.student, 'reevalDate') || '',
   meetingDate: getDisplayValue(props.student, 'meetingDate') || '',
-  caseManagerId: props.student.caseManagerId || props.student.casemanager_id || '',
-  schedule: { ...props.student.schedule } || {},
-  services: props.student.services ? props.student.services.filter(s => s.includes(':')) : [],
-  speechId: props.student.speechId || props.student.speech_id || '',
-  otId: props.student.otId || props.student.ot_id || '',
-  mhId: props.student.mhId || props.student.mh_id || '',
-  ptId: props.student.ptId || props.student.pt_id || '',
-  scId: props.student.scId || props.student.sc_id || '',
-  trId: props.student.trId || props.student.tr_id || '',
-  audId: props.student.audId || props.student.aud_id || '',
-  viId: props.student.viId || props.student.vi_id || '',
-  atId: props.student.atId || props.student.at_id || '',
-  dhhId: props.student.dhhId || props.student.dhh_id || '',
-  omId: props.student.omId || props.student.om_id || '',
-  bisId: props.student.bisId || props.student.bis_id || '',
-  hnId: props.student.hnId || props.student.hn_id || '',
-  swId: props.student.swId || props.student.sw_id || '',
+  caseManagerId: props.student.app?.studentData?.caseManagerId || props.student.caseManagerId || props.student.casemanager_id || '',
+  schedule: { ...(props.student.app?.schedule?.periods || props.student.schedule) } || {},
+  services: (props.student.app?.schedule?.classServices || props.student.services) || [],
+  speechId: props.student.app?.providers?.speechId || props.student.speechId || props.student.speech_id || '',
+  otId: props.student.app?.providers?.otId || props.student.otId || props.student.ot_id || '',
+  mhId: props.student.app?.providers?.mhId || props.student.mhId || props.student.mh_id || '',
+  ptId: props.student.app?.providers?.ptId || props.student.ptId || props.student.pt_id || '',
+  scId: props.student.app?.providers?.scId || props.student.scId || props.student.sc_id || '',
+  trId: props.student.app?.providers?.trId || props.student.trId || props.student.tr_id || '',
+  audId: props.student.app?.providers?.audId || props.student.audId || props.student.aud_id || '',
+  viId: props.student.app?.providers?.viId || props.student.viId || props.student.vi_id || '',
+  atId: props.student.app?.providers?.atId || props.student.atId || props.student.at_id || '',
+  dhhId: props.student.app?.providers?.dhhId || props.student.dhhId || props.student.dhh_id || '',
+  omId: props.student.app?.providers?.omId || props.student.omId || props.student.om_id || '',
+  bisId: props.student.app?.providers?.bisId || props.student.bisId || props.student.bis_id || '',
+  hnId: props.student.app?.providers?.hnId || props.student.hnId || props.student.hn_id || '',
+  swId: props.student.app?.providers?.swId || props.student.swId || props.student.sw_id || '',
   instruction: getDisplayValue(props.student, 'instruction') || '',
   assessment: getDisplayValue(props.student, 'assessment') || '',
-  flag1: !!props.student.flag1,
-  flag2: !!props.student.flag2,
+  flag1: props.student.app?.flags?.flag1 || props.student.flag1 || false,
+  flag2: props.student.app?.flags?.flag2 || props.student.flag2 || false,
+  ataglancePdfUrl: props.student.app?.documents?.ataglancePdfUrl || props.student.ataglancePdfUrl || '',
+  bipPdfUrl: props.student.app?.documents?.bipPdfUrl || props.student.bipPdfUrl || '',
   bipFile: null,
   ataglanceFile: null,
   removeBipFile: false,
@@ -285,6 +334,7 @@ const form = reactive({
 // Watch for changes in student prop and update form
 watch(() => props.student, (newStudent) => {
   if (newStudent && Object.keys(newStudent).length > 0) {
+    form.ssid = newStudent.id || ''
     form.firstName = getDisplayValue(newStudent, 'firstName') || ''
     form.lastName = getDisplayValue(newStudent, 'lastName') || ''
     form.grade = getDisplayValue(newStudent, 'grade') || '7'
@@ -292,31 +342,43 @@ watch(() => props.student, (newStudent) => {
     form.reviewDate = getDisplayValue(newStudent, 'reviewDate') || ''
     form.reevalDate = getDisplayValue(newStudent, 'reevalDate') || ''
     form.meetingDate = getDisplayValue(newStudent, 'meetingDate') || ''
-    form.caseManagerId = newStudent.caseManagerId || newStudent.casemanager_id || ''
-    form.schedule = { ...newStudent.schedule } || {}
-    form.services = newStudent.services ? newStudent.services.filter(s => s.includes(':')) : []
-    form.speechId = newStudent.speechId || newStudent.speech_id || ''
-    form.otId = newStudent.otId || newStudent.ot_id || ''
-    form.mhId = newStudent.mhId || newStudent.mh_id || ''
-    form.ptId = newStudent.ptId || newStudent.pt_id || ''
-    form.scId = newStudent.scId || newStudent.sc_id || ''
-    form.trId = newStudent.trId || newStudent.tr_id || ''
-    form.audId = newStudent.audId || newStudent.aud_id || ''
-    form.viId = newStudent.viId || newStudent.vi_id || ''
-    form.atId = newStudent.atId || newStudent.at_id || ''
-    form.dhhId = newStudent.dhhId || newStudent.dhh_id || ''
-    form.omId = newStudent.omId || newStudent.om_id || ''
-    form.bisId = newStudent.bisId || newStudent.bis_id || ''
-    form.hnId = newStudent.hnId || newStudent.hn_id || ''
-    form.swId = newStudent.swId || newStudent.sw_id || ''
+    form.caseManagerId = newStudent.app?.studentData?.caseManagerId || newStudent.caseManagerId || newStudent.casemanager_id || ''
+    form.schedule = { ...newStudent.app?.schedule?.periods || newStudent.schedule } || {}
+    form.services = newStudent.app?.schedule?.classServices || newStudent.services || []
+    form.speechId = newStudent.app?.providers?.speechId || newStudent.speechId || newStudent.speech_id || ''
+    form.otId = newStudent.app?.providers?.otId || newStudent.otId || newStudent.ot_id || ''
+    form.mhId = newStudent.app?.providers?.mhId || newStudent.mhId || newStudent.mh_id || ''
+    form.ptId = newStudent.app?.providers?.ptId || newStudent.ptId || newStudent.pt_id || ''
+    form.scId = newStudent.app?.providers?.scId || newStudent.scId || newStudent.sc_id || ''
+    form.trId = newStudent.app?.providers?.trId || newStudent.trId || newStudent.tr_id || ''
+    form.audId = newStudent.app?.providers?.audId || newStudent.audId || newStudent.aud_id || ''
+    form.viId = newStudent.app?.providers?.viId || newStudent.viId || newStudent.vi_id || ''
+    form.atId = newStudent.app?.providers?.atId || newStudent.atId || newStudent.at_id || ''
+    form.dhhId = newStudent.app?.providers?.dhhId || newStudent.dhhId || newStudent.dhh_id || ''
+    form.omId = newStudent.app?.providers?.omId || newStudent.omId || newStudent.om_id || ''
+    form.bisId = newStudent.app?.providers?.bisId || newStudent.bisId || newStudent.bis_id || ''
+    form.hnId = newStudent.app?.providers?.hnId || newStudent.hnId || newStudent.hn_id || ''
+    form.swId = newStudent.app?.providers?.swId || newStudent.swId || newStudent.sw_id || ''
     form.instruction = getDisplayValue(newStudent, 'instruction') || ''
     form.assessment = getDisplayValue(newStudent, 'assessment') || ''
-    form.flag1 = !!newStudent.flag1
-    form.flag2 = !!newStudent.flag2
+    form.flag1 = !!(newStudent.app?.flags?.flag1 || newStudent.flag1)
+    form.flag2 = !!(newStudent.app?.flags?.flag2 || newStudent.flag2)
     form.bipFile = null
     form.ataglanceFile = null
     form.removeBipFile = false
     form.removeAtaglanceFile = false
+  }
+}, { immediate: true, deep: true })
+
+// Watch for app settings changes and update form accordingly
+watch(() => appSettings.value, (newSettings) => {
+  console.log('StudentForm: App settings watcher triggered:', newSettings)
+  
+  // Update grade if app settings has grades and current grade is not in the list
+  if (newSettings?.grades && newSettings.grades.length > 0) {
+    if (!newSettings.grades.includes(form.grade)) {
+      form.grade = newSettings.grades[0] || '7'
+    }
   }
 }, { immediate: true, deep: true })
 
@@ -441,17 +503,11 @@ function getProviderUsers(abbr) {
   return userRoles.value[userRoleKey] || []
 }
 const serviceProviders = computed(() => {
-  console.log('serviceProviders computed - appSettings:', appSettings)
-  console.log('appSettings.value:', appSettings.value)
-  console.log('appSettings.value.serviceProviders:', appSettings.value?.serviceProviders)
-  console.log('appSettings.value.serviceProviders length:', appSettings.value?.serviceProviders?.length)
-  
   if (appSettings.value && appSettings.value.serviceProviders && appSettings.value.serviceProviders.length > 0) {
-    console.log('✅ Using app settings service providers:', appSettings.value.serviceProviders)
+    console.log('StudentForm: Using app settings service providers:', appSettings.value.serviceProviders.length, 'providers')
     return appSettings.value.serviceProviders
   }
-  // No fallback - return empty array if no providers configured
-  console.log('❌ No service providers configured in app settings')
+  console.log('StudentForm: No service providers configured in app settings')
   return []
 })
 const customServiceProviders = computed(() => {
@@ -466,6 +522,13 @@ async function handleSubmit() {
   try {
     console.log('Form submitted:', form)
     isSaving.value = true
+    
+    // Validate SSID for new students
+    if (props.mode === 'new' && (!form.ssid || form.ssid.trim() === '')) {
+      alert('SSID is required. Please enter the student\'s State Student ID from your SIS (Aeries, SEIS, etc.).')
+      isSaving.value = false
+      return
+    }
     
     // Compose services arrays
     const classServices = form.services.filter(s => s && s.includes(':'))
@@ -506,38 +569,72 @@ async function handleSubmit() {
       console.log('At-A-Glance uploaded:', ataglancePdfUrl)
     }
     
-    // Compose payload
+    // Compose payload - save to nested 'app' structure with categories
+    const appData = {
+      // Basic student information
+      studentData: {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        grade: form.grade,
+        plan: form.plan,
+        caseManagerId: form.caseManagerId
+      },
+      
+      // Important dates
+      dates: {
+        reviewDate: form.reviewDate,
+        reevalDate: form.reevalDate,
+        meetingDate: form.meetingDate
+      },
+      
+      // Academic schedule and services
+      schedule: {
+        periods: schedule,
+        classServices: classServices
+      },
+      
+      // Service providers
+      providers: {
+        speechId: form.speechId,
+        otId: form.otId,
+        mhId: form.mhId,
+        ptId: form.ptId,
+        scId: form.scId,
+        trId: form.trId,
+        audId: form.audId,
+        viId: form.viId,
+        atId: form.atId,
+        dhhId: form.dhhId,
+        omId: form.omId,
+        bisId: form.bisId,
+        hnId: form.hnId,
+        swId: form.swId
+      },
+      
+      // Accommodations
+      accommodations: {
+        instruction: form.instruction,
+        assessment: form.assessment
+      },
+      
+      // Flags
+      flags: {
+        flag1: form.flag1,
+        flag2: form.flag2
+      },
+      
+      // Documents
+      documents: {
+        ataglancePdfUrl: ataglancePdfUrl,
+        bipPdfUrl: bipPdfUrl
+      }
+    }
+    
+    console.log('Saving payload:', appData)
+    
+    // Create the full payload with nested structure
     const payload = {
-      firstName: form.firstName,
-      lastName: form.lastName,
-      grade: form.grade,
-      plan: form.plan,
-      reviewDate: form.reviewDate,
-      reevalDate: form.reevalDate,
-      meetingDate: form.meetingDate,
-      caseManagerId: form.caseManagerId,
-      schedule,
-      services: classServices,
-      speechId: form.speechId,
-      otId: form.otId,
-      mhId: form.mhId,
-      ptId: form.ptId,
-      scId: form.scId,
-      trId: form.trId,
-      audId: form.audId,
-      viId: form.viId,
-      atId: form.atId,
-      dhhId: form.dhhId,
-      omId: form.omId,
-      bisId: form.bisId,
-      hnId: form.hnId,
-      swId: form.swId,
-      instruction: form.instruction,
-      assessment: form.assessment,
-      flag1: form.flag1,
-      flag2: form.flag2,
-      bipPdfUrl: bipPdfUrl,
-      ataglancePdfUrl: ataglancePdfUrl,
+      app: appData,
       updatedAt: serverTimestamp()
     }
     
@@ -546,16 +643,28 @@ async function handleSubmit() {
     // Save to Firestore
     if (props.mode === 'edit' && props.student.id) {
       console.log('Updating existing student:', props.student.id)
-      // Update existing student
-      await setDoc(doc(db, 'students', props.student.id), payload)
+      // Update existing student with merge to preserve other data
+      await setDoc(doc(db, 'students', props.student.id), payload, { merge: true })
       console.log('Student updated successfully')
     } else {
       console.log('Adding new student')
-      // Add new student
+      // For new students, SSID is required
+      if (!form.ssid || form.ssid.trim() === '') {
+        alert('SSID is required for new students')
+        return
+      }
+      
+      const ssid = form.ssid.trim()
+      
+      // Add SSID to the payload for internal reference
+      payload.app.studentData.ssid = ssid
+      
+      // Use Firebase auto-generated ID for security
+      const docRef = doc(collection(db, 'students'))
       payload.createdAt = serverTimestamp()
-      const docRef = await addDoc(collection(db, 'students'), payload)
+      await setDoc(docRef, payload)
       payload.id = docRef.id
-      console.log('Student added successfully with ID:', docRef.id)
+      console.log('Student added successfully with ID:', docRef.id, 'SSID:', ssid)
     }
     
     emit('saved', payload)
@@ -570,6 +679,38 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+.ssid-field {
+  grid-column: span 3;
+  margin-bottom: 20px;
+}
+
+.field-label {
+  font-weight: 600;
+  color: #d32f2f;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.ssid-input {
+  border: 2px solid #d32f2f;
+  background-color: #fff3f3;
+}
+
+.ssid-input:focus {
+  border-color: #1976d2;
+  background-color: #fff;
+}
+
+.field-help {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  border-left: 3px solid #1976d2;
+}
+
 .btn-remove {
   background: #f44336;
   color: white;
@@ -606,5 +747,62 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* App Settings Integration Styles */
+.loading-message, .error-message, .no-services-message {
+  grid-column: span 3;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.loading-message {
+  background-color: #f0f8ff;
+  color: #0066cc;
+  border: 1px solid #b3d9ff;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.error-message {
+  background-color: #fff5f5;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+}
+
+.error-icon {
+  font-size: 16px;
+}
+
+.no-services-message {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.info-icon {
+  font-size: 16px;
+}
+
+.settings-link {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

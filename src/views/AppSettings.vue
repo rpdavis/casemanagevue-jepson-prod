@@ -4,7 +4,8 @@
     <form @submit.prevent="saveSettings">
       <!-- Grades -->
       <section class="settings-section">
-        <h3>Grades</h3>
+        <fieldset>
+        <legend>Grades</legend>
         <div class="grades-checkboxes">
           <label>
             <input type="checkbox" :checked="allGradesSelected" @change="toggleAllGrades" />
@@ -14,7 +15,7 @@
             <input type="checkbox" v-model="settings.grades" :value="grade.value" />
             <span>{{ grade.label }}</span>
           </label>
-        </div>
+        </div></fieldset>
       </section>
 
       <!-- Class Services -->
@@ -105,33 +106,83 @@
 
       <!-- Service Providers -->
       <section class="settings-section">
-        <h3>Service Providers</h3>
-        <div class="service-providers-defaults">
-          <label v-for="service in serviceProviders" :key="service.abbreviation">
-            <input type="checkbox" v-model="settings.serviceProviders" :value="service.abbreviation" />
-            <span>{{ service.name }} ({{ service.abbreviation }})</span>
-          </label>
-        </div>
-        <div class="service-providers-custom">
-          <label>Add Custom Service Provider (max 18 chars):</label>
-          <input type="text" v-model="customServiceProvider" maxlength="18" @keyup.enter="addCustomServiceProvider" />
-          <button type="button" @click="addCustomServiceProvider">Add</button>
-          <div class="custom-chips">
-            <span v-for="(svc, idx) in settings.customServiceProviders" :key="svc" class="chip">
-              {{ svc }} <button type="button" @click="removeCustomServiceProvider(idx)">×</button>
-            </span>
+        <fieldset>
+          <legend>Service Providers</legend>
+          <div class="service-providers-defaults">
+            <label v-for="service in serviceProviders" :key="service.abbreviation">
+              <input type="checkbox" v-model="settings.serviceProviders" :value="service.abbreviation" />
+              <span>{{ service.name }} ({{ service.abbreviation }})</span>
+            </label>
           </div>
-        </div>
+          <div class="service-providers-custom">
+            <label>Add Custom Service Provider (max 18 chars):</label>
+            <input type="text" v-model="customServiceProvider" maxlength="18" @keyup.enter="addCustomServiceProvider" />
+            <button type="button" @click="addCustomServiceProvider">Add</button>
+            <div class="custom-chips">
+              <span v-for="(svc, idx) in settings.customServiceProviders" :key="svc" class="chip">
+                {{ svc }} <button type="button" @click="removeCustomServiceProvider(idx)">×</button>
+              </span>
+            </div>
+          </div>
+        </fieldset>
       </section>
 
-
+      <!-- Periods -->
+      <section class="settings-section">
+        <fieldset>
+          <legend>Periods</legend>
+          <div class="periods-controls">
+            <div class="period-number-control">
+              <label>
+                Number of Periods (max 15):
+                <input 
+                  type="number" 
+                  v-model="settings.numPeriods" 
+                  min="1" 
+                  max="15" 
+                  class="period-number-input"
+                />
+              </label>
+            </div>
+            
+            <div class="period-labels" v-if="settings.numPeriods > 0">
+              <h4>Period Labels (3 chars max each):</h4>
+              <div class="period-labels-grid">
+                <div v-for="i in settings.numPeriods" :key="i" class="period-label-item">
+                  <label>
+                    Period {{ i }}:
+                    <input 
+                      type="text" 
+                      v-model="settings.periodLabels[i-1]" 
+                      maxlength="3" 
+                      :placeholder="`Per${i}`"
+                      class="period-label-input"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="period-preview" v-if="settings.numPeriods > 0">
+              <strong>Preview:</strong> 
+              <span v-for="i in settings.numPeriods" :key="i" class="period-preview-item">
+                {{ settings.periodLabels[i-1] || `Per${i}` }}
+              </span>
+            </div>
+          </div>
+        </fieldset>
+      </section>
 
       <!-- Save/Load/Reset -->
       <section class="settings-section">
-        <button type="submit" :disabled="loading">💾 Save Settings</button>
-        <button type="button" @click="loadSettings" :disabled="loading">📂 Load</button>
-        <button type="button" @click="resetSettings" :disabled="loading">↩️ Reset</button>
-        <span v-if="status" :class="{ error: statusError }">{{ status }}</span>
+        <div class="action-buttons">
+          <button type="submit" :disabled="saveLoading || loading">💾 Save Settings</button>
+          <button type="button" @click="() => loadSettings(true)" :disabled="loading">📂 Load</button>
+          <button type="button" @click="resetSettings" :disabled="loading">↩️ Reset</button>
+        </div>
+        <div v-if="status" class="status-message" :class="{ error: statusError, success: !statusError }">
+          {{ status }}
+        </div>
       </section>
     </form>
   </div>
@@ -142,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAppSettings } from '../composables/useAppSettings.js'
 import { useAuth } from '../composables/useAuth.js'
 
@@ -178,6 +229,7 @@ const DEFAULT_SERVICE_PROVIDERS = [
   { name: 'Social Work Services', abbreviation: 'SW' }
 ]
 const { saveAppSettings, loadAppSettings, resetAppSettings, loading, error } = useAppSettings()
+const saveLoading = ref(false)
 const settings = ref({
   grades: [],
   classServices: [
@@ -192,15 +244,15 @@ const settings = ref({
     fa: true
   },
   serviceProviders: DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
-  customServiceProviders: []
+  customServiceProviders: [],
+  numPeriods: 7,
+  periodLabels: ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
 })
 
 const customClassService = ref('')
 const customServiceProvider = ref('')
 const status = ref('')
 const statusError = ref(false)
-
-
 
 const allGradesSelected = computed(() => settings.value.grades.length === gradeOptions.length)
 const toggleAllGrades = () => {
@@ -266,6 +318,21 @@ function normalizeSettings(loaded) {
     { name: 'Directed Studies', subcategories: ['Directed Studies'], enabledSubcategories: ['Directed Studies'] },
     { name: 'FA', subcategories: ['FA'], enabledSubcategories: ['FA'] }
   ]
+  
+  // Handle period labels migration
+  let periodLabels = []
+  if (Array.isArray(loaded.periodLabels)) {
+    periodLabels = loaded.periodLabels
+  } else if (loaded.periodLabel) {
+    // Migration from old single periodLabel to array
+    const numPeriods = loaded.numPeriods || 7
+    periodLabels = Array(numPeriods).fill(loaded.periodLabel)
+  } else {
+    // Default period labels
+    const numPeriods = loaded.numPeriods || 7
+    periodLabels = Array(numPeriods).fill('Per')
+  }
+  
   const merged = {
     grades: loaded.grades || [],
     classServices: Array.isArray(loaded.classServices) ? loaded.classServices.map((svc, i) => ({
@@ -275,7 +342,9 @@ function normalizeSettings(loaded) {
     })) : defaultClassServices,
     directedStudiesFA: loaded.directedStudiesFA || { directedStudies: true, fa: true },
     serviceProviders: Array.isArray(loaded.serviceProviders) ? loaded.serviceProviders : DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
-    customServiceProviders: Array.isArray(loaded.customServiceProviders) ? loaded.customServiceProviders : []
+    customServiceProviders: Array.isArray(loaded.customServiceProviders) ? loaded.customServiceProviders : [],
+    numPeriods: loaded.numPeriods || 7,
+    periodLabels: periodLabels
   }
   // Ensure classServices has at least 5 entries
   while (merged.classServices.length < 5) {
@@ -285,29 +354,52 @@ function normalizeSettings(loaded) {
 }
 
 const saveSettings = async () => {
+  saveLoading.value = true
   status.value = ''
   statusError.value = false
   try {
     console.log('Saving settings:', JSON.stringify(settings.value, null, 2))
     await saveAppSettings(settings.value)
-    status.value = '✅ Settings saved!'
+    status.value = '✅ Settings saved successfully!'
+    // Clear status after 3 seconds
+    setTimeout(() => {
+      if (status.value === '✅ Settings saved successfully!') {
+        status.value = ''
+      }
+    }, 3000)
   } catch (e) {
     console.error('Error saving settings:', e)
     status.value = '❌ Failed to save settings: ' + (e && e.message ? e.message : e)
     statusError.value = true
+  } finally {
+    saveLoading.value = false
   }
 }
-const loadSettings = async () => {
+const loadSettings = async (showMessage = false) => {
   status.value = ''
   statusError.value = false
   try {
     const loaded = await loadAppSettings()
     if (loaded) {
       settings.value = normalizeSettings(loaded)
-      status.value = '✅ Settings loaded!'
+      if (showMessage) {
+        status.value = '✅ Settings loaded!'
+        setTimeout(() => {
+          if (status.value === '✅ Settings loaded!') {
+            status.value = ''
+          }
+        }, 3000)
+      }
     } else {
       settings.value = normalizeSettings({})
-      status.value = 'No saved settings found.'
+      if (showMessage) {
+        status.value = 'No saved settings found.'
+        setTimeout(() => {
+          if (status.value === 'No saved settings found.') {
+            status.value = ''
+          }
+        }, 3000)
+      }
     }
   } catch (e) {
     status.value = '❌ Failed to load settings.'
@@ -329,14 +421,34 @@ const resetSettings = () => {
       fa: true
     },
     serviceProviders: DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
-    customServiceProviders: []
+    customServiceProviders: [],
+    numPeriods: 7,
+    periodLabels: ['1', '2', '3', '4', '5', '6', 'SH']
   }
-  status.value = 'Settings reset.'
+  status.value = 'Settings reset to defaults.'
+  setTimeout(() => {
+    if (status.value === 'Settings reset to defaults.') {
+      status.value = ''
+    }
+  }, 3000)
 }
 
 const serviceProviders = computed(() => DEFAULT_SERVICE_PROVIDERS)
 
-onMounted(loadSettings)
+// Watch for changes in numPeriods and adjust periodLabels array
+watch(() => settings.value.numPeriods, (newNumPeriods, oldNumPeriods) => {
+  if (newNumPeriods > oldNumPeriods) {
+    // Adding periods - add default labels
+    while (settings.value.periodLabels.length < newNumPeriods) {
+      settings.value.periodLabels.push(`Per${settings.value.periodLabels.length + 1}`)
+    }
+  } else if (newNumPeriods < oldNumPeriods) {
+    // Removing periods - trim the array
+    settings.value.periodLabels = settings.value.periodLabels.slice(0, newNumPeriods)
+  }
+}, { immediate: true })
+
+onMounted(() => loadSettings(false))
 
 // TODO: Wire these settings into the rest of the app (forms, filters, etc)
 </script>
@@ -427,6 +539,32 @@ button:disabled {
   color: #b71c1c;
   margin-left: 1rem;
 }
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.status-message {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  margin-top: 1rem;
+}
+
+.status-message.success {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.status-message.error {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+}
 .related-services-defaults {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -441,6 +579,75 @@ button:disabled {
   font-size: 1rem;
   padding: 0.25em 0.5em;
 }
+.periods-controls {
+  margin-bottom: 1rem;
+}
+.period-number-control {
+  flex: 1;
+}
+.period-labels {
+  flex: 1;
+}
+.period-labels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.period-label-item {
+  display: flex;
+  flex-direction: column;
+}
+.period-label-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.period-label-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.period-number-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 100px;
+}
+.period-preview {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+.period-preview-item {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 500;
+}
 
+.service-providers-defaults {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
 
+.service-providers-defaults label {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  width: 100%;
+  font-weight: 500;
+}
+
+.service-providers-custom {
+  margin-top: 1rem;
+}
 </style> 

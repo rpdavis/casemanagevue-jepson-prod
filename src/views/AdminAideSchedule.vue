@@ -193,6 +193,16 @@ const teachers = computed(() => {
   return userList.value?.filter(user => user.role === 'teacher') || []
 })
 
+const periods = computed(() => {
+  // Use app settings for periods
+  if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
+    return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
+  }
+  
+  // Fallback to default periods
+  return ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
+})
+
 // Load time table data
 async function loadTimeTableData() {
   try {
@@ -343,9 +353,7 @@ async function loadData() {
     await Promise.all([
       fetchUsers(),
       fetchStudents(),
-      loadAppSettings(),
-      loadAideSchedules(),
-      loadAideAssignments()
+      loadAppSettings()
     ])
     
     // Load detailed schedule from app settings

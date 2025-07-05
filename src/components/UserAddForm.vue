@@ -49,6 +49,12 @@
             </select>
           </label>
         </div>
+        <div>
+          <label>
+            Aeries ID:
+            <input type="text" v-model="singleUser.aeriesId" placeholder="Optional Aeries Teacher ID" />
+          </label>
+        </div>
         <button type="submit">Add User</button>
       </form>
     </div>
@@ -68,12 +74,15 @@
       </div>
       <h4>Example Formatting</h4>
       <div>File needs to be in .csv, .xls, .xlsx format, like an Excel spreadsheet.</div>
-      <div>
-        <img
-          src="../assets/images/bulk_upload_ex.png"
-          alt="Bulk User Upload Example Format"
-          style="max-width:100%; height:auto;"
-        />
+      <div class="example-format">
+        <p><strong>CSV Format:</strong></p>
+        <pre>Name,Email,Role,Provider,AeriesID
+"John Smith","john.smith@school.org","teacher","","123456"
+"Jane Doe","jane.doe@school.org","service_provider","SLP","789012"
+"Bob Johnson","bob.johnson@school.org","case_manager","",""</pre>
+        <p><strong>Supported Roles:</strong> admin, teacher, case_manager, sped_chair, service_provider</p>
+        <p><strong>Provider Types:</strong> SLP, OT, PT, SC, MH, TR, AUD, VI, AT, DHH, O&M, BIS, HN, SW</p>
+        <p><strong>Aeries ID:</strong> Optional 6-digit teacher ID from Aeries system</p>
       </div>
     </div>
 
@@ -102,7 +111,8 @@ export default {
       name: '',
       email: '',
       role: '',
-      provider: ''
+      provider: '',
+      aeriesId: ''
     })
 
     const selectedFile = ref(null)
@@ -148,13 +158,14 @@ export default {
       }, 5000)
     }
 
-    const createUserInFirestore = async (name, email, role, provider) => {
+    const createUserInFirestore = async (name, email, role, provider, aeriesId) => {
       try {
         const userData = {
           name: name,
           email: email,
           role: role,
           provider: provider,
+          aeriesId: aeriesId,
           createdAt: new Date(),
           status: 'active'
         }
@@ -165,16 +176,22 @@ export default {
       }
     }
 
-    const addUserToFirestore = async (name, email, role, provider) => {
+    const addUserToFirestore = async (name, email, role, provider, aeriesId) => {
+      console.log(`🔄 Attempting to add user: ${name} (${email}) - ${role}`)
       try {
         try {
-          await addUserWithRoleCallable({ name, email, role, provider })
+          console.log('📞 Calling cloud function...')
+          await addUserWithRoleCallable({ name, email, role, provider, aeriesId })
+          console.log('✅ Cloud function succeeded')
           return { success: true, method: 'cloud-function' }
         } catch (cloudError) {
-          await createUserInFirestore(name, email, role, provider)
+          console.log('⚠️ Cloud function failed, trying Firestore directly:', cloudError.message)
+          await createUserInFirestore(name, email, role, provider, aeriesId)
+          console.log('✅ Firestore direct creation succeeded')
           return { success: true, method: 'firestore' }
         }
       } catch (error) {
+        console.error('❌ Both methods failed:', error.message)
         return { success: false, error: error.message }
       }
     }
@@ -192,7 +209,8 @@ export default {
         singleUser.name,
         singleUser.email,
         singleUser.role,
-        singleUser.provider
+        singleUser.provider,
+        singleUser.aeriesId
       )
       if (result.success) {
         showStatus(`User ${singleUser.name} added successfully!`)
@@ -200,14 +218,239 @@ export default {
         singleUser.email = ''
         singleUser.role = ''
         singleUser.provider = ''
+        singleUser.aeriesId = ''
       } else {
         showStatus(`Error adding user: ${result.error}`, true)
       }
     }
 
-    // Dummy handlers for bulk upload (implement as needed)
-    const handleFileSelect = () => {}
-    const uploadBulkUsers = () => {}
+    const handleFileSelect = (event) => {
+      const file = event.target.files[0]
+      if (file) {
+        selectedFile.value = file
+      }
+    }
+
+    const uploadBulkUsers = async () => {
+      if (!selectedFile.value) {
+        showStatus('Please select a file first', true)
+        return
+      }
+
+      const fileName = selectedFile.value.name.toLowerCase()
+      if (!(fileName.endsWith('.csv') || fileName.endsWith('.xls') || fileName.endsWith('.xlsx'))) {
+        showStatus('Unsupported file type. Please upload a .csv, .xls, or .xlsx file.', true)
+        return
+      }
+
+      showStatus('Processing file...')
+
+      try {
+        if (fileName.endsWith('.csv')) {
+          await processCSVFile(selectedFile.value)
+        } else {
+          await processExcelFile(selectedFile.value)
+        }
+      } catch (error) {
+        showStatus(`Error processing file: ${error.message}`, true)
+        console.error('Bulk upload error:', error)
+      }
+    }
+
+    const processCSVFile = async (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            const text = e.target.result
+            const lines = text.trim().split(/\r?\n/)
+            if (lines.length === 0) {
+              reject(new Error('The CSV file is empty.'))
+              return
+            }
+
+            // Simple CSV parser that handles quoted fields
+            const parseCSVLine = (line) => {
+              const result = []
+              let current = ''
+              let inQuotes = false
+              
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i]
+                if (char === '"') {
+                  inQuotes = !inQuotes
+                } else if (char === ',' && !inQuotes) {
+                  result.push(current.trim())
+                  current = ''
+                } else {
+                  current += char
+                }
+              }
+              result.push(current.trim())
+              return result
+            }
+
+            let startIndex = 0
+            const colIndex = { name: 0, email: 1, role: 2, provider: 3, aeriesId: 4 }
+            const firstLineCols = parseCSVLine(lines[0])
+            const headerDetected = firstLineCols.map(h => h.toLowerCase())
+              .some(h => h.includes('name') || h.includes('email') || h.includes('role'))
+
+            if (headerDetected) {
+              firstLineCols.forEach((header, idx) => {
+                const headerLC = header.trim().toLowerCase()
+                if (headerLC === 'name' || headerLC === 'displayname') colIndex.name = idx
+                if (headerLC === 'email') colIndex.email = idx
+                if (headerLC === 'role') colIndex.role = idx
+                if (headerLC === 'provider' || headerLC === 'providertype') colIndex.provider = idx
+                if (headerLC === 'aeriesid' || headerLC === 'aeries_id' || headerLC === 'teacherid') colIndex.aeriesId = idx
+              })
+              startIndex = 1
+            }
+
+            let successCount = 0
+            const errorMessages = []
+
+            for (let i = startIndex; i < lines.length; i++) {
+              const line = lines[i].trim()
+              if (!line) continue
+
+              const parts = parseCSVLine(line)
+              const name = (parts[colIndex.name] || '').trim()
+              const email = (parts[colIndex.email] || '').trim()
+              const role = (parts[colIndex.role] || '').trim()
+              const provider = (parts[colIndex.provider] || '').trim()
+              const aeriesId = (parts[colIndex.aeriesId] || '').trim()
+
+              // Remove quotes from values
+              const cleanName = name.replace(/^"|"$/g, '')
+              const cleanEmail = email.replace(/^"|"$/g, '')
+              const cleanRole = role.replace(/^"|"$/g, '')
+              const cleanProvider = provider.replace(/^"|"$/g, '')
+              const cleanAeriesId = aeriesId.replace(/^"|"$/g, '')
+
+              if (!cleanName || !cleanEmail || !cleanRole) {
+                errorMessages.push(`Line ${i + 1}: Missing name, email, or role.`)
+                continue
+              }
+
+              if (!isApprovedRole(cleanRole)) {
+                errorMessages.push(`Line ${i + 1}: Invalid role "${cleanRole}".`)
+                continue
+              }
+
+              console.log(`Processing user: ${cleanName} (${cleanEmail}) - ${cleanRole}`)
+              const errMsg = await addUserToFirestore(cleanName, cleanEmail, cleanRole, cleanProvider, cleanAeriesId)
+              if (errMsg.success) {
+                successCount++
+                console.log(`✅ Successfully added user: ${cleanName}`)
+              } else {
+                errorMessages.push(`Line ${i + 1}: ${errMsg.error}`)
+                console.error(`❌ Failed to add user: ${cleanName} - ${errMsg.error}`)
+              }
+            }
+
+            let summary = `${successCount} users added successfully.`
+            if (errorMessages.length > 0) {
+              summary += `\n${errorMessages.length} errors:\n` + errorMessages.join('\n')
+            }
+            showStatus(summary, errorMessages.length > 0)
+            selectedFile.value = null
+            if (bulkFileInput.value) {
+              bulkFileInput.value.value = ''
+            }
+            resolve()
+          } catch (err) {
+            reject(new Error(`Error processing CSV file: ${err.message}`))
+          }
+        }
+        reader.onerror = () => reject(new Error('Failed to read the CSV file.'))
+        reader.readAsText(file)
+      })
+    }
+
+    const processExcelFile = async (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+          try {
+            if (typeof XLSX === 'undefined') {
+              reject(new Error('Excel upload requires SheetJS (XLSX) library. Please include it in your page.'))
+              return
+            }
+
+            const data = new Uint8Array(e.target.result)
+            const workbook = XLSX.read(data, { type: 'array' })
+            const firstSheetName = workbook.SheetNames[0]
+            const worksheet = workbook.Sheets[firstSheetName]
+            const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+
+            if (rows.length === 0) {
+              reject(new Error('The Excel file is empty or unrecognized.'))
+              return
+            }
+
+            let successCount = 0
+            const errorMessages = []
+
+            for (let index = 0; index < rows.length; index++) {
+              const row = rows[index]
+              let name = '', email = '', role = '', provider = '', aeriesId = ''
+
+              for (const key in row) {
+                const keyLC = key.toLowerCase()
+                const value = ('' + row[key]).trim()
+                if ((keyLC === 'name' || keyLC === 'displayname') && !name) name = value
+                else if (keyLC === 'email' && !email) email = value
+                else if (keyLC === 'role' && !role) role = value
+                else if ((keyLC === 'provider' || keyLC === 'providertype') && !provider) provider = value
+                else if ((keyLC === 'aeriesid' || keyLC === 'aeries_id' || keyLC === 'teacherid') && !aeriesId) aeriesId = value
+              }
+
+              // Fallback to column order if field names not found
+              const rowValues = Object.values(row).map(val => ('' + val).trim())
+              if (!name && rowValues[0]) name = rowValues[0]
+              if (!email && rowValues[1]) email = rowValues[1]
+              if (!role && rowValues[2]) role = rowValues[2]
+              if (!provider && rowValues[3]) provider = rowValues[3]
+              if (!aeriesId && rowValues[4]) aeriesId = rowValues[4]
+
+              if (!name || !email || !role) {
+                errorMessages.push(`Row ${index + 1}: Missing name, email, or role.`)
+                continue
+              }
+
+              if (!isApprovedRole(role)) {
+                errorMessages.push(`Row ${index + 1}: Invalid role "${role}".`)
+                continue
+              }
+
+              const errMsg = await addUserToFirestore(name, email, role, provider, aeriesId)
+              if (errMsg.success) {
+                successCount++
+              } else {
+                errorMessages.push(`Row ${index + 1}: ${errMsg.error}`)
+              }
+            }
+
+            let summary = `${successCount} users added successfully.`
+            if (errorMessages.length > 0) {
+              summary += `\n${errorMessages.length} errors:\n` + errorMessages.join('\n')
+            }
+            showStatus(summary, errorMessages.length > 0)
+            selectedFile.value = null
+            if (bulkFileInput.value) {
+              bulkFileInput.value.value = ''
+            }
+            resolve()
+          } catch (err) {
+            reject(new Error(`Error processing Excel file: ${err.message}`))
+          }
+        }
+        reader.onerror = () => reject(new Error('Failed to read the Excel file.'))
+        reader.readAsArrayBuffer(file)
+      })
+    }
 
     onMounted(async () => {
       await loadAppSettings()
@@ -232,4 +475,30 @@ export default {
 
 <style scoped>
 /* Add your styles here */
+.example-format {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.example-format pre {
+  background-color: #fff;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.example-format p {
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.example-format strong {
+  color: #495057;
+}
 </style>

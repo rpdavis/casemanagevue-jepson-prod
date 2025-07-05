@@ -133,7 +133,7 @@ export default function useAideAssignment() {
         teacherIdArray.forEach(teacherId => {
           if (teacherId) {
             students.forEach(student => {
-              if (student.classAssignment && student.classAssignment[period] === teacherId) {
+              if (student.schedule && student.schedule[period] === teacherId) {
                 const existingIndex = aideStudents.findIndex(s => s.id === student.id)
                 if (existingIndex === -1) {
                   aideStudents.push({ ...student, assignmentType: 'class', period, teacherId })
@@ -161,9 +161,9 @@ export default function useAideAssignment() {
       ? aideData.directAssignment 
       : (aideData.directAssignment ? [aideData.directAssignment] : [])
     if (directStudentIds.includes(studentId)) return true
-    if (!student.classAssignment) return false
+    if (!student.schedule) return false
     const aidePeriods = aideData.classAssignment || {}
-    const hasClassAssignment = Object.entries(student.classAssignment).some(([period, teacherId]) => {
+    const hasClassAssignment = Object.entries(student.schedule).some(([period, teacherId]) => {
       const aideTeacherIds = aidePeriods[period]
       if (!aideTeacherIds) return false
       const teacherIdArray = Array.isArray(aideTeacherIds) ? aideTeacherIds : [aideTeacherIds]

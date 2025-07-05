@@ -28,6 +28,7 @@ const VALID_ROLES_SERVER = [
   "case_manager",
   "teacher",
   "service_provider",
+  "paraeducator"
 ];
 
 // ─── 1) Auth trigger: runs when a new user account is created ─────────────────
@@ -130,7 +131,7 @@ exports.addUserWithRole = onCallHttps(async (request) => {
     throw new Error("Only administrators are authorized to add users.");
   }
 
-  const {name, email, role} = request.data;
+  const {name, email, role, provider, aeriesId} = request.data;
 
   // 2. Input Validation
   if (!name || !email || !role) {
@@ -138,7 +139,16 @@ exports.addUserWithRole = onCallHttps(async (request) => {
   }
 
   // 3. Role Validation
-  const validRoles = ["admin", "teacher", "counselor", "principal", "assistant"];
+  const validRoles = [
+    "admin",
+    "administrator", 
+    "administrator_504_CM",
+    "sped_chair",
+    "case_manager",
+    "teacher",
+    "service_provider",
+    "paraeducator"
+  ];
   if (!validRoles.includes(role)) {
     throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
   }
@@ -155,12 +165,22 @@ exports.addUserWithRole = onCallHttps(async (request) => {
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: role });
 
     // 6. Store Additional User Data in Firestore
-    await db.collection("users").doc(userRecord.uid).set({
+    const userData = {
       name: name,
       email: email,
       role: role,
       createdAt: new Date(),
-    });
+    };
+
+    // Add optional fields if provided
+    if (provider) {
+      userData.provider = provider;
+    }
+    if (aeriesId) {
+      userData.aeriesId = aeriesId;
+    }
+
+    await db.collection("users").doc(userRecord.uid).set(userData);
 
     // 7. Return Success Response
     return {

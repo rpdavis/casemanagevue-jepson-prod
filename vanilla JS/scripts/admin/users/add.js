@@ -98,10 +98,10 @@ export function showUsersAdd(sectionElement) {
   });
 
   // Helper function for bulk upload - now calls the new Cloud Function
-  const addUserToFirestore = async (name, email, role, lineInfo = "") => {
+  const addUserToFirestore = async (name, email, role, provider, aeriesId, lineInfo = "") => {
     try {
       // Call the HTTPS Callable Cloud Function
-      await addUserWithRoleCallable({ name, email, role });
+      await addUserWithRoleCallable({ name, email, role, provider, aeriesId });
       return null; // null indicates success
     } catch (err) {
       console.error(`${lineInfo}Error adding user "${email}" via Cloud Function:`, err);
@@ -135,7 +135,7 @@ export function showUsersAdd(sectionElement) {
             return;
           }
           let startIndex = 0;
-          const colIndex = { name: 0, email: 1, role: 2 };
+          const colIndex = { name: 0, email: 1, role: 2, provider: 3, aeriesId: 4 };
           const firstLineCols = lines[0].split(",");
           const headerDetected = firstLineCols.map(h => h.toLowerCase())
                                              .some(h => h.includes("name") || h.includes("email") || h.includes("role"));
@@ -145,6 +145,8 @@ export function showUsersAdd(sectionElement) {
               if (headerLC === "name" || headerLC === "displayname") colIndex.name = idx;
               if (headerLC === "email") colIndex.email = idx;
               if (headerLC === "role") colIndex.role = idx;
+              if (headerLC === "provider" || headerLC === "providertype") colIndex.provider = idx;
+              if (headerLC === "aeriesid" || headerLC === "aeries_id" || headerLC === "teacherid") colIndex.aeriesId = idx;
             });
             startIndex = 1;
           }
@@ -157,6 +159,8 @@ export function showUsersAdd(sectionElement) {
             const name = (parts[colIndex.name] || "").trim();
             const email = (parts[colIndex.email] || "").trim();
             const role = (parts[colIndex.role] || "").trim();
+            const provider = (parts[colIndex.provider] || "").trim();
+            const aeriesId = (parts[colIndex.aeriesId] || "").trim();
             if (!name || !email || !role) {
               errorMessages.push(`Line ${i+1}: Missing name, email, or role.`);
               continue;
@@ -165,7 +169,7 @@ export function showUsersAdd(sectionElement) {
               errorMessages.push(`Line ${i+1}: Invalid role "${role}".`);
               continue;
             }
-            const errMsg = await addUserToFirestore(name, email, role, `Line ${i+1}: `);
+            const errMsg = await addUserToFirestore(name, email, role, provider, aeriesId, `Line ${i+1}: `);
             if (errMsg) {
               errorMessages.push(errMsg);
             } else {
@@ -209,19 +213,23 @@ export function showUsersAdd(sectionElement) {
           const errorMessages = [];
           for (let index = 0; index < rows.length; index++) {
             const row = rows[index];
-            let name = "", email = "", role = "";
+            let name = "", email = "", role = "", provider = "", aeriesId = "";
             for (const key in row) {
               const keyLC = key.toLowerCase();
               const value = ("" + row[key]).trim();
               if ((keyLC === "name" || keyLC === "displayname") && !name) name = value;
               else if (keyLC === "email" && !email) email = value;
               else if (keyLC === "role" && !role) role = value;
+              else if ((keyLC === "provider" || keyLC === "providertype") && !provider) provider = value;
+              else if ((keyLC === "aeriesid" || keyLC === "aeries_id" || keyLC === "teacherid") && !aeriesId) aeriesId = value;
             }
             if (!name || !email || !role) {
               const rowValues = Object.values(row).map(val => ("" + val).trim());
               if (!name && rowValues[0]) name = rowValues[0];
               if (!email && rowValues[1]) email = rowValues[1];
               if (!role && rowValues[2]) role = rowValues[2];
+              if (!provider && rowValues[3]) provider = rowValues[3];
+              if (!aeriesId && rowValues[4]) aeriesId = rowValues[4];
             }
             if (!name || !email || !role) {
               errorMessages.push(`Row ${index+1}: Missing name, email, or role.`);
@@ -231,7 +239,7 @@ export function showUsersAdd(sectionElement) {
               errorMessages.push(`Row ${index+1}: Invalid role "${role}".`);
               continue;
             }
-            const errMsg = await addUserToFirestore(name, email, role, `Row ${index+1}: `);
+            const errMsg = await addUserToFirestore(name, email, role, provider, aeriesId, `Row ${index+1}: `);
             if (errMsg) {
               errorMessages.push(errMsg);
             } else {

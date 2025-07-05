@@ -1,4 +1,4 @@
-import { getFirestore, doc, setDoc } from 'firebase/firestore'
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 import Papa from 'papaparse'
 
 // Note: You'll need to install papaparse: npm install papaparse
@@ -32,67 +32,75 @@ function toCamelCase(fieldName) {
 }
 
 /**
- * Maps Aeries CSV field names to the specified database structure
+ * Maps Aeries CSV field names to OneRoster standard field names
  * @param {string} csvFieldName - The original CSV field name
  * @returns {string} - The mapped field name for the app
  */
 function mapAeriesField(csvFieldName) {
   const fieldMap = {
-    // Core student fields
+    // OneRoster standard fields
+    'sourcedId': 'stateId',
     'SSID': 'stateId',
+    'StateStudentID': 'stateId',
     'StudentNumber': 'localId',
+    'givenName': 'firstName',
     'FirstName': 'firstName',
+    'familyName': 'lastName',
     'LastName': 'lastName',
+    'middleName': 'middleName',
+    'MiddleName': 'middleName',
+    'email': 'email',
+    'Email': 'email',
+    'phone': 'phone',
+    'Phone': 'phone',
+    'dateOfBirth': 'dob',
+    'DOB': 'dob',
+    'sex': 'gender',
+    'Gender': 'gender',
+    'grade': 'grade',
     'Grade': 'grade',
+    'school': 'school',
+    'School': 'school',
+    'schoolCode': 'schoolCode',
     'SchoolCode': 'schoolCode',
+    'schoolName': 'schoolName',
     'SchoolName': 'schoolName',
     
-    // Program flags
+    // OneRoster special education fields
+    'specialEducation': 'programs.specialEducation',
+    'iep': 'programs.specialEducation',
     'IEP': 'programs.specialEducation',
+    'plan504': 'programs.plan504',
     '504': 'programs.plan504',
+    'disabilities': 'disabilities',
+    'Disability': 'disabilities',
+    'ell': 'programs.ell',
     'ELL': 'programs.ell',
     
-    // Medical information
+    // Additional fields that might be in CSV exports
     'MedicalNotes': 'medical.notes',
     'Vision': 'medical.vision',
     'Hearing': 'medical.hearing',
-    
-    // Test scores
     'CAASPP': 'testScores.CAASPP',
     'ELPAC': 'testScores.ELPAC',
-    
-    // Dates
     'ReviewDate': 'reviewDate',
     'ReevalDate': 'reevalDate',
     'MeetingDate': 'meetingDate',
-    
-    // Accommodations
-    'InstructionAccommodations': 'instruction',
-    'AssessmentAccommodations': 'assessment',
-    
-    // Other fields
-    'DOB': 'dob',
-    'Gender': 'gender',
-    'Ethnicity': 'ethnicity',
     'Address': 'address',
     'City': 'city',
     'State': 'state',
     'ZipCode': 'zipCode',
-    'Phone': 'phone',
     'ParentName': 'parentName',
     'ParentPhone': 'parentPhone',
     'ParentEmail': 'parentEmail',
     'CaseManager': 'caseManager',
-    'Disability': 'disability',
     'ServiceMinutes': 'serviceMinutes',
     'Goals': 'goals',
     'Notes': 'notes',
     'Plan': 'plan',
     'SpeechProvider': 'speechProvider',
     'MHProvider': 'mhProvider',
-    'OTProvider': 'otProvider',
-    'Flag1': 'flag1',
-    'Flag2': 'flag2'
+    'OTProvider': 'otProvider'
   }
   
   return fieldMap[csvFieldName] || toCamelCase(csvFieldName)
@@ -137,10 +145,8 @@ function mapSeisField(csvFieldName) {
     'SpeechProvider': 'speechProvider',
     'MHProvider': 'mhProvider',
     'OTProvider': 'otProvider',
-    'InstructionAccommodations': 'instruction',
-    'AssessmentAccommodations': 'assessment',
-    'Flag1': 'flag1',
-    'Flag2': 'flag2',
+    'ProgramAccommodations': 'programAccommodations',
+    'Accommodations': 'programAccommodations',
     'IEP_Services': 'iepServices'
   }
   
@@ -162,11 +168,11 @@ export async function parseAeriesCSVAndPreview(file) {
         if (!rows || !rows.length) {
           return reject(new Error('No data rows found in the CSV.'))
         }
-        // Check for SSID column (case-insensitive)
+        // Check for SSID column (OneRoster sourcedId or legacy SSID)
         const headerKeys = Object.keys(rows[0]).map(h => h.trim().toLowerCase())
-        const hasSSID = headerKeys.includes('ssid') || headerKeys.includes('statestudentid')
+        const hasSSID = headerKeys.includes('sourcedid') || headerKeys.includes('ssid') || headerKeys.includes('statestudentid')
         if (!hasSSID) {
-          return reject(new Error("Missing required 'SSID' column."))
+          return reject(new Error("Missing required 'sourcedId' or 'SSID' column."))
         }
         resolve(rows)
       },
@@ -185,8 +191,8 @@ export async function importFilteredAeriesRecords(data, fieldsToImport) {
   let importedCount = 0
 
   for (const entry of data) {
-    // Extract SSID (case-insensitive keys)
-    const ssid = (entry['SSID'] || entry['ssid'] || entry['StateStudentID'] || entry['stateStudentId'])?.trim()
+    // Extract SSID (OneRoster sourcedId or legacy SSID fields)
+    const ssid = (entry['sourcedId'] || entry['SSID'] || entry['ssid'] || entry['StateStudentID'] || entry['stateStudentId'])?.trim()
     if (!ssid) {
       console.warn('Skipping row with missing SSID:', entry)
       continue
@@ -229,9 +235,29 @@ export async function importFilteredAeriesRecords(data, fieldsToImport) {
     aeriesData.lastAeriesImport = new Date().toISOString()
 
     try {
-      // Merge into 'aeries' subfield
-      const studentRef = doc(db, 'students', ssid)
-      await setDoc(studentRef, { aeries: aeriesData }, { merge: true })
+      // Find existing student by SSID or create new one
+      const studentsRef = collection(db, 'students')
+      const q = query(studentsRef, where('app.studentData.ssid', '==', ssid))
+      const querySnapshot = await getDocs(q)
+      
+      if (!querySnapshot.empty) {
+        // Update existing student
+        const studentDoc = querySnapshot.docs[0]
+        await setDoc(doc(db, 'students', studentDoc.id), { aeries: aeriesData }, { merge: true })
+        console.log(`Updated existing student ${studentDoc.id} with Aeries data for SSID ${ssid}`)
+      } else {
+        // Create new student with auto-generated ID
+        const newStudentRef = doc(collection(db, 'students'))
+        const newStudentData = {
+          app: {
+            studentData: { ssid: ssid }
+          },
+          aeries: aeriesData,
+          createdAt: serverTimestamp()
+        }
+        await setDoc(newStudentRef, newStudentData)
+        console.log(`Created new student ${newStudentRef.id} with Aeries data for SSID ${ssid}`)
+      }
       importedCount++
     } catch (error) {
       console.error(`Failed to import Aeries data for SSID ${ssid}:`, error)
@@ -284,28 +310,56 @@ export async function importFilteredSeisRecords(data, fieldsToImport) {
       continue
     }
 
-    const record = {}
+    // Build the nested seis object
+    const seisData = {}
 
     for (const field of fieldsToImport) {
       const mappedFieldName = mapSeisField(field)
       
       if (field === 'IEP_Services' || field === 'iep_services') {
-        record[mappedFieldName] = entry[field]?.split(';').map(s => s.trim()) || []
+        seisData[mappedFieldName] = entry[field]?.split(';').map(s => s.trim()) || []
+      } else if (field === 'ProgramAccommodations' || field === 'Accommodations') {
+        seisData[mappedFieldName] = entry[field]?.split(';').map(s => s.trim()) || []
       } else {
-        record[mappedFieldName] = entry[field]
+        seisData[mappedFieldName] = entry[field]
       }
     }
 
-    record.lastImported = new Date().toISOString()
+    // Add import timestamp
+    seisData.lastSeisImport = new Date().toISOString()
 
     try {
-      const studentRef = doc(db, 'students', ssid)
-      await setDoc(studentRef, record, { merge: true })
+      // Find existing student by SSID or create new one
+      const studentsRef = collection(db, 'students')
+      const q = query(studentsRef, where('app.studentData.ssid', '==', ssid))
+      const querySnapshot = await getDocs(q)
+      
+      if (!querySnapshot.empty) {
+        // Update existing student
+        const studentDoc = querySnapshot.docs[0]
+        await setDoc(doc(db, 'students', studentDoc.id), { seis: seisData }, { merge: true })
+        console.log(`Updated existing student ${studentDoc.id} with SEIS data for SSID ${ssid}`)
+      } else {
+        // Create new student with auto-generated ID
+        const newStudentRef = doc(collection(db, 'students'))
+        const newStudentData = {
+          app: {
+            studentData: { ssid: ssid }
+          },
+          seis: seisData,
+          createdAt: serverTimestamp()
+        }
+        await setDoc(newStudentRef, newStudentData)
+        console.log(`Created new student ${newStudentRef.id} with SEIS data for SSID ${ssid}`)
+      }
       importedCount++
     } catch (error) {
-      console.error(`Failed to import SSID ${ssid}:`, error)
+      console.error(`Failed to import SEIS data for SSID ${ssid}:`, error)
     }
   }
 
   return importedCount
-} 
+}
+
+// Export mapping functions for testing
+export { mapAeriesField, mapSeisField } 
