@@ -177,21 +177,15 @@ export default {
     }
 
     const addUserToFirestore = async (name, email, role, provider, aeriesId) => {
-      console.log(`🔄 Attempting to add user: ${name} (${email}) - ${role}`)
       try {
         try {
-          console.log('📞 Calling cloud function...')
           await addUserWithRoleCallable({ name, email, role, provider, aeriesId })
-          console.log('✅ Cloud function succeeded')
           return { success: true, method: 'cloud-function' }
         } catch (cloudError) {
-          console.log('⚠️ Cloud function failed, trying Firestore directly:', cloudError.message)
           await createUserInFirestore(name, email, role, provider, aeriesId)
-          console.log('✅ Firestore direct creation succeeded')
           return { success: true, method: 'firestore' }
         }
       } catch (error) {
-        console.error('❌ Both methods failed:', error.message)
         return { success: false, error: error.message }
       }
     }
@@ -339,14 +333,11 @@ export default {
                 continue
               }
 
-              console.log(`Processing user: ${cleanName} (${cleanEmail}) - ${cleanRole}`)
               const errMsg = await addUserToFirestore(cleanName, cleanEmail, cleanRole, cleanProvider, cleanAeriesId)
               if (errMsg.success) {
                 successCount++
-                console.log(`✅ Successfully added user: ${cleanName}`)
               } else {
                 errorMessages.push(`Line ${i + 1}: ${errMsg.error}`)
-                console.error(`❌ Failed to add user: ${cleanName} - ${errMsg.error}`)
               }
             }
 
