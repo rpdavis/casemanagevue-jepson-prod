@@ -1,0 +1,129 @@
+{
+  "sampleUser": {
+    "id": "user001",
+    "aeriesId": "100001",
+    "createdAt": "2025-07-07T03:53:17.272Z",
+    "email": "joshua.harris@school.edu",
+    "name": "Joshua Harris",
+    "provider": "",
+    "role": "paraeducator"
+  },
+  "sampleStudent": {
+    "id": "student001",
+    "ssid": "100000001",
+    "createdAt": "2025-07-07T03:53:17.276Z",
+    "updatedAt": "2025-07-07T03:53:17.276Z",
+    "app": {
+      "studentData": {
+        "firstName": "Chloe",
+        "lastName": "Miller",
+        "grade": "8",
+        "plan": "RTI",
+        "caseManagerId": "user006",
+        "ssid": "100000001"
+      },
+      "dates": {
+        "reviewDate": "2025-08-16",
+        "reevalDate": "2026-01-19",
+        "meetingDate": "2025-07-13"
+      },
+      "schedule": {
+        "periods": {
+          "1": "user022",
+          "3": "user007",
+          "4": "user022",
+          "5": "user024",
+          "6": "user022"
+        },
+        "classServices": [
+          "Co-teach: Math"
+        ]
+      },
+      "providers": {
+        "speechId": "",
+        "otId": "user058",
+        "ptId": "",
+        "atId": "",
+        "audId": "",
+        "bisId": "",
+        "dhhId": "",
+        "hnId": "user015",
+        "mhId": "",
+        "omId": "",
+        "scId": "",
+        "swId": "",
+        "trId": "user006",
+        "viId": ""
+      },
+      "flags": {
+        "flag1": false,
+        "flag2": false
+      },
+      "documents": {
+        "bipPdfUrl": "",
+        "ataglancePdfUrl": ""
+      },
+      "accommodations": {},
+      "assessment": "Assessment notes for student 1",
+      "instruction": "Instruction notes for student 1"
+    },
+    "aeries": {
+      "firstName": "Chloe",
+      "lastName": "Miller",
+      "grade": "8",
+      "birthDate": "2014-05-25",
+      "gender": "M",
+      "address": "4350 Main St",
+      "city": "Anytown",
+      "state": "CA",
+      "zipCode": "90210",
+      "phone": "(555) 939-8040",
+      "email": "chloe.miller@student.edu",
+      "parentName": "Parent1",
+      "parentPhone": "(555) 110-9265",
+      "parentEmail": "parent1@email.com",
+      "attendanceRate": "85.9",
+      "schedule": {
+        "Period 1": {
+          "teacherId": "100043",
+          "subject": "English 9",
+          "room": "A101"
+        },
+        "Period 2": {
+          "teacherId": "100049",
+          "subject": "Algebra 1",
+          "room": "B205"
+        }
+      }
+    },
+    "seis": {
+      "firstName": "Chloe",
+      "lastName": "Miller",
+      "grade": "8",
+      "birthDate": "2003-08-10",
+      "gender": "M",
+      "eligibilityCategory": "Specific Learning Disability",
+      "primaryDisability": "Dyslexia",
+      "secondaryDisability": "ADHD",
+      "iepStartDate": "2023-09-01",
+      "iepEndDate": "2024-06-30",
+      "annualReviewDate": "2024-03-15",
+      "triennialDate": "2024-06-20",
+      "services": [
+        "Speech and Language Therapy",
+        "Occupational Therapy",
+        "Resource Specialist Program"
+      ],
+      "goals": [
+        "Improve reading comprehension by 20%",
+        "Develop organizational skills",
+        "Increase attention span during class"
+      ],
+      "behaviorPlan": "Yes",
+      "socialSkills": "Needs improvement",
+      "transitionPlan": "Post-secondary education"
+    }
+  },
+  "userCount": 100,
+  "studentCount": 100
+}

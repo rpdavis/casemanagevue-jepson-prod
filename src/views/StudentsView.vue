@@ -79,8 +79,8 @@
         <div class="filter-group">
           <label>Sort By</label>
           <select v-model="currentFilters.sortBy" @change="applyFilters()" class="filter-select">
-            <option value="first_name">First Name</option>
-            <option value="last_name">Last Name</option>
+            <option value="firstName">First Name</option>
+            <option value="lastName">Last Name</option>
             <option value="grade">Grade</option>
             <option value="plan">Plan</option>
             <option value="reviewDate">Review Date</option>
@@ -264,10 +264,21 @@ const studentsByClass = computed(() => {
   const isParaeducatorFilter = currentFilters.paraeducator && currentFilters.paraeducator !== 'all'
   
   filteredStudents.value.forEach(student => {
-    if (student.schedule) {
-      Object.entries(student.schedule).forEach(([period, teacherId]) => {
+    const schedule = getSchedule(student)
+    if (schedule) {
+      Object.entries(schedule).forEach(([period, data]) => {
         if (!groups[period]) {
           groups[period] = []
+        }
+        
+        // Extract teacherId from both simple and complex schedule structures
+        let teacherId
+        if (typeof data === 'string') {
+          teacherId = data
+        } else if (data && typeof data === 'object') {
+          teacherId = data.teacherId
+        } else {
+          return // Skip if no valid teacherId
         }
         
         // If filtering by paraeducator, only add student to periods where aide is assigned
@@ -324,7 +335,7 @@ const directAssignmentStudents = computed(() => {
 const studentsByCaseManager = computed(() => {
   const groups = {}
   filteredStudents.value.forEach(student => {
-    const cmId = student.caseManagerId || student.casemanager_id
+    const cmId = getCaseManagerId(student)
     if (cmId) {
       if (!groups[cmId]) {
         groups[cmId] = []
@@ -334,6 +345,38 @@ const studentsByCaseManager = computed(() => {
   })
   return groups
 })
+
+// Helper function to get case manager ID from nested structure
+function getCaseManagerId(student) {
+  return student.app?.studentData?.caseManagerId || 
+         student.caseManagerId || 
+         student.casemanager_id
+}
+
+// Helper function to get schedule data from nested structure
+function getSchedule(student) {
+  // Check Aeries schedule structure first (direct schedule object)
+  if (student.schedule) {
+    return student.schedule
+  }
+  
+  // Check new nested structure
+  if (student.app?.schedule?.periods) {
+    return student.app.schedule.periods
+  }
+  
+  // Check Aeries schedule.periods structure (your current format)
+  if (student.aeries?.schedule?.periods) {
+    return student.aeries.schedule.periods
+  }
+  
+  // Check legacy Aeries schedule structure
+  if (student.aeries?.schedule) {
+    return student.aeries.schedule
+  }
+  
+  return null
+}
 
 // Get paraeducators for filter dropdown - use userList which includes UID as id field
 const paraeducators = computed(() => {
@@ -360,7 +403,7 @@ const debouncedApplyFilters = () => {
 
 // Current filters state
 const currentFilters = reactive({
-  sortBy: 'first_name',
+  sortBy: 'firstName',
   cm: 'all',
   teacher: 'all',
   paraeducator: 'all',
@@ -417,7 +460,7 @@ function toggleFilters() {
 }
 
 function clearFilters() {
-  currentFilters.sortBy = 'first_name'
+  currentFilters.sortBy = 'firstName'
   currentFilters.cm = 'all'
   currentFilters.teacher = 'all'
   currentFilters.paraeducator = 'all'
@@ -432,19 +475,29 @@ function applyFilters(filters = currentFilters) {
 
   // Apply provider view filtering (for case managers)
   if (filters.providerView === 'case_manager') {
-    result = result.filter(s => s.caseManagerId === currentUser.value?.uid)
+    result = result.filter(s => getCaseManagerId(s) === currentUser.value?.uid)
   } else if (filters.providerView === 'service_provider') {
     result = result.filter(s => {
-      const isInSchedule = Object.values(s.schedule || {}).includes(currentUser.value?.uid)
+      // Check if user is in schedule (handle both simple and complex structures)
+      const schedule = getSchedule(s)
+      const isInSchedule = schedule ? Object.entries(schedule).some(([period, data]) => {
+        if (typeof data === 'string') {
+          return data === currentUser.value?.uid
+        } else if (data && typeof data === 'object') {
+          return data.teacherId === currentUser.value?.uid
+        }
+        return false
+      }) : false
+      
       const isInServices = (s.services || []).some(service => service.includes(currentUser.value?.uid))
-      const isNotCaseManager = s.caseManagerId !== currentUser.value?.uid
+      const isNotCaseManager = getCaseManagerId(s) !== currentUser.value?.uid
       return (isInSchedule || isInServices) && isNotCaseManager
     })
   }
 
   // Apply role-based filtering
   if (currentUser.value?.role === 'case_manager' && filters.providerView === 'all') {
-    result = result.filter(s => s.caseManagerId === currentUser.value.uid)
+    result = result.filter(s => getCaseManagerId(s) === currentUser.value.uid)
   } else if (currentUser.value?.role === 'paraeducator') {
     // Filter students based on aide assignments
     result = result.filter(s => {
@@ -469,12 +522,27 @@ function applyFilters(filters = currentFilters) {
   
   // Apply case manager filter
   if (filters.cm && filters.cm !== 'all') {
-    result = result.filter(s => s.caseManagerId === filters.cm)
+    result = result.filter(s => getCaseManagerId(s) === filters.cm)
   }
 
   // Apply teacher filter
   if (filters.teacher && filters.teacher !== 'all') {
-    result = result.filter(s => Object.values(s.schedule || {}).includes(filters.teacher))
+    result = result.filter(s => {
+      const schedule = getSchedule(s)
+      if (!schedule) return false
+      
+      // Handle both simple schedule structure (period -> teacherId) and complex structure (period -> {teacherId, subject, room})
+      return Object.entries(schedule).some(([period, data]) => {
+        if (typeof data === 'string') {
+          // Simple structure: period -> teacherId
+          return data === filters.teacher
+        } else if (data && typeof data === 'object') {
+          // Complex structure: period -> {teacherId, subject, room}
+          return data.teacherId === filters.teacher
+        }
+        return false
+      })
+    })
   }
 
   // Apply paraeducator filter

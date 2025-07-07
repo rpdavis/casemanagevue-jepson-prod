@@ -32,13 +32,38 @@ function toCamelCase(fieldName) {
 }
 
 /**
- * Maps Aeries CSV field names to OneRoster standard field names
+ * Maps Aeries teacher IDs to Firebase user IDs using the aeriesId field
+ * @param {string} aeriesTeacherId - The Aeries teacher ID from CSV
+ * @param {Object} userMap - Map of Firebase user IDs to user objects
+ * @returns {string|null} - The Firebase user ID or null if not found
+ */
+async function mapAeriesTeacherIdToFirebaseId(aeriesTeacherId, userMap) {
+  if (!aeriesTeacherId) return null
+  
+  // First try to find by aeriesId field
+  const user = Object.values(userMap).find(u => 
+    u.aeriesId === aeriesTeacherId || 
+    u.aeriesId === parseInt(aeriesTeacherId) ||
+    u.aeriesId?.toString() === aeriesTeacherId?.toString()
+  )
+  
+  if (user) {
+    return user.id
+  }
+  
+  // If not found, log a warning
+  console.warn(`No Firebase user found for Aeries teacher ID: ${aeriesTeacherId}`)
+  return null
+}
+
+/**
+ * Maps Aeries CSV field names to the structure specified in DATABASE_FIELDS.md
  * @param {string} csvFieldName - The original CSV field name
  * @returns {string} - The mapped field name for the app
  */
 function mapAeriesField(csvFieldName) {
   const fieldMap = {
-    // OneRoster standard fields
+    // Basic student info (mapped to aeries.*)
     'sourcedId': 'stateId',
     'SSID': 'stateId',
     'StateStudentID': 'stateId',
@@ -53,39 +78,14 @@ function mapAeriesField(csvFieldName) {
     'Email': 'email',
     'phone': 'phone',
     'Phone': 'phone',
-    'dateOfBirth': 'dob',
-    'DOB': 'dob',
+    'dateOfBirth': 'birthDate',
+    'DOB': 'birthDate',
     'sex': 'gender',
     'Gender': 'gender',
     'grade': 'grade',
     'Grade': 'grade',
-    'school': 'school',
-    'School': 'school',
-    'schoolCode': 'schoolCode',
-    'SchoolCode': 'schoolCode',
-    'schoolName': 'schoolName',
-    'SchoolName': 'schoolName',
     
-    // OneRoster special education fields
-    'specialEducation': 'programs.specialEducation',
-    'iep': 'programs.specialEducation',
-    'IEP': 'programs.specialEducation',
-    'plan504': 'programs.plan504',
-    '504': 'programs.plan504',
-    'disabilities': 'disabilities',
-    'Disability': 'disabilities',
-    'ell': 'programs.ell',
-    'ELL': 'programs.ell',
-    
-    // Additional fields that might be in CSV exports
-    'MedicalNotes': 'medical.notes',
-    'Vision': 'medical.vision',
-    'Hearing': 'medical.hearing',
-    'CAASPP': 'testScores.CAASPP',
-    'ELPAC': 'testScores.ELPAC',
-    'ReviewDate': 'reviewDate',
-    'ReevalDate': 'reevalDate',
-    'MeetingDate': 'meetingDate',
+    // Contact info
     'Address': 'address',
     'City': 'city',
     'State': 'state',
@@ -93,14 +93,28 @@ function mapAeriesField(csvFieldName) {
     'ParentName': 'parentName',
     'ParentPhone': 'parentPhone',
     'ParentEmail': 'parentEmail',
-    'CaseManager': 'caseManager',
-    'ServiceMinutes': 'serviceMinutes',
-    'Goals': 'goals',
-    'Notes': 'notes',
-    'Plan': 'plan',
-    'SpeechProvider': 'speechProvider',
-    'MHProvider': 'mhProvider',
-    'OTProvider': 'otProvider'
+    
+    // Academic info
+    'AttendanceRate': 'attendanceRate',
+    'attendanceRate': 'attendanceRate',
+    
+    // Schedule fields - these will be handled specially to create aeries.schedule.periods
+    'Period1TeacherId': 'schedule.periods.1',
+    'period1TeacherId': 'schedule.periods.1',
+    'Period2TeacherId': 'schedule.periods.2',
+    'period2TeacherId': 'schedule.periods.2',
+    'Period3TeacherId': 'schedule.periods.3',
+    'period3TeacherId': 'schedule.periods.3',
+    'Period4TeacherId': 'schedule.periods.4',
+    'period4TeacherId': 'schedule.periods.4',
+    'Period5TeacherId': 'schedule.periods.5',
+    'period5TeacherId': 'schedule.periods.5',
+    'Period6TeacherId': 'schedule.periods.6',
+    'period6TeacherId': 'schedule.periods.6',
+    'Period7TeacherId': 'schedule.periods.7',
+    'period7TeacherId': 'schedule.periods.7',
+    'SHTeacherId': 'schedule.periods.SH',
+    'shTeacherId': 'schedule.periods.SH'
   }
   
   return fieldMap[csvFieldName] || toCamelCase(csvFieldName)
@@ -190,6 +204,15 @@ export async function parseAeriesCSVAndPreview(file) {
 export async function importFilteredAeriesRecords(data, fieldsToImport) {
   let importedCount = 0
 
+  // Load user collection to map Aeries teacher IDs to Firebase user IDs
+  const usersRef = collection(db, 'users')
+  const usersSnapshot = await getDocs(usersRef)
+  const userMap = {}
+  usersSnapshot.forEach(doc => {
+    userMap[doc.id] = { id: doc.id, ...doc.data() }
+  })
+  console.log(`Loaded ${Object.keys(userMap).length} users for teacher ID mapping`)
+
   for (const entry of data) {
     // Extract SSID (OneRoster sourcedId or legacy SSID fields)
     const ssid = (entry['sourcedId'] || entry['SSID'] || entry['ssid'] || entry['StateStudentID'] || entry['stateStudentId'])?.trim()
@@ -198,41 +221,58 @@ export async function importFilteredAeriesRecords(data, fieldsToImport) {
       continue
     }
 
-    // Build the nested aeries object with proper structure
+    // Build the nested aeries object with proper structure as specified in DATABASE_FIELDS.md
     const aeriesData = {
-      studentId: parseInt(ssid) || ssid,
-      stateId: ssid,
-      localId: entry['StudentNumber'] || ssid,
-      programs: {},
-      medical: {},
-      testScores: {}
+      firstName: '',
+      lastName: '',
+      grade: '',
+      birthDate: '',
+      gender: '',
+      address: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      phone: '',
+      email: '',
+      parentName: '',
+      parentPhone: '',
+      parentEmail: '',
+      attendanceRate: '',
+      schedule: {
+        periods: {}
+      }
     }
 
     // Process each field and map to proper structure
     for (const field of fieldsToImport) {
       const mappedFieldName = mapAeriesField(field)
-      const value = entry[field] != null ? entry[field].trim() : null
+      const rawValue = entry[field]
+      const value = rawValue != null && typeof rawValue === 'string' ? rawValue.trim() : (rawValue != null ? String(rawValue) : null)
 
-      // Handle nested objects
-      if (mappedFieldName.includes('.')) {
-        const [parent, child] = mappedFieldName.split('.')
-        if (!aeriesData[parent]) {
-          aeriesData[parent] = {}
-        }
-        
-        // Convert string values to appropriate types for program flags
-        if (parent === 'programs') {
-          aeriesData[parent][child] = value === 'Yes' || value === 'true' || value === '1'
-        } else {
-          aeriesData[parent][child] = value
+      // Handle schedule fields specially - map to aeries.schedule.periods
+      if (mappedFieldName.startsWith('schedule.periods.')) {
+        const period = mappedFieldName.split('.')[2] // Extract period number (1, 2, 3, etc.)
+        if (value) {
+          // Map Aeries teacher ID to Firebase user ID
+          const firebaseUserId = await mapAeriesTeacherIdToFirebaseId(value, userMap)
+          if (firebaseUserId) {
+            aeriesData.schedule.periods[period] = firebaseUserId
+            console.log(`Mapped Aeries teacher ID ${value} to Firebase user ID ${firebaseUserId} for period ${period}`)
+          } else {
+            console.warn(`Could not map Aeries teacher ID ${value} for period ${period}`)
+          }
         }
       } else {
+        // Handle regular fields
         aeriesData[mappedFieldName] = value
       }
     }
 
     // Add import timestamp
     aeriesData.lastAeriesImport = new Date().toISOString()
+
+    // Debug: Log the final schedule structure
+    console.log('Final aeriesData.schedule structure:', JSON.stringify(aeriesData.schedule, null, 2))
 
     try {
       // Find existing student by SSID or create new one

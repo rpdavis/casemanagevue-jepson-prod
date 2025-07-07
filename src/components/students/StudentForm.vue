@@ -62,8 +62,6 @@
           </div>
         </fieldset>
 
-
-
         <!-- Schedule -->
         <fieldset class="form-col">
           <legend>Schedule</legend>
@@ -279,17 +277,21 @@ const availableClassServices = computed(() => {
 
 // Use the new userRoles structure that matches vanilla JS
 const userRoles = computed(() => {
-  if (props.users.userRoles) {
-    return props.users.userRoles
-  }
-  // Fallback to old structure if userRoles not available
-  return {
+  let roles = props.users.userRoles ? props.users.userRoles : {
     teachers: props.users.teachers || [],
     caseManagers: props.users.caseManagers || [],
     speech: props.users.speech || [],
     ot: props.users.ot || [],
     mh: props.users.mh || []
+  };
+  // Force all teacher IDs to strings
+  if (roles.teachers) {
+    roles = {
+      ...roles,
+      teachers: roles.teachers.map(t => ({ ...t, id: String(t.id) }))
+    };
   }
+  return roles;
 })
 
 // Form state - use hierarchy for fields that could have duplicate data
@@ -303,7 +305,7 @@ const form = reactive({
   reevalDate: getDisplayValue(props.student, 'reevalDate') || '',
   meetingDate: getDisplayValue(props.student, 'meetingDate') || '',
   caseManagerId: props.student.app?.studentData?.caseManagerId || props.student.caseManagerId || props.student.casemanager_id || '',
-  schedule: { ...(props.student.app?.schedule?.periods || props.student.schedule) } || {},
+  schedule: props.student.app?.schedule?.periods || props.student.aeries?.schedule?.periods || props.student.schedule || {},
   services: (props.student.app?.schedule?.classServices || props.student.services) || [],
   speechId: props.student.app?.providers?.speechId || props.student.speechId || props.student.speech_id || '',
   otId: props.student.app?.providers?.otId || props.student.otId || props.student.ot_id || '',
@@ -334,6 +336,10 @@ const form = reactive({
 // Watch for changes in student prop and update form
 watch(() => props.student, (newStudent) => {
   if (newStudent && Object.keys(newStudent).length > 0) {
+    // DEBUG: Check schedule data sources
+    console.log('🔍 StudentForm DEBUG - newStudent.app?.schedule?.periods:', JSON.stringify(newStudent?.app?.schedule?.periods, null, 2))
+    console.log('🔍 StudentForm DEBUG - newStudent.aeries?.schedule?.periods:', JSON.stringify(newStudent?.aeries?.schedule?.periods, null, 2))
+    console.log('🔍 StudentForm DEBUG - newStudent.schedule:', JSON.stringify(newStudent?.schedule, null, 2))
     form.ssid = newStudent.id || ''
     form.firstName = getDisplayValue(newStudent, 'firstName') || ''
     form.lastName = getDisplayValue(newStudent, 'lastName') || ''
@@ -343,7 +349,9 @@ watch(() => props.student, (newStudent) => {
     form.reevalDate = getDisplayValue(newStudent, 'reevalDate') || ''
     form.meetingDate = getDisplayValue(newStudent, 'meetingDate') || ''
     form.caseManagerId = newStudent.app?.studentData?.caseManagerId || newStudent.caseManagerId || newStudent.casemanager_id || ''
-    form.schedule = { ...newStudent.app?.schedule?.periods || newStudent.schedule } || {}
+    // Now schedule is expected to use app user IDs directly
+    form.schedule = newStudent.app?.schedule?.periods || newStudent.aeries?.schedule?.periods || newStudent.schedule || {}
+    console.log('🔍 StudentForm DEBUG - Processed form.schedule:', form.schedule)
     form.services = newStudent.app?.schedule?.classServices || newStudent.services || []
     form.speechId = newStudent.app?.providers?.speechId || newStudent.speechId || newStudent.speech_id || ''
     form.otId = newStudent.app?.providers?.otId || newStudent.otId || newStudent.ot_id || ''

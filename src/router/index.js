@@ -9,6 +9,7 @@ import AdminTimeTable from '@/views/AdminTimeTable.vue';
 import AideScheduleView from '@/views/AideScheduleView.vue';
 import StudentsView from '@/views/StudentsView.vue';
 import AdminAideSchedule from '@/views/AdminAideSchedule.vue';
+import AdminBackupRestore from '@/views/AdminBackupRestore.vue';
 import { setupGuards } from './guards';
 import { STUDENT_ACCESS_ROLES, ADMIN_ONLY } from '@/config/roles';
 
@@ -67,6 +68,15 @@ const routes = [
     path: '/admin/aide-schedule',
     name: 'AdminAideSchedule',
     component: AdminAideSchedule,
+    meta: {
+      requiresAuth: true,
+      allowedRoles: ADMIN_ONLY,
+    },
+  },
+  {
+    path: '/admin/backup-restore',
+    name: 'AdminBackupRestore',
+    component: AdminBackupRestore,
     meta: {
       requiresAuth: true,
       allowedRoles: ADMIN_ONLY,

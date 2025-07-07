@@ -185,7 +185,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { formatListFromText, getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
 
@@ -226,8 +226,6 @@ onMounted(async () => {
   }
 })
 
-
-
 // Helper functions
 function getUserName(userId) {
   const user = props.userMap[userId]
@@ -260,8 +258,6 @@ function hasFlags(student) {
   return (student.app?.flags && Object.values(student.app.flags).some(Boolean)) ||
          (student.flag1 || student.flag2)
 }
-
-
 
 // --- Urgency color helpers ---
 function getDateUrgencyClass(dateStr) {
@@ -335,9 +331,76 @@ function getDocumentUrl(student, type) {
 }
 
 function getSchedule(student) {
-  // Check new nested structure first, then fallback to legacy
-  return student.app?.schedule?.periods || 
-         student.schedule
+  // Check Aeries schedule structure first (direct schedule object)
+  if (student.schedule) {
+    return student.schedule
+  }
+  
+  // Check new nested structure
+  if (student.app?.schedule?.periods) {
+    return student.app.schedule.periods
+  }
+  
+  // Check Aeries schedule.periods structure (your current format)
+  if (student.aeries?.schedule?.periods) {
+    return student.aeries.schedule.periods
+  }
+  
+  // Check legacy Aeries schedule structure
+  if (student.aeries?.schedule) {
+    const formattedSchedule = {}
+    Object.entries(student.aeries.schedule).forEach(([period, data]) => {
+      if (data && data.teacherId) {
+        // Get period label from app settings
+        let periodLabel = period
+        if (appSettings.value && appSettings.value.periodLabels) {
+          const periodIndex = parseInt(period.replace('period', '')) - 1
+          if (periodIndex >= 0 && periodIndex < appSettings.value.periodLabels.length) {
+            periodLabel = appSettings.value.periodLabels[periodIndex]
+          }
+        }
+        
+        // Get teacher name from userMap
+        let teacherName = data.teacherId
+        if (props.userMap) {
+          // Try to find teacher by aeriesId (exact match or string conversion)
+          let teacher = Object.values(props.userMap).find(user => 
+            user.aeriesId === data.teacherId || 
+            user.aeriesId === parseInt(data.teacherId) ||
+            user.id === data.teacherId
+          )
+          
+          // If not found by aeriesId, try to find by any field that might match
+          if (!teacher) {
+            teacher = Object.values(props.userMap).find(user => 
+              user.aeriesId?.toString() === data.teacherId?.toString() ||
+              user.id?.toString() === data.teacherId?.toString()
+            )
+          }
+          
+          if (teacher && teacher.name) {
+            // Format as "First Initial. Last Name"
+            const nameParts = teacher.name.split(' ')
+            if (nameParts.length >= 2) {
+              const firstName = nameParts[0]
+              const lastName = nameParts[nameParts.length - 1]
+              teacherName = `${firstName.charAt(0)}. ${lastName}`
+            } else {
+              teacherName = teacher.name
+            }
+          } else {
+            // If teacher not found, show the teacherId as is
+            console.warn(`Teacher not found for ID: ${data.teacherId}`)
+          }
+        }
+        
+        formattedSchedule[periodLabel] = teacherName
+      }
+    })
+    return Object.keys(formattedSchedule).length > 0 ? formattedSchedule : null
+  }
+  
+  return null
 }
 
 function getClassServices(student) {
@@ -505,6 +568,51 @@ function isDirectAssignment(studentId) {
   
   return aideData?.directAssignment === studentId
 }
+
+function getScheduleForForm(student) {
+  // App schedule (preferred)
+  if (student.app?.schedule?.periods && Object.keys(student.app.schedule.periods).length > 0) {
+    return { ...student.app.schedule.periods }
+  }
+  // Aeries schedule.periods structure (your current format)
+  if (student.aeries?.schedule?.periods && Object.keys(student.aeries.schedule.periods).length > 0) {
+    return { ...student.aeries.schedule.periods }
+  }
+  // Legacy top-level
+  if (student.schedule && Object.keys(student.schedule).length > 0) {
+    return { ...student.schedule }
+  }
+  // Aeries fallback: convert to simple { period: teacherId }
+  if (student.aeries?.schedule && Object.keys(student.aeries.schedule).length > 0) {
+    const aeriesSchedule = {}
+    Object.entries(student.aeries.schedule).forEach(([period, data]) => {
+      if (data && data.teacherId) {
+        aeriesSchedule[period] = String(data.teacherId || data)
+      }
+    })
+    return aeriesSchedule
+  }
+  return {}
+}
+
+// DEBUG: Check schedule data sources (moved to StudentForm.vue)
+
+watch(() => props.student, (newStudent) => {
+  if (newStudent && Object.keys(newStudent).length > 0) {
+    // ... other fields ...
+    form.schedule =
+      newStudent.app?.schedule?.periods ||
+      newStudent.schedule ||
+      newStudent.aeries?.schedule?.periods ||
+      {};
+    console.log('StudentForm DEBUG - form.schedule:', form.schedule);
+    console.log('StudentForm DEBUG - aeries.schedule:', props.student.aeries?.schedule);
+    console.log('StudentForm DEBUG - app.schedule.periods:', props.student.app?.schedule?.periods);
+    // ... other fields ...
+
+    // DEBUG: Check schedule data in watcher (moved to StudentForm.vue)
+  }
+}, { immediate: true, deep: true })
 </script>
 
 <style scoped>
@@ -550,4 +658,5 @@ function isDirectAssignment(studentId) {
 }
 </style>
 
+// Styles removed for migration to external CSS files
 // Styles removed for migration to external CSS files

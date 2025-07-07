@@ -68,6 +68,11 @@
       <div v-if="activeTab === 'settings'" class="admin-section">
         <AppSettings />
       </div>
+
+      <!-- Backup & Restore Tab -->
+      <div v-if="activeTab === 'backup-restore'" class="admin-section">
+        <AdminBackupRestore />
+      </div>
     </div>
   </div>
 </template>
@@ -91,6 +96,7 @@ import AppSettings from './AppSettings.vue'
 import AdminAideAssignment from './AdminAideAssignment.vue'
 import AdminTimeTable from './AdminTimeTable.vue'
 import AdminAideSchedule from './AdminAideSchedule.vue'
+import AdminBackupRestore from './AdminBackupRestore.vue'
 
 export default {
   name: 'AdminView',
@@ -108,7 +114,8 @@ export default {
     AppSettings,
     AdminAideAssignment,
     AdminTimeTable,
-    AdminAideSchedule
+    AdminAideSchedule,
+    AdminBackupRestore
   },
   setup() {
     const router = useRouter()
@@ -124,7 +131,8 @@ export default {
       { key: 'permissions', label: 'Permissions', category: 'system-config' },
       { key: 'seis', label: 'SEIS Import', category: 'system-config' },
       { key: 'aeries', label: 'Aeries API & Import', category: 'system-config' },
-      { key: 'settings', label: 'App Settings', category: 'system-config' }
+      { key: 'settings', label: 'App Settings', category: 'system-config' },
+      { key: 'backup-restore', label: 'Backup & Restore', category: 'system-config' }
     ]
 
     const handleTabChange = (tabKey) => {

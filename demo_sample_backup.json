@@ -1,0 +1,1273 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "createdAt": "2025-07-07T03:58:53.356Z",
+    "createdBy": "admin",
+    "description": "Sample demo data (10 users, 10 students)"
+  },
+  "collections": {
+    "users": [
+      {
+        "id": "user001",
+        "aeriesId": "100001",
+        "createdAt": "2025-07-07T03:53:17.272Z",
+        "email": "joshua.harris@school.edu",
+        "name": "Joshua Harris",
+        "provider": "",
+        "role": "paraeducator"
+      },
+      {
+        "id": "user002",
+        "aeriesId": "100002",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "donna.watson@school.edu",
+        "name": "Donna Watson",
+        "provider": "",
+        "role": "administrator"
+      },
+      {
+        "id": "user003",
+        "aeriesId": "100003",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "robert.mendoza@school.edu",
+        "name": "Robert Mendoza",
+        "provider": "SP",
+        "role": "service_provider"
+      },
+      {
+        "id": "user004",
+        "aeriesId": "100004",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "deborah.moore@school.edu",
+        "name": "Deborah Moore",
+        "provider": "",
+        "role": "paraeducator"
+      },
+      {
+        "id": "user005",
+        "aeriesId": "100005",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "michelle.clark@school.edu",
+        "name": "Michelle Clark",
+        "provider": "",
+        "role": "paraeducator"
+      },
+      {
+        "id": "user006",
+        "aeriesId": "100006",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "nicholas.jimenez@school.edu",
+        "name": "Nicholas Jimenez",
+        "provider": "SP",
+        "role": "service_provider"
+      },
+      {
+        "id": "user007",
+        "aeriesId": "100007",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "stephen.diaz@school.edu",
+        "name": "Stephen Diaz",
+        "provider": "",
+        "role": "teacher"
+      },
+      {
+        "id": "user008",
+        "aeriesId": "100008",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "deborah.martin@school.edu",
+        "name": "Deborah Martin",
+        "provider": "",
+        "role": "paraeducator"
+      },
+      {
+        "id": "user009",
+        "aeriesId": "100009",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "karen.cooper@school.edu",
+        "name": "Karen Cooper",
+        "provider": "",
+        "role": "teacher"
+      },
+      {
+        "id": "user010",
+        "aeriesId": "100010",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "email": "alexander.james@school.edu",
+        "name": "Alexander James",
+        "provider": "",
+        "role": "teacher"
+      }
+    ],
+    "students": [
+      {
+        "id": "student001",
+        "ssid": "100000001",
+        "createdAt": "2025-07-07T03:53:17.276Z",
+        "updatedAt": "2025-07-07T03:53:17.276Z",
+        "app": {
+          "studentData": {
+            "firstName": "Chloe",
+            "lastName": "Miller",
+            "grade": "8",
+            "plan": "RTI",
+            "caseManagerId": "user006",
+            "ssid": "100000001"
+          },
+          "dates": {
+            "reviewDate": "2025-08-16",
+            "reevalDate": "2026-01-19",
+            "meetingDate": "2025-07-13"
+          },
+          "schedule": {
+            "periods": {
+              "1": "user022",
+              "3": "user007",
+              "4": "user022",
+              "5": "user024",
+              "6": "user022"
+            },
+            "classServices": [
+              "Co-teach: Math"
+            ]
+          },
+          "providers": {
+            "speechId": "",
+            "otId": "user058",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "user015",
+            "mhId": "",
+            "omId": "",
+            "scId": "",
+            "swId": "",
+            "trId": "user006",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": false
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 1",
+          "instruction": "Instruction notes for student 1"
+        },
+        "aeries": {
+          "firstName": "Chloe",
+          "lastName": "Miller",
+          "grade": "8",
+          "birthDate": "2014-05-25",
+          "gender": "M",
+          "address": "4350 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 939-8040",
+          "email": "chloe.miller@student.edu",
+          "parentName": "Parent1",
+          "parentPhone": "(555) 110-9265",
+          "parentEmail": "parent1@email.com",
+          "attendanceRate": "85.9",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100043",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100049",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Chloe",
+          "lastName": "Miller",
+          "grade": "8",
+          "birthDate": "2003-08-10",
+          "gender": "M",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student002",
+        "ssid": "100000002",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Emma",
+            "lastName": "Kim",
+            "grade": "5",
+            "plan": "RTI",
+            "caseManagerId": "user003",
+            "ssid": "100000002"
+          },
+          "dates": {
+            "reviewDate": "2026-04-05",
+            "reevalDate": "2025-10-22",
+            "meetingDate": "2025-07-09"
+          },
+          "schedule": {
+            "periods": {
+              "2": "user011",
+              "3": "user010",
+              "4": "user010",
+              "5": "user007",
+              "SH": "user009"
+            },
+            "classServices": [
+              "RSP: English",
+              "SDC: History",
+              "FA: FA",
+              "SDC: Science"
+            ]
+          },
+          "providers": {
+            "speechId": "",
+            "otId": "",
+            "ptId": "user015",
+            "atId": "",
+            "audId": "user016",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "user054",
+            "mhId": "",
+            "omId": "",
+            "scId": "user054",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": true,
+            "flag2": false
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 2",
+          "instruction": "Instruction notes for student 2"
+        },
+        "aeries": {
+          "firstName": "Emma",
+          "lastName": "Kim",
+          "grade": "5",
+          "birthDate": "2005-01-07",
+          "gender": "F",
+          "address": "4905 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 311-6405",
+          "email": "emma.kim@student.edu",
+          "parentName": "Parent2",
+          "parentPhone": "(555) 578-8632",
+          "parentEmail": "parent2@email.com",
+          "attendanceRate": "87.4",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100031",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100021",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Emma",
+          "lastName": "Kim",
+          "grade": "5",
+          "birthDate": "2004-05-18",
+          "gender": "M",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student003",
+        "ssid": "100000003",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Nora",
+            "lastName": "Morris",
+            "grade": "4",
+            "plan": "RTI",
+            "caseManagerId": "user010",
+            "ssid": "100000003"
+          },
+          "dates": {
+            "reviewDate": "2026-05-27",
+            "reevalDate": "2026-04-28",
+            "meetingDate": "2025-08-02"
+          },
+          "schedule": {
+            "periods": {
+              "2": "user020",
+              "3": "user021",
+              "4": "user010",
+              "6": "user009",
+              "SH": "user007"
+            },
+            "classServices": [
+              "SDC: Math",
+              "FA: FA",
+              "SDC: History",
+              "Co-teach: Math"
+            ]
+          },
+          "providers": {
+            "speechId": "user042",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "user003",
+            "dhhId": "",
+            "hnId": "",
+            "mhId": "user003",
+            "omId": "",
+            "scId": "user027",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 3",
+          "instruction": "Instruction notes for student 3"
+        },
+        "aeries": {
+          "firstName": "Nora",
+          "lastName": "Morris",
+          "grade": "4",
+          "birthDate": "2003-11-27",
+          "gender": "F",
+          "address": "8509 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 455-5913",
+          "email": "nora.morris@student.edu",
+          "parentName": "Parent3",
+          "parentPhone": "(555) 519-1009",
+          "parentEmail": "parent3@email.com",
+          "attendanceRate": "91.5",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100045",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100027",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Nora",
+          "lastName": "Morris",
+          "grade": "4",
+          "birthDate": "2010-04-14",
+          "gender": "F",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student004",
+        "ssid": "100000004",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Nova",
+            "lastName": "Reed",
+            "grade": "11",
+            "plan": "None",
+            "caseManagerId": "user003",
+            "ssid": "100000004"
+          },
+          "dates": {
+            "reviewDate": "2026-01-29",
+            "reevalDate": "2026-06-12",
+            "meetingDate": "2025-07-12"
+          },
+          "schedule": {
+            "periods": {
+              "2": "user014",
+              "3": "user010",
+              "4": "user024",
+              "5": "user022",
+              "SH": "user021"
+            },
+            "classServices": [
+              "SDC: English",
+              "SDC: Science",
+              "RSP: English"
+            ]
+          },
+          "providers": {
+            "speechId": "",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "user015",
+            "dhhId": "",
+            "hnId": "",
+            "mhId": "",
+            "omId": "",
+            "scId": "",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": false
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 4",
+          "instruction": "Instruction notes for student 4"
+        },
+        "aeries": {
+          "firstName": "Nova",
+          "lastName": "Reed",
+          "grade": "11",
+          "birthDate": "2013-08-20",
+          "gender": "F",
+          "address": "8266 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 459-0369",
+          "email": "nova.reed@student.edu",
+          "parentName": "Parent4",
+          "parentPhone": "(555) 703-0720",
+          "parentEmail": "parent4@email.com",
+          "attendanceRate": "89.1",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100024",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100026",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Nova",
+          "lastName": "Reed",
+          "grade": "11",
+          "birthDate": "2002-03-01",
+          "gender": "M",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student005",
+        "ssid": "100000005",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Avery",
+            "lastName": "Lee",
+            "grade": "K",
+            "plan": "None",
+            "caseManagerId": "user006",
+            "ssid": "100000005"
+          },
+          "dates": {
+            "reviewDate": "2026-05-26",
+            "reevalDate": "2025-10-31",
+            "meetingDate": "2025-07-16"
+          },
+          "schedule": {
+            "periods": {
+              "3": "user009",
+              "6": "user009"
+            },
+            "classServices": [
+              "SDC: Science",
+              "Co-teach: English"
+            ]
+          },
+          "providers": {
+            "speechId": "user033",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "",
+            "mhId": "",
+            "omId": "user006",
+            "scId": "user052",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": true,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 5",
+          "instruction": "Instruction notes for student 5"
+        },
+        "aeries": {
+          "firstName": "Avery",
+          "lastName": "Lee",
+          "grade": "K",
+          "birthDate": "2005-07-26",
+          "gender": "M",
+          "address": "7065 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 488-0795",
+          "email": "avery.lee@student.edu",
+          "parentName": "Parent5",
+          "parentPhone": "(555) 692-6698",
+          "parentEmail": "parent5@email.com",
+          "attendanceRate": "96.8",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100030",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100014",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Avery",
+          "lastName": "Lee",
+          "grade": "K",
+          "birthDate": "2008-07-10",
+          "gender": "M",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student006",
+        "ssid": "100000006",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Emilia",
+            "lastName": "Jones",
+            "grade": "9",
+            "plan": "RTI",
+            "caseManagerId": "user006",
+            "ssid": "100000006"
+          },
+          "dates": {
+            "reviewDate": "2025-09-07",
+            "reevalDate": "2026-07-05",
+            "meetingDate": "2025-07-31"
+          },
+          "schedule": {
+            "periods": {
+              "4": "user014",
+              "5": "user009",
+              "6": "user013",
+              "SH": "user010"
+            },
+            "classServices": [
+              "Co-teach: English"
+            ]
+          },
+          "providers": {
+            "speechId": "user042",
+            "otId": "",
+            "ptId": "",
+            "atId": "user050",
+            "audId": "user042",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "",
+            "mhId": "user026",
+            "omId": "",
+            "scId": "user033",
+            "swId": "user006",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 6",
+          "instruction": "Instruction notes for student 6"
+        },
+        "aeries": {
+          "firstName": "Emilia",
+          "lastName": "Jones",
+          "grade": "9",
+          "birthDate": "2004-12-15",
+          "gender": "M",
+          "address": "9054 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 914-3758",
+          "email": "emilia.jones@student.edu",
+          "parentName": "Parent6",
+          "parentPhone": "(555) 235-6981",
+          "parentEmail": "parent6@email.com",
+          "attendanceRate": "91.0",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100033",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100013",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Emilia",
+          "lastName": "Jones",
+          "grade": "9",
+          "birthDate": "2014-11-06",
+          "gender": "F",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student007",
+        "ssid": "100000007",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Eli",
+            "lastName": "Wilson",
+            "grade": "K",
+            "plan": "None",
+            "caseManagerId": "user009",
+            "ssid": "100000007"
+          },
+          "dates": {
+            "reviewDate": "2026-02-04",
+            "reevalDate": "2025-08-08",
+            "meetingDate": "2025-07-14"
+          },
+          "schedule": {
+            "periods": {
+              "1": "user024",
+              "3": "user010",
+              "4": "user022",
+              "5": "user022"
+            },
+            "classServices": [
+              "SDC: Science",
+              "SDC: History"
+            ]
+          },
+          "providers": {
+            "speechId": "",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "user058",
+            "mhId": "",
+            "omId": "user016",
+            "scId": "",
+            "swId": "",
+            "trId": "user027",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": true,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 7",
+          "instruction": "Instruction notes for student 7"
+        },
+        "aeries": {
+          "firstName": "Eli",
+          "lastName": "Wilson",
+          "grade": "K",
+          "birthDate": "2006-09-28",
+          "gender": "M",
+          "address": "5678 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 873-2400",
+          "email": "eli.wilson@student.edu",
+          "parentName": "Parent7",
+          "parentPhone": "(555) 960-8303",
+          "parentEmail": "parent7@email.com",
+          "attendanceRate": "98.4",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100022",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100031",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Eli",
+          "lastName": "Wilson",
+          "grade": "K",
+          "birthDate": "2007-05-04",
+          "gender": "F",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student008",
+        "ssid": "100000008",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Everly",
+            "lastName": "Torres",
+            "grade": "1",
+            "plan": "None",
+            "caseManagerId": "user003",
+            "ssid": "100000008"
+          },
+          "dates": {
+            "reviewDate": "2025-12-27",
+            "reevalDate": "2025-11-26",
+            "meetingDate": "2025-07-11"
+          },
+          "schedule": {
+            "periods": {
+              "1": "user013",
+              "4": "user014",
+              "5": "user021",
+              "SH": "user010"
+            },
+            "classServices": [
+              "RSP: Math",
+              "SDC: Math",
+              "FA: FA",
+              "Directed Studies: Directed Studies"
+            ]
+          },
+          "providers": {
+            "speechId": "user042",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "user017",
+            "bisId": "",
+            "dhhId": "user017",
+            "hnId": "",
+            "mhId": "",
+            "omId": "user026",
+            "scId": "",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 8",
+          "instruction": "Instruction notes for student 8"
+        },
+        "aeries": {
+          "firstName": "Everly",
+          "lastName": "Torres",
+          "grade": "1",
+          "birthDate": "2008-11-26",
+          "gender": "F",
+          "address": "253 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 794-3857",
+          "email": "everly.torres@student.edu",
+          "parentName": "Parent8",
+          "parentPhone": "(555) 616-4711",
+          "parentEmail": "parent8@email.com",
+          "attendanceRate": "95.8",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100025",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100022",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Everly",
+          "lastName": "Torres",
+          "grade": "1",
+          "birthDate": "2006-05-19",
+          "gender": "M",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student009",
+        "ssid": "100000009",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Henry",
+            "lastName": "Campbell",
+            "grade": "6",
+            "plan": "504",
+            "caseManagerId": "user009",
+            "ssid": "100000009"
+          },
+          "dates": {
+            "reviewDate": "2026-02-25",
+            "reevalDate": "2025-07-07",
+            "meetingDate": "2025-07-26"
+          },
+          "schedule": {
+            "periods": {
+              "4": "user022",
+              "5": "user022",
+              "6": "user009",
+              "SH": "user021"
+            },
+            "classServices": [
+              "RSP: Math",
+              "Co-teach: Math",
+              "SDC: History"
+            ]
+          },
+          "providers": {
+            "speechId": "user050",
+            "otId": "",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "user003",
+            "dhhId": "user052",
+            "hnId": "user054",
+            "mhId": "",
+            "omId": "user015",
+            "scId": "user015",
+            "swId": "user029",
+            "trId": "user052",
+            "viId": "user006"
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 9",
+          "instruction": "Instruction notes for student 9"
+        },
+        "aeries": {
+          "firstName": "Henry",
+          "lastName": "Campbell",
+          "grade": "6",
+          "birthDate": "2000-07-02",
+          "gender": "M",
+          "address": "534 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 549-5480",
+          "email": "henry.campbell@student.edu",
+          "parentName": "Parent9",
+          "parentPhone": "(555) 740-4970",
+          "parentEmail": "parent9@email.com",
+          "attendanceRate": "90.0",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100009",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100034",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Henry",
+          "lastName": "Campbell",
+          "grade": "6",
+          "birthDate": "2012-12-20",
+          "gender": "F",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      },
+      {
+        "id": "student010",
+        "ssid": "100000010",
+        "createdAt": "2025-07-07T03:53:17.277Z",
+        "updatedAt": "2025-07-07T03:53:17.277Z",
+        "app": {
+          "studentData": {
+            "firstName": "Violet",
+            "lastName": "Russell",
+            "grade": "2",
+            "plan": "RTI",
+            "caseManagerId": "user009",
+            "ssid": "100000010"
+          },
+          "dates": {
+            "reviewDate": "2026-03-13",
+            "reevalDate": "2026-03-28",
+            "meetingDate": "2025-07-29"
+          },
+          "schedule": {
+            "periods": {
+              "1": "user011",
+              "3": "user013",
+              "5": "user010",
+              "6": "user007",
+              "SH": "user022"
+            },
+            "classServices": [
+              "SDC: History",
+              "SDC: Math"
+            ]
+          },
+          "providers": {
+            "speechId": "",
+            "otId": "user006",
+            "ptId": "",
+            "atId": "",
+            "audId": "",
+            "bisId": "",
+            "dhhId": "",
+            "hnId": "",
+            "mhId": "user017",
+            "omId": "",
+            "scId": "user016",
+            "swId": "",
+            "trId": "",
+            "viId": ""
+          },
+          "flags": {
+            "flag1": false,
+            "flag2": true
+          },
+          "documents": {
+            "bipPdfUrl": "",
+            "ataglancePdfUrl": ""
+          },
+          "accommodations": {},
+          "assessment": "Assessment notes for student 10",
+          "instruction": "Instruction notes for student 10"
+        },
+        "aeries": {
+          "firstName": "Violet",
+          "lastName": "Russell",
+          "grade": "2",
+          "birthDate": "2010-11-18",
+          "gender": "M",
+          "address": "2494 Main St",
+          "city": "Anytown",
+          "state": "CA",
+          "zipCode": "90210",
+          "phone": "(555) 054-9928",
+          "email": "violet.russell@student.edu",
+          "parentName": "Parent10",
+          "parentPhone": "(555) 678-4254",
+          "parentEmail": "parent10@email.com",
+          "attendanceRate": "91.2",
+          "schedule": {
+            "Period 1": {
+              "teacherId": "100011",
+              "subject": "English 9",
+              "room": "A101"
+            },
+            "Period 2": {
+              "teacherId": "100011",
+              "subject": "Algebra 1",
+              "room": "B205"
+            }
+          }
+        },
+        "seis": {
+          "firstName": "Violet",
+          "lastName": "Russell",
+          "grade": "2",
+          "birthDate": "2014-08-21",
+          "gender": "F",
+          "eligibilityCategory": "Specific Learning Disability",
+          "primaryDisability": "Dyslexia",
+          "secondaryDisability": "ADHD",
+          "iepStartDate": "2023-09-01",
+          "iepEndDate": "2024-06-30",
+          "annualReviewDate": "2024-03-15",
+          "triennialDate": "2024-06-20",
+          "services": [
+            "Speech and Language Therapy",
+            "Occupational Therapy",
+            "Resource Specialist Program"
+          ],
+          "goals": [
+            "Improve reading comprehension by 20%",
+            "Develop organizational skills",
+            "Increase attention span during class"
+          ],
+          "behaviorPlan": "Yes",
+          "socialSkills": "Needs improvement",
+          "transitionPlan": "Post-secondary education"
+        }
+      }
+    ]
+  }
+}

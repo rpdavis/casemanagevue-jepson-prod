@@ -172,3 +172,33 @@ export function formatListFromText(text) {
     .join("");
   return `<ul class="bullet-list">${items}</ul>`;
 }
+
+export function getStudentSchedule(student) {
+  if (!student) return null;
+  // App schedule (new structure)
+  if (student.app && student.app.schedule && student.app.schedule.periods) {
+    return student.app.schedule.periods;
+  }
+  // Aeries schedule.periods structure (your current format)
+  if (student.aeries && student.aeries.schedule && student.aeries.schedule.periods) {
+    return student.aeries.schedule.periods;
+  }
+  // Aeries schedule (map "Period 1" -> "1", etc.)
+  if (student.aeries && student.aeries.schedule) {
+    const aeriesPeriods = student.aeries.schedule;
+    // Convert keys like "Period 1" to "1"
+    const mapped = {};
+    Object.keys(aeriesPeriods).forEach(key => {
+      const match = key.match(/^Period (\d+)$/);
+      if (match) {
+        mapped[match[1]] = aeriesPeriods[key];
+      }
+    });
+    return Object.keys(mapped).length ? mapped : null;
+  }
+  // Legacy schedule
+  if (student.schedule) {
+    return student.schedule;
+  }
+  return null;
+}

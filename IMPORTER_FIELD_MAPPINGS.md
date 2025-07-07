@@ -54,13 +54,6 @@ Test Scores:
 ├── CAASPP → testScores.CAASPP
 ├── ELPAC → testScores.ELPAC
 
-Important Dates:
-├── ReviewDate → reviewDate
-├── ReevalDate → reevalDate
-├── MeetingDate → meetingDate
-
-Accommodations:
-*Note: Aeries does not typically include accommodation fields in CSV exports*
 
 Demographic Information:
 ├── DOB → dob

@@ -3,9 +3,13 @@
   <div id="student-filters" class="student-filters-pro">
     <div class="filters-left">
       <select v-model="filters.sortBy" @change="emitFilters">
-        <option value="first_name">First Name</option>
-        <option value="last_name">Last Name</option>
-        <!-- other sort options -->
+        <option value="firstName">First Name</option>
+        <option value="lastName">Last Name</option>
+        <option value="grade">Grade</option>
+        <option value="plan">Plan</option>
+        <option value="reviewDate">Review Date</option>
+        <option value="reevalDate">Re-evaluation Date</option>
+        <option value="meetingDate">Meeting Date</option>
       </select>
       <select v-model="filters.cm" @change="emitFilters">
         <option value="all">All Case Managers</option>
@@ -78,7 +82,7 @@ const props = defineProps({
 const emit = defineEmits(['filter'])
 
 const filters = reactive({
-  sortBy: 'first_name',
+  sortBy: 'firstName',
   cm: 'all',
   teacher: 'all',
   paraeducator: 'all',
@@ -98,7 +102,7 @@ function emitFilters() {
 }
 
 function clearFilters() {
-  filters.sortBy = 'first_name'
+  filters.sortBy = 'firstName'
   filters.cm = 'all'
   filters.teacher = 'all'
   filters.paraeducator = 'all'
