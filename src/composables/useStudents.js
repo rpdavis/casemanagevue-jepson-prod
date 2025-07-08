@@ -36,6 +36,20 @@ function convertFirestoreMaps(obj) {
 
 export default function useStudents() {
   const students = ref([])
+  let googleSheetsSync = null
+
+  // Lazy load Google Sheets sync only when needed
+  async function getGoogleSheetsSync() {
+    if (!googleSheetsSync) {
+      try {
+        const { useGoogleSheetsRealtime } = await import('./useGoogleSheetsRealtime')
+        googleSheetsSync = useGoogleSheetsRealtime()
+      } catch (error) {
+        console.error('Failed to load Google Sheets sync:', error)
+      }
+    }
+    return googleSheetsSync
+  }
 
   async function fetchStudents() {
     const studentSnap = await getDocs(collection(db, 'students'))
@@ -65,16 +79,62 @@ export default function useStudents() {
   }
 
   async function updateStudent(id, updates) {
+    // Update in Firestore
     await updateDoc(doc(db, 'students', id), updates)
+    
+    // Trigger Google Sheets sync if linked
+    try {
+      const sync = await getGoogleSheetsSync()
+      if (sync && sync.linkedSheetId.value) {
+        // Update the local students array with the changes
+        const studentIndex = students.value.findIndex(s => s.id === id)
+        if (studentIndex !== -1) {
+          students.value[studentIndex] = { ...students.value[studentIndex], ...updates }
+        }
+        
+        // Sync to Google Sheets
+        console.log('Syncing student update to Google Sheets...')
+        await sync.updateSheetData(students.value)
+      }
+    } catch (error) {
+      console.error('Failed to sync to Google Sheets:', error)
+      // Don't throw - we don't want to fail the update if sync fails
+    }
   }
 
   async function deleteStudent(id) {
     await deleteDoc(doc(db, 'students', id))
+    
+    // Trigger Google Sheets sync if linked
+    try {
+      const sync = await getGoogleSheetsSync()
+      if (sync && sync.linkedSheetId.value) {
+        // Remove from local array
+        students.value = students.value.filter(s => s.id !== id)
+        
+        // Sync to Google Sheets
+        console.log('Syncing student deletion to Google Sheets...')
+        await sync.updateSheetData(students.value)
+      }
+    } catch (error) {
+      console.error('Failed to sync to Google Sheets:', error)
+    }
   }
 
   async function deleteAllStudents() {
     const studentSnap = await getDocs(collection(db, 'students'))
     await Promise.all(studentSnap.docs.map(d => deleteDoc(doc(db, 'students', d.id))))
+    
+    // Clear Google Sheets if linked
+    try {
+      const sync = await getGoogleSheetsSync()
+      if (sync && sync.linkedSheetId.value) {
+        students.value = []
+        await sync.updateSheetData([])
+      }
+    } catch (error) {
+      console.error('Failed to sync to Google Sheets:', error)
+    }
   }
 
   return { 

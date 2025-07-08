@@ -1,714 +1,886 @@
 <template>
-  <div class="testing-links">
-    <h2>Testing Links Configuration</h2>
-    <p>Configure Google Sheets integration for testing data.</p>
-
-        <!-- Simplified Controls -->
-    <div class="sheet-controls">
-      <p class="auth-info">Logged in as: <strong>{{ authStore.user?.email }}</strong></p>
-      <p class="info-text">Create Google Sheets with your student data using one of the options below.</p>
-    </div>
-
-    <!-- Main Sheet Configuration -->
-    <div class="sheet-config">
-      <h3>Google Sheets Integration</h3>
+  <div class="testing-links-container">
+    <h3>Testing Links & Google Sheets Integration</h3>
+    
+    <!-- Google Sheets Integration Section -->
+    <div class="sheets-section">
+      <h4>Google Sheets Integration</h4>
       
-      <!-- Debug Info -->
-      <div class="debug-info">
-        <p><strong>Debug:</strong> gapiLoaded: {{ gapiLoaded }}, currentSheetUrl: {{ currentSheetUrl || 'null' }}</p>
-      </div>
-      
-      <!-- Create Sheet Options -->
-      <div class="sheet-controls">
-        <div class="create-options">
-          <h4>Choose how to create your Google Sheet:</h4>
-          
-          <div class="option-card">
-            <button 
-              @click="createLinkedGoogleSheet" 
-              class="btn-primary btn-large"
-              :disabled="isCreating"
-            >
-              {{ isCreating ? 'Creating...' : '📊 Create Google Sheet with Data' }}
-            </button>
-            <p class="option-description">
-              Downloads your student data as CSV and opens Google Sheets. Import the CSV to create a sheet with all your data.
+      <!-- Linked Sheet Status -->
+      <div v-if="linkedSheetId" class="linked-sheet-status">
+        <div class="status-card success">
+          <h5>📊 Linked Google Sheet</h5>
+          <p>Your student data is synced to Google Sheets</p>
+          <a :href="linkedSheetUrl" target="_blank" class="sheet-link">
+            Open Google Sheet →
+          </a>
+          <div class="sync-info">
+            <span v-if="lastSyncTime">Last synced: {{ formatTime(lastSyncTime) }}</span>
+            <span v-if="syncStatus === 'syncing'" class="syncing">🔄 Syncing...</span>
+            <span v-else-if="syncStatus === 'success'" class="success">✅ Synced</span>
+            <span v-else-if="syncStatus === 'error'" class="error">❌ {{ syncMessage }}</span>
+          </div>
+          <div class="auto-sync-info">
+            <span class="auto-sync-badge">
+              <span class="pulse"></span>
+              Auto-sync enabled
+            </span>
+            <p class="auto-sync-description">
+              Changes to student data, accommodations, and services are automatically synced to your Google Sheet.
             </p>
           </div>
-          
-          <div class="option-card">
-            <button @click="createSimpleSheet" class="btn-secondary">
-              📄 Create Blank Google Sheet
+          <div class="sheet-actions">
+            <button @click="syncNow" :disabled="syncStatus === 'syncing'" class="btn-sync">
+              Sync Now
             </button>
-            <p class="option-description">
-              Opens a new blank Google Sheet that you can manually populate.
-            </p>
-          </div>
-          
-          <div class="option-card">
-            <button @click="exportToCSV" class="btn-success">
-              💾 Export to CSV Only
+            <button @click="unlinkSheet" class="btn-unlink">
+              Unlink Sheet
             </button>
-            <p class="option-description">
-              Downloads student data as a CSV file without opening Google Sheets.
-            </p>
           </div>
         </div>
-      </div>
-
-      <!-- Sheet Structure Info -->
-      <div class="sheet-structure">
-        <h4>Sheet Structure</h4>
-        <p>The Google Sheet will contain the following columns:</p>
-        <ul>
-          <li><strong>First Name</strong> - Student's first name</li>
-          <li><strong>Last Name</strong> - Student's last name</li>
-          <li><strong>Grade</strong> - Student's grade level</li>
-          <li><strong>Case Manager</strong> - Student's case manager</li>
-          <li><strong>Assessment Accommodations</strong> - Student's assessment accommodations</li>
-          <li v-if="hasCustomTabs"><strong>Period</strong> - Class period (for custom tabs)</li>
-          <li v-if="hasCustomTabs"><strong>Teacher</strong> - Class teacher (for custom tabs)</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Custom Tabs Configuration -->
-    <div class="custom-tabs-config">
-      <h3>Custom Tabs Configuration</h3>
-      
-      <div class="add-tab-controls">
-        <button 
-          @click="showAddTabForm = true" 
-          class="btn-secondary"
-          :disabled="customTabs.length >= 5"
-        >
-          Add Custom Tab
-        </button>
-        <span v-if="customTabs.length >= 5" class="max-tabs-warning">
-          Maximum 5 custom tabs allowed
-        </span>
-      </div>
-
-      <!-- Add Tab Form -->
-      <div v-if="showAddTabForm" class="add-tab-form">
-        <h4>Create New Tab</h4>
         
-        <div class="form-group">
-          <label for="tabTitle">Tab Title:</label>
-          <input 
-            id="tabTitle"
-            v-model="newTab.title" 
-            type="text" 
-            placeholder="Enter tab title"
-            class="form-input"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Select Teachers:</label>
-          <div class="teacher-checkboxes">
-            <label v-for="teacher in availableTeachers" :key="teacher.id" class="checkbox-label">
-              <input 
-                type="checkbox" 
-                :value="teacher.id" 
-                v-model="newTab.selectedTeachers"
-                @change="updateFilteredStudents"
-              />
-              {{ teacher.name }}
-            </label>
+        <!-- Custom Tabs Section -->
+        <div class="custom-tabs-config">
+          <h5>Custom Teacher Tabs</h5>
+          <p>Create custom tabs with data filtered by specific teachers</p>
+          
+          <!-- Add Tab Button -->
+          <div class="add-tab-controls">
+            <button 
+              @click="showAddTabForm = !showAddTabForm" 
+              :disabled="customTabs.length >= maxCustomTabs"
+              class="btn-primary"
+            >
+              + Add Custom Tab
+            </button>
+            <span v-if="customTabs.length >= maxCustomTabs" class="max-tabs-warning">
+              Maximum of {{ maxCustomTabs }} custom tabs allowed
+            </span>
           </div>
-        </div>
-
-        <div class="form-actions">
-          <button @click="createCustomTab" class="btn-primary" :disabled="!canCreateTab">
-            Create Tab
-          </button>
-          <button @click="cancelAddTab" class="btn-secondary">Cancel</button>
+          
+          <!-- Add Tab Form -->
+          <div v-if="showAddTabForm" class="add-tab-form">
+            <div class="form-group">
+              <label>Tab Name</label>
+              <input 
+                v-model="newTabName" 
+                type="text" 
+                class="form-input" 
+                placeholder="e.g., Math Teachers"
+                maxlength="30"
+              >
+            </div>
+            
+            <div class="form-group">
+              <label>Select Teachers</label>
+              <div class="teacher-checkboxes">
+                <label 
+                  v-for="teacher in availableTeachers" 
+                  :key="teacher.id"
+                  class="checkbox-label"
+                >
+                  <input 
+                    type="checkbox" 
+                    :value="teacher.id"
+                    v-model="selectedTeachers"
+                  >
+                  {{ teacher.name }}
+                </label>
+              </div>
+            </div>
+            
+            <!-- Preview -->
+            <div v-if="selectedTeachers.length > 0" class="preview-section">
+              <h6>Preview ({{ filteredStudentsPreview.length }} students)</h6>
+              <div class="preview-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Grade</th>
+                      <th>Period</th>
+                      <th>Teacher</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="student in filteredStudentsPreview.slice(0, 5)" :key="student.id">
+                      <td>{{ student.firstName }} {{ student.lastName }}</td>
+                      <td>{{ student.grade || student.app?.studentData?.grade }}</td>
+                      <td>
+                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers)" :key="idx">
+                          {{ period.period }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers).length - 1">, </span>
+                        </span>
+                      </td>
+                      <td>
+                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers)" :key="idx">
+                          {{ period.teacherName }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers).length - 1">, </span>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="filteredStudentsPreview.length > 5" class="preview-note">
+                  ... and {{ filteredStudentsPreview.length - 5 }} more students
+                </p>
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button @click="addCustomTab" class="btn-primary">
+                Create Tab
+              </button>
+              <button @click="showAddTabForm = false; selectedTeachers = []; newTabName = ''" class="btn-secondary">
+                Cancel
+              </button>
+            </div>
+          </div>
+          
+          <!-- Existing Tabs -->
+          <div v-if="customTabs.length > 0" class="existing-tabs">
+            <h6>Current Custom Tabs</h6>
+            <div v-for="tab in customTabs" :key="tab.id" class="tab-item">
+              <div>
+                <strong>{{ tab.name }}</strong>
+                <span class="tab-teachers">
+                  {{ tab.teachers.length }} teacher(s), {{ tab.studentCount }} students
+                </span>
+              </div>
+              <button @click="removeCustomTab(tab.id)" class="btn-danger btn-small">
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Existing Custom Tabs -->
-      <div v-if="customTabs.length > 0" class="existing-tabs">
-        <h4>Existing Custom Tabs</h4>
-        <div v-for="(tab, index) in customTabs" :key="index" class="tab-item">
-          <div class="tab-info">
-            <strong>{{ tab.title }}</strong>
-            <span class="tab-teachers">{{ tab.selectedTeachers.length }} teachers selected</span>
+      
+      <!-- Create Linked Sheet -->
+      <div v-else class="create-sheet-section">
+        <h5>Create a Linked Google Sheet</h5>
+        <p>Link your student data to a Google Sheet that automatically updates when changes are made.</p>
+        <div class="features-list">
+          <div class="feature">
+            <span class="feature-icon">🔄</span>
+            <span>Auto-syncs when students are added or updated</span>
           </div>
-          <button @click="deleteCustomTabLocal(index)" class="btn-danger btn-small">Delete</button>
+          <div class="feature">
+            <span class="feature-icon">📝</span>
+            <span>Updates accommodations and services in real-time</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">🔗</span>
+            <span>Maintains a live connection to your data</span>
+          </div>
+        </div>
+        <button @click="createLinkedGoogleSheet" class="btn-primary">
+          🔗 Create & Link Google Sheet
+        </button>
+      </div>
+      
+      <!-- Alternative Options -->
+      <div class="alternative-options">
+        <h5>Other Export Options</h5>
+        <div class="button-group">
+          <button @click="createGoogleSheetWithData" class="btn-secondary">
+            📊 Create Google Sheet with Data (One-time)
+          </button>
+          <button @click="createBlankGoogleSheet" class="btn-secondary">
+            📄 Create Blank Google Sheet
+          </button>
+          <button @click="exportToCSV" class="btn-secondary">
+            💾 Export to CSV Only
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Preview Section -->
-    <div v-if="hasCustomTabs && filteredStudents.length > 0" class="preview-section">
-      <h3>Preview: Students for Selected Teachers</h3>
-      <div class="preview-table">
-        <table>
-          <thead>
-            <tr>
-              <th>First Name</th>
-              <th>Last Name</th>
-              <th>Period</th>
-              <th>Teacher</th>
-              <th>Grade</th>
-              <th>Case Manager</th>
-              <th>Assessment Accommodations</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="student in filteredStudents" :key="student.id">
-              <td>{{ getDisplayValue(student, 'firstName') }}</td>
-              <td>{{ getDisplayValue(student, 'lastName') }}</td>
-              <td>{{ getStudentPeriod(student) }}</td>
-              <td>{{ getStudentTeacher(student) }}</td>
-              <td>{{ getDisplayValue(student, 'grade') }}</td>
-              <td>{{ getUserName(getCaseManagerId(student)) }}</td>
-              <td>{{ getDisplayValue(student, 'assessment') }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- Existing Testing Links -->
+    <div class="links-section">
+      <h4>Testing Links</h4>
+      <div class="links-grid">
+        <a 
+          v-for="link in testingLinks" 
+          :key="link.path"
+          :href="link.path" 
+          target="_blank"
+          class="test-link"
+          :class="link.category"
+        >
+          <span class="link-icon">{{ link.icon }}</span>
+          <span class="link-text">{{ link.name }}</span>
+          <span class="link-category">{{ link.category }}</span>
+        </a>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '@/store/authStore'
-import { getDisplayValue } from '@/utils/studentUtils'
-import useGoogleSheetsClient from '@/composables/useGoogleSheetsClient'
+import { ref, computed, onMounted, watch } from 'vue'
+import useStudents from '@/composables/useStudents'
+import { useGoogleSheetsRealtime } from '@/composables/useGoogleSheetsRealtime'
+import useUsers from '@/composables/useUsers'
 
-// Get auth store
-const authStore = useAuthStore()
+// Composables
+const { students, fetchStudents } = useStudents()
+const { userList: users, fetchUsers } = useUsers()
+const { 
+  linkedSheetId,
+  linkedSheetUrl,
+  lastSyncTime,
+  syncStatus,
+  syncMessage,
+  initializeGoogleAuth,
+  createLinkedSheet,
+  updateSheetData,
+  createCustomTab,
+  deleteCustomTab,
+  unlinkSheet,
+  checkSheetConnection
+} = useGoogleSheetsRealtime()
 
-// Import constants for testing
-const API_KEY = 'AIzaSyDx1jbQT-FzgzjASFqVA2kbAHWJ_TeUzdY'
-const DISCOVERY_DOCS = [
-  'https://sheets.googleapis.com/$discovery/rest?version=v4'
-]
+// Custom tabs state
+const customTabs = ref([])
+const showAddTabForm = ref(false)
+const newTabName = ref('')
+const selectedTeachers = ref([])
+const maxCustomTabs = 5
 
-// Props
-const props = defineProps({
-  students: {
-    type: Array,
-    default: () => []
-  },
-  userMap: {
-    type: Object,
-    default: () => ({})
-  }
+// Get unique teachers from student schedules
+const availableTeachers = computed(() => {
+  const teacherSet = new Set()
+  
+  console.log('🔍 Finding teachers from students:', students.value.length)
+  
+  students.value.forEach(student => {
+    // Check aeries schedule structure first
+    if (student.aeries?.schedule) {
+      Object.values(student.aeries.schedule).forEach(period => {
+        if (period && period.teacherId) {
+          console.log('🔍 Found teacher ID in aeries.schedule:', period.teacherId)
+          teacherSet.add(String(period.teacherId))
+        }
+      })
+    }
+    
+    // Check app.schedule.periods structure
+    if (student.app?.schedule?.periods) {
+      Object.values(student.app.schedule.periods).forEach(teacherId => {
+        if (teacherId) {
+          console.log('🔍 Found teacher ID in app.schedule.periods:', teacherId)
+          teacherSet.add(String(teacherId))
+        }
+      })
+    }
+    
+    // Also check for direct period properties (from CSV import)
+    for (let i = 1; i <= 7; i++) {
+      const teacherIdField = `period${i}TeacherId`
+      const teacherId = student[teacherIdField] || 
+                       student.aeries?.[teacherIdField] ||
+                       student.app?.[teacherIdField]
+      if (teacherId) {
+        console.log('🔍 Found teacher ID in', teacherIdField, ':', teacherId)
+        teacherSet.add(String(teacherId))
+      }
+    }
+  })
+  
+  console.log('🔍 Unique teacher IDs found:', Array.from(teacherSet))
+  console.log('🔍 Users available:', users.value.length)
+  
+  // Convert to array and map to user objects
+  // Handle both email-based IDs and numeric aeriesIds
+  return Array.from(teacherSet).map(teacherId => {
+    // First try to find by ID (email format)
+    let user = users.value.find(u => u.id === teacherId)
+    
+    // If not found and teacherId is numeric, try to find by aeriesId
+    if (!user && /^\d+$/.test(teacherId)) {
+      user = users.value.find(u => u.aeriesId === teacherId)
+    }
+    
+    return {
+      id: teacherId,
+      name: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`,
+      actualUserId: user ? user.id : null
+    }
+  }).sort((a, b) => a.name.localeCompare(b.name))
 })
 
-// Google Sheets composable
-const {
-  isSignedIn,
-  gapiLoaded,
-  currentSheetId,
-  currentSheetUrl,
-  errorMessage,
-  initClient,
-  initClientWithoutOAuth,
-  signIn,
-  signOut,
-  createSheet,
-  addDataToSheet,
-  testAPI
-} = useGoogleSheetsClient()
-
-// Helper function to load Google API
-function loadGapi() {
-  return new Promise((resolve, reject) => {
-    if (window.gapi && window.gapi.load) {
-      window.gapi.load('client:auth2', resolve)
-      return
-    }
-
-    if (document.querySelector('script[src="https://apis.google.com/js/api.js"]')) {
-      const checkGapi = () => {
-        if (window.gapi && window.gapi.load) {
-          window.gapi.load('client:auth2', resolve)
-        } else {
-          setTimeout(checkGapi, 100)
+// Get students for selected teachers
+const getStudentsForTeachers = (teacherIds) => {
+  return students.value.filter(student => {
+    // Check aeries schedule structure
+    if (student.aeries?.schedule) {
+      for (const period of Object.values(student.aeries.schedule)) {
+        if (period && period.teacherId && teacherIds.includes(String(period.teacherId))) {
+          return true
         }
       }
-      checkGapi()
-      return
     }
-
-    const script = document.createElement('script')
-    script.src = 'https://apis.google.com/js/api.js'
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      if (window.gapi && window.gapi.load) {
-        window.gapi.load('client:auth2', resolve)
-      } else {
-        reject(new Error('Google API failed to load properly'))
+    
+    // Check app.schedule.periods structure
+    if (student.app?.schedule?.periods) {
+      for (const teacherId of Object.values(student.app.schedule.periods)) {
+        if (teacherId && teacherIds.includes(String(teacherId))) {
+          return true
+        }
       }
     }
-    script.onerror = () => reject(new Error('Failed to load Google API script'))
-    document.head.appendChild(script)
+    
+    // Also check for direct period properties (from CSV import)
+    for (let i = 1; i <= 7; i++) {
+      const teacherIdField = `period${i}TeacherId`
+      const teacherId = student[teacherIdField] || 
+                       student.aeries?.[teacherIdField] ||
+                       student.app?.[teacherIdField]
+      if (teacherId && teacherIds.includes(String(teacherId))) {
+        return true
+      }
+    }
+    
+    return false
   })
 }
 
-// Reactive data
-const isCreating = ref(false)
-const showAddTabForm = ref(false)
-const customTabs = ref([])
-const newTab = ref({
-  title: '',
-  selectedTeachers: []
-})
-const filteredStudents = ref([])
-
-// Computed properties
-const hasCustomTabs = computed(() => customTabs.value.length > 0)
-
-const availableTeachers = computed(() => {
-  // Get all users who are teachers
-  return Object.values(props.userMap).filter(user => user.role === 'teacher')
+// Preview of filtered students
+const filteredStudentsPreview = computed(() => {
+  if (selectedTeachers.value.length === 0) return []
+  return getStudentsForTeachers(selectedTeachers.value)
 })
 
-const canCreateTab = computed(() => {
-  return newTab.value.title.trim() && newTab.value.selectedTeachers.length > 0
-})
-
-// Methods
-const createLinkedSheet = async () => {
-  isCreating.value = true
-  try {
-    const sheet = await createSheet('Student Testing Data')
-    // Write main data
-    const headers = [
-      'First Name',
-      'Last Name',
-      'Grade',
-      'Case Manager',
-      'Assessment Accommodations'
-    ]
-    const dataRows = props.students.map(student => [
-      getDisplayValue(student, 'firstName'),
-      getDisplayValue(student, 'lastName'),
-      getDisplayValue(student, 'grade'),
-      getUserName(getCaseManagerId(student)),
-      getDisplayValue(student, 'assessment')
-    ])
-    await addDataToSheet(sheet.spreadsheetId, 'Sheet1!A1:E' + (dataRows.length + 1), [headers, ...dataRows])
-    alert('✅ Google Sheet created successfully!')
-  } catch (error) {
-    console.error('Create sheet error:', error)
-    
-    if (error.message && error.message.includes('OAuth authentication required')) {
-      alert('🔐 OAuth Required: ' + error.message + '\n\nPlease:\n1. Click "Load Google API (with OAuth)"\n2. Sign in with Google\n3. Try creating the sheet again')
-    } else {
-      alert('❌ Failed to create Google Sheet: ' + error.message)
-    }
-  } finally {
-    isCreating.value = false
-  }
-}
-
-const unlinkSheet = () => {
-  // Just clear the local state (does not delete the sheet)
-  currentSheetId.value = ''
-  customTabs.value = []
-}
-
-const createCustomTab = async () => {
-  if (!canCreateTab.value) return
-  const tab = {
-    title: newTab.value.title,
-    selectedTeachers: [...newTab.value.selectedTeachers]
-  }
-  try {
-    // Add a new sheet (tab) and write data
-    const headers = [
-      'First Name',
-      'Last Name',
-      'Period',
-      'Teacher',
-      'Grade',
-      'Case Manager',
-      'Assessment Accommodations'
-    ]
-    // Filter students for selected teachers
-    const filtered = props.students.filter(student => {
-      const schedule = getStudentSchedule(student)
-      if (!schedule) return false
-      return Object.values(schedule).some(teacherId => tab.selectedTeachers.includes(teacherId))
-    })
-    const dataRows = filtered.map(student => {
-      const schedule = getStudentSchedule(student)
-      const period = getStudentPeriod(student, schedule, tab.selectedTeachers)
-      const teacher = getStudentTeacher(student, schedule, tab.selectedTeachers)
-      return [
-        getDisplayValue(student, 'firstName'),
-        getDisplayValue(student, 'lastName'),
-        period,
-        teacher,
-        getDisplayValue(student, 'grade'),
-        getUserName(getCaseManagerId(student)),
-        getDisplayValue(student, 'assessment')
-      ]
-    })
-    // Add the new sheet
-    await window.gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: currentSheetId.value,
-      requests: [{
-        addSheet: { properties: { title: tab.title } }
-      }]
-    })
-    await addDataToSheet(currentSheetId.value, `${tab.title}!A1:G${dataRows.length + 1}`, [headers, ...dataRows])
-    customTabs.value.push(tab)
-    cancelAddTab()
-  } catch (error) {
-    alert('Failed to create custom tab. Please try again.')
-    console.error(error)
-  }
-}
-
-const deleteCustomTabLocal = async (index) => {
-  const tab = customTabs.value[index]
-  try {
-    // Find the sheetId for the tab
-    const spreadsheet = await window.gapi.client.sheets.spreadsheets.get({
-      spreadsheetId: currentSheetId.value
-    })
-    const sheetToDelete = spreadsheet.result.sheets.find(sheet => sheet.properties.title === tab.title)
-    if (!sheetToDelete) throw new Error('Sheet not found')
-    await window.gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: currentSheetId.value,
-      requests: [{ deleteSheet: { sheetId: sheetToDelete.properties.sheetId } }]
-    })
-    customTabs.value.splice(index, 1)
-  } catch (error) {
-    alert('Failed to delete custom tab. Please try again.')
-    console.error(error)
-  }
-}
-
-const cancelAddTab = () => {
-  showAddTabForm.value = false
-  newTab.value = {
-    title: '',
-    selectedTeachers: []
-  }
-  filteredStudents.value = []
-}
-
-const updateFilteredStudents = () => {
-  if (newTab.value.selectedTeachers.length === 0) {
-    filteredStudents.value = []
+// Add custom tab
+const addCustomTab = async () => {
+  if (!newTabName.value.trim() || selectedTeachers.value.length === 0) {
+    alert('Please enter a tab name and select at least one teacher')
     return
   }
-  // Filter students who have the selected teachers in their schedule
-  filteredStudents.value = props.students.filter(student => {
-    const schedule = getStudentSchedule(student)
-    if (!schedule) return false
-    return Object.values(schedule).some(teacherId => newTab.value.selectedTeachers.includes(teacherId))
-  })
-}
-
-const getStudentSchedule = (student) => {
-  if (student.schedule) return student.schedule
-  if (student.app?.schedule?.periods) return student.app.schedule.periods
-  if (student.aeries?.schedule?.periods) return student.aeries.schedule.periods
-  return null
-}
-const getStudentPeriod = (student, schedule, selectedTeachers) => {
-  schedule = schedule || getStudentSchedule(student)
-  if (!schedule) return '—'
-  for (const [period, teacherId] of Object.entries(schedule)) {
-    if ((selectedTeachers || newTab.value.selectedTeachers).includes(teacherId)) {
-      return period
-    }
+  
+  if (customTabs.value.length >= maxCustomTabs) {
+    alert(`Maximum of ${maxCustomTabs} custom tabs allowed`)
+    return
   }
-  return '—'
-}
-const getStudentTeacher = (student, schedule, selectedTeachers) => {
-  schedule = schedule || getStudentSchedule(student)
-  if (!schedule) return '—'
-  for (const [period, teacherId] of Object.entries(schedule)) {
-    if ((selectedTeachers || newTab.value.selectedTeachers).includes(teacherId)) {
-      const teacher = props.userMap[teacherId]
-      return teacher ? teacher.name : teacherId
-    }
-  }
-  return '—'
-}
-const getCaseManagerId = (student) => {
-  return student.app?.studentData?.caseManagerId || student.caseManagerId || student.casemanager_id
-}
-const getUserName = (userId) => {
-  const user = props.userMap[userId]
-  return user ? (user.name || user.email || userId) : userId
-}
-
-// Test function to check basic API access without OAuth
-const testBasicAPI = async () => {
-  try {
-    console.log('Testing basic Google API access...')
-    
-    // Load the API script
-    await loadGapi()
-    console.log('✅ Google API script loaded')
-    
-    // Try to initialize without OAuth
-    await window.gapi.client.init({
-      apiKey: API_KEY,
-      discoveryDocs: DISCOVERY_DOCS,
-    })
-    console.log('✅ Google API client initialized without OAuth')
-    
-    // Test if we can access the Sheets API
-    try {
-      const response = await window.gapi.client.sheets.spreadsheets.get({
-        spreadsheetId: 'test'
-      })
-      console.log('✅ Sheets API accessible')
-      alert('✅ Basic API test successful! The API key and Sheets API are working correctly.')
-    } catch (error) {
-      // 404 is expected for a non-existent spreadsheet - this means the API is working!
-      if (error.status === 404) {
-        console.log('✅ Sheets API accessible (404 expected for non-existent spreadsheet)')
-        alert('✅ Basic API test successful! The API key and Sheets API are working correctly. The 404 error is expected for the test spreadsheet.')
-      } else {
-        throw error
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ Basic API test failed:', error)
-    if (error.status === 403) {
-      alert('❌ API Key issue: Google Sheets API might not be enabled or API key lacks permissions.')
-    } else {
-      alert(`❌ API test failed: ${error.message}`)
-    }
-  }
-}
-
-// Simple direct initialization without OAuth
-const initializeGoogleAPI = async () => {
-  try {
-    console.log('Initializing Google API directly...')
-    
-    // Load the API script
-    await loadGapi()
-    console.log('✅ Google API script loaded')
-    
-    // Initialize without OAuth
-    await window.gapi.client.init({
-      apiKey: API_KEY,
-      discoveryDocs: DISCOVERY_DOCS,
-    })
-    console.log('✅ Google API client initialized successfully')
-    
-    // Update the reactive state
-    gapiLoaded.value = true
-    isSignedIn.value = false // No OAuth, so not signed in
-    errorMessage.value = ''
-    
-    console.log('✅ Google API ready for use!')
-    alert('✅ Google API initialized successfully! You can now create Google Sheets.')
-    
-  } catch (error) {
-    console.error('❌ Google API initialization failed:', error)
-    errorMessage.value = `Failed to initialize Google API: ${error.message}`
-    alert(`❌ Failed to initialize Google API: ${error.message}`)
-  }
-}
-
-// Test OAuth client configuration
-const testOAuthClient = async () => {
-  try {
-    console.log('Testing OAuth client configuration...')
-    
-    // Load the API script
-    await loadGapi()
-    console.log('✅ Google API script loaded')
-    
-    // Try to initialize with OAuth
-    await window.gapi.client.init({
-      apiKey: API_KEY,
-      clientId: '756483333257-kh1cv865e0buv0cv9g0v1h7ghq7s0e70.apps.googleusercontent.com',
-      discoveryDocs: DISCOVERY_DOCS,
-      scope: 'https://www.googleapis.com/auth/spreadsheets',
-    })
-    console.log('✅ OAuth client initialized successfully')
-    
-    // Try to get auth instance
-    const authInstance = window.gapi.auth2.getAuthInstance()
-    console.log('✅ Auth instance created successfully')
-    
-    alert('✅ OAuth client configuration is working! You can now sign in with Google.')
-    
-  } catch (error) {
-    console.error('❌ OAuth client test failed:', error)
-    
-    if (error.message && error.message.includes('idpiframe_initialization_failed')) {
-      alert('❌ OAuth Client Configuration Error:\n\nPlease check your Google Cloud Console:\n1. Go to APIs & Services > Credentials\n2. Find your OAuth 2.0 Client ID\n3. Add http://localhost:5173 to Authorized JavaScript origins\n4. Remove any malformed entries')
-    } else {
-      alert(`❌ OAuth test failed: ${error.message}`)
-    }
-  }
-}
-
-// Create a blank Google Sheet
-const createSimpleSheet = async () => {
-  try {
-    console.log('Opening Google Sheets to create new sheet...')
-    
-    // For a blank sheet, just open Google Sheets directly
-    // This will open the Google Sheets homepage where user can create a new sheet
-    window.open('https://sheets.google.com', '_blank')
-    
-    alert('✅ Google Sheets opened! Click "+" or "Blank" to create a new sheet.')
-    
-  } catch (error) {
-    console.error('Open sheets error:', error)
-    alert('❌ Failed to open Google Sheets: ' + error.message)
-  }
-}
-
-// Create a linked Google Sheet with student data
-const createLinkedGoogleSheet = async () => {
-  isCreating.value = true
   
   try {
-    console.log('Creating Google Sheet with student data...')
+    // Get the filtered students for these teachers
+    const filteredStudents = getStudentsForTeachers(selectedTeachers.value)
     
-    // Prepare the data
-    const headers = [
-      'First Name',
-      'Last Name',
-      'Grade',
-      'Case Manager',
-      'Assessment Accommodations'
-    ]
+    // Create the tab in Google Sheets
+    const result = await createCustomTab(
+      newTabName.value.trim(),
+      filteredStudents,
+      selectedTeachers.value,
+      users.value // Pass users data for teacher name lookup
+    )
     
-    const dataRows = props.students.map(student => [
-      getDisplayValue(student, 'firstName') || '',
-      getDisplayValue(student, 'lastName') || '',
-      getDisplayValue(student, 'grade') || '',
-      getUserName(getCaseManagerId(student)) || '',
-      getDisplayValue(student, 'assessment') || ''
-    ])
+    // Store the tab info locally with the sheet ID
+    const tab = {
+      id: Date.now().toString(),
+      name: newTabName.value.trim(),
+      teachers: [...selectedTeachers.value],
+      studentCount: result.rowCount,
+      sheetId: result.sheetId // Store the Google Sheet tab ID
+    }
     
-    // Create CSV content
-    const csvContent = [headers, ...dataRows]
-      .map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+    customTabs.value.push(tab)
     
-    // Create a blob and download the CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
+    // Reset form
+    newTabName.value = ''
+    selectedTeachers.value = []
+    showAddTabForm.value = false
     
-    // Create a temporary link to download
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `student_data_${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-    
-    // Open Google Sheets import page in new tab
-    setTimeout(() => {
-      window.open('https://sheets.new', '_blank')
-    }, 500)
-    
-    alert(`✅ CSV Downloaded Successfully!\n\nNext steps:\n1. A new Google Sheet will open\n2. Click File → Import\n3. Upload the CSV file that was just downloaded\n4. Choose "Replace current sheet"\n5. Click "Import data"\n\nYour student data will be imported with ${dataRows.length} students!`)
+    console.log('Custom tab added:', tab)
+    alert(`Custom tab "${tab.name}" created successfully with ${result.rowCount} student entries!`)
     
   } catch (error) {
-    console.error('Create sheet error:', error)
-    alert(`❌ Failed to create sheet: ${error.message}`)
-  } finally {
-    isCreating.value = false
+    console.error('Failed to create custom tab:', error)
+    alert('Failed to create custom tab in Google Sheet. Please try again.')
   }
 }
 
-// Alternative: Direct Google Sheets with pre-filled data
+// Remove custom tab
+const removeCustomTab = async (tabId) => {
+  const tab = customTabs.value.find(t => t.id === tabId)
+  if (!tab) return
+  
+  if (confirm(`Are you sure you want to remove the "${tab.name}" tab?`)) {
+    try {
+      // Delete from Google Sheets if we have a sheet ID
+      if (tab.sheetId) {
+        await deleteCustomTab(tab.sheetId)
+      }
+      
+      // Remove from local list
+      customTabs.value = customTabs.value.filter(t => t.id !== tabId)
+      
+      console.log('Custom tab removed:', tabId)
+      alert(`Tab "${tab.name}" removed successfully.`)
+      
+    } catch (error) {
+      console.error('Failed to delete custom tab:', error)
+      alert('Failed to delete tab from Google Sheet. You may need to delete it manually.')
+      // Still remove from local list even if Google Sheets deletion failed
+      customTabs.value = customTabs.value.filter(t => t.id !== tabId)
+    }
+  }
+}
+
+// Get student's periods for selected teachers
+const getStudentTeacherPeriods = (student, teacherIds) => {
+  const periods = []
+  
+  // Check aeries schedule structure
+  if (student.aeries?.schedule) {
+    Object.entries(student.aeries.schedule).forEach(([periodKey, period]) => {
+      if (period && period.teacherId && teacherIds.includes(String(period.teacherId))) {
+        // Extract period number from key (e.g., "period1" -> "1")
+        const periodNum = periodKey.replace('period', '')
+        
+        // Find user by aeriesId or ID
+        let user = users.value.find(u => u.id === String(period.teacherId))
+        if (!user && /^\d+$/.test(period.teacherId)) {
+          user = users.value.find(u => u.aeriesId === String(period.teacherId))
+        }
+        
+        periods.push({
+          period: periodNum,
+          teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${period.teacherId}`
+        })
+      }
+    })
+  }
+  
+  // Check app.schedule.periods structure
+  if (student.app?.schedule?.periods) {
+    Object.entries(student.app.schedule.periods).forEach(([periodNum, teacherId]) => {
+      if (teacherId && teacherIds.includes(String(teacherId))) {
+        const user = users.value.find(u => u.id === String(teacherId))
+        periods.push({
+          period: periodNum,
+          teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
+        })
+      }
+    })
+  }
+  
+  // Also check for direct period properties (from CSV import)
+  for (let i = 1; i <= 7; i++) {
+    const teacherIdField = `period${i}TeacherId`
+    const teacherId = student[teacherIdField] || 
+                     student.aeries?.[teacherIdField] ||
+                     student.app?.[teacherIdField]
+    
+    if (teacherId && teacherIds.includes(String(teacherId))) {
+      // Find user by aeriesId or ID
+      let user = users.value.find(u => u.id === String(teacherId))
+      if (!user && /^\d+$/.test(teacherId)) {
+        user = users.value.find(u => u.aeriesId === String(teacherId))
+      }
+      
+      periods.push({
+        period: i.toString(),
+        teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
+      })
+    }
+  }
+  
+  return periods
+}
+
+// Testing links data
+const testingLinks = ref([
+  { 
+    name: 'Student Table Test', 
+    path: '/testing#student-table',
+    category: 'components',
+    icon: '📊'
+  },
+  { 
+    name: 'Auth Flow Test', 
+    path: '/testing#auth',
+    category: 'auth',
+    icon: '🔐'
+  },
+  { 
+    name: 'Permissions Test', 
+    path: '/testing#permissions',
+    category: 'auth',
+    icon: '🛡️'
+  },
+  { 
+    name: 'API Integration Test', 
+    path: '/testing#api',
+    category: 'api',
+    icon: '🔌'
+  },
+  { 
+    name: 'Form Validation Test', 
+    path: '/testing#forms',
+    category: 'components',
+    icon: '📝'
+  },
+  { 
+    name: 'Data Import Test', 
+    path: '/testing#import',
+    category: 'data',
+    icon: '📥'
+  }
+])
+
+// Initialize Google Auth on mount
+onMounted(async () => {
+  try {
+    // Clear any old sheet ID that might be causing 403 errors
+    const oldSheetId = localStorage.getItem('casemanage_linked_sheet_id')
+    if (oldSheetId && oldSheetId.startsWith('1XSL0Sl7')) {
+      console.log('Clearing old sheet ID that was causing 403 errors')
+      localStorage.removeItem('casemanage_linked_sheet_id')
+    }
+    
+    // Fetch students and users data first
+    await Promise.all([
+      fetchStudents(),
+      fetchUsers()
+    ])
+    console.log('Students loaded:', students.value.length)
+    console.log('Users loaded:', users.value.length)
+    
+    await initializeGoogleAuth()
+    
+    // Check if we have a linked sheet
+    if (linkedSheetId.value) {
+      const isConnected = await checkSheetConnection()
+      if (isConnected) {
+        // Do an initial sync
+        await syncNow()
+      }
+    }
+  } catch (error) {
+    console.error('Failed to initialize Google Auth:', error)
+  }
+})
+
+// Watch for student changes and auto-sync
+watch(() => students.value, async (newStudents, oldStudents) => {
+  if (linkedSheetId.value && newStudents !== oldStudents) {
+    // Debounce to avoid too many updates
+    clearTimeout(window.autoSyncTimeout)
+    window.autoSyncTimeout = setTimeout(async () => {
+      await syncNow()
+    }, 5000) // Wait 5 seconds after changes stop
+  }
+}, { deep: true })
+
+// Create and link a Google Sheet
+const createLinkedGoogleSheet = async () => {
+  try {
+    await createLinkedSheet(students.value)
+  } catch (error) {
+    console.error('Failed to create linked sheet:', error)
+    alert('Failed to create Google Sheet. Please make sure you are signed in to Google.')
+  }
+}
+
+// Sync the linked sheet
+const syncNow = async () => {
+  if (!linkedSheetId.value) return
+  
+  try {
+    await updateSheetData(students.value)
+  } catch (error) {
+    console.error('Failed to sync sheet:', error)
+  }
+}
+
+// One-time export with data
 const createGoogleSheetWithData = () => {
-  try {
-    // Prepare the data as tab-separated values for URL
-    const headers = ['First Name', 'Last Name', 'Grade', 'Case Manager', 'Assessment Accommodations']
-    const dataRows = props.students.slice(0, 10).map(student => [ // Limit to 10 for URL length
-      getDisplayValue(student, 'firstName') || '',
-      getDisplayValue(student, 'lastName') || '',
-      getDisplayValue(student, 'grade') || '',
-      getUserName(getCaseManagerId(student)) || '',
-      getDisplayValue(student, 'assessment') || ''
-    ])
-    
-    // Create a simple table format
-    const allData = [headers, ...dataRows]
-    const tableData = allData.map(row => row.join('\t')).join('\n')
-    
-    // Encode for URL
-    const encodedData = encodeURIComponent(tableData)
-    
-    // Create Google Sheets URL with pre-filled data (limited due to URL length constraints)
-    // For full data, use the CSV approach
-    window.open('https://sheets.new', '_blank')
-    
-    alert('✅ Opening Google Sheets!\n\nTo add your data:\n1. Copy the data from the CSV file\n2. Paste it into the new sheet\n\nNote: For large datasets, use the "Export to CSV" option.')
-    
-  } catch (error) {
-    console.error('Error opening Google Sheets:', error)
-    alert('Failed to open Google Sheets. Please try the CSV export option.')
-  }
+  const csvContent = generateCSV()
+  downloadCSV(csvContent, 'student_data.csv')
+  window.open('https://sheets.new', '_blank')
 }
 
-// Export student data to CSV for Google Sheets
+// Create blank sheet
+const createBlankGoogleSheet = () => {
+  window.open('https://sheets.new', '_blank')
+}
+
+// Export to CSV only
 const exportToCSV = () => {
-  try {
-    console.log('Exporting student data to CSV...')
+  const csvContent = generateCSV()
+  downloadCSV(csvContent, 'student_data_export.csv')
+}
+
+// Generate CSV content
+const generateCSV = () => {
+  const headers = [
+    'Student ID',
+    'First Name', 
+    'Last Name',
+    'Grade',
+    'Case Manager',
+    'Assessment Accommodations',
+    'Services'
+  ]
+  
+  const rows = students.value.map(student => {
+    const firstName = student.firstName || student.app?.studentData?.firstName || ''
+    const lastName = student.lastName || student.app?.studentData?.lastName || ''
+    const grade = student.grade || student.app?.studentData?.grade || ''
+    const caseManager = student.caseManagerId || student.app?.studentData?.caseManagerId || ''
     
-    // Create CSV headers
-    const headers = [
-      'First Name',
-      'Last Name', 
-      'Grade',
-      'Case Manager',
-      'Assessment Accommodations'
+    const assessmentAccom = student.app?.accommodations?.assessment || []
+    const services = student.app?.classServices || []
+    
+    return [
+      student.id || '',
+      firstName,
+      lastName,
+      grade,
+      caseManager,
+      Array.isArray(assessmentAccom) ? assessmentAccom.join('; ') : assessmentAccom,
+      Array.isArray(services) ? services.map(s => s.name || s).join('; ') : services
     ]
-    
-    // Create CSV data rows
-    const dataRows = props.students.map(student => [
-      getDisplayValue(student, 'firstName'),
-      getDisplayValue(student, 'lastName'),
-      getDisplayValue(student, 'grade'),
-      getUserName(getCaseManagerId(student)),
-      getDisplayValue(student, 'assessment')
-    ])
-    
-    // Combine headers and data
-    const csvContent = [headers, ...dataRows]
-      .map(row => row.map(cell => `"${cell || ''}"`).join(','))
-      .join('\n')
-    
-    // Create and download CSV file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', 'student_data.csv')
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    
-    alert('✅ CSV file downloaded! Now:\n1. Go to Google Sheets\n2. Create a new sheet\n3. File > Import > Upload the CSV file\n4. Your student data will be imported!')
-    
-  } catch (error) {
-    console.error('Export error:', error)
-    alert('❌ Failed to export data: ' + error.message)
-  }
+  })
+  
+  const allRows = [headers, ...rows]
+  return allRows.map(row => 
+    row.map(cell => `"${String(cell).replace(/"/g, '""')}"`)
+       .join(',')
+  ).join('\n')
+}
+
+// Download CSV helper
+const downloadCSV = (content, filename) => {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
+// Format time helper
+const formatTime = (date) => {
+  return new Date(date).toLocaleString()
 }
 </script>
 
 <style scoped>
+.testing-links-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.sheets-section, .links-section {
+  margin-bottom: 3rem;
+}
+
+.sheets-section h4, .links-section h4 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.status-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-card.success {
+  border-color: #c3e6cb;
+  background-color: #f8f9fa;
+}
+
+.create-sheet-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.features-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  text-align: left;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.feature-icon {
+  font-size: 1.5rem;
+}
+
+.sync-info {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.syncing {
+  color: #007bff;
+}
+
+.success {
+  color: #28a745;
+}
+
+.error {
+  color: #dc3545;
+}
+
+.auto-sync-info {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.auto-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #4caf50;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.auto-sync-description {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-sync, .btn-unlink {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-sync {
+  background: #28a745;
+  color: white;
+}
+
+.btn-sync:hover:not(:disabled) {
+  background: #218838;
+}
+
+.btn-sync:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-unlink {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-unlink:hover {
+  background: #c82333;
+}
+
+.alternative-options {
+  margin-top: 2rem;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.test-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.test-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: #007bff;
+}
+
+.link-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.link-text {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.link-category {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-note {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-style: italic;
+}
+
 .testing-links {
   max-width: 1200px;
   margin: 0 auto;
@@ -856,12 +1028,6 @@ const exportToCSV = () => {
 
 .sheet-link:hover {
   text-decoration: underline;
-}
-
-.sheet-actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
 }
 
 .sheet-structure ul {
@@ -1117,5 +1283,278 @@ const exportToCSV = () => {
 .btn-large {
   padding: 0.75rem 1.5rem;
   font-size: 1.1rem;
+}
+
+/* Google Sheets Section */
+.sheets-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.sheets-section h4 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.2em;
+}
+
+.linked-sheet-status {
+  margin: 15px 0;
+}
+
+.status-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.status-card.success {
+  border-left: 4px solid #34a853;
+}
+
+.status-card h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.sheet-link {
+  display: inline-block;
+  color: #1a73e8;
+  text-decoration: none;
+  font-weight: 500;
+  margin: 10px 0;
+}
+
+.sheet-link:hover {
+  text-decoration: underline;
+}
+
+.sync-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 15px 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.sync-info .syncing {
+  color: #fbbc04;
+}
+
+.sync-info .success {
+  color: #34a853;
+}
+
+.sync-info .error {
+  color: #ea4335;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn-sync,
+.btn-unlink {
+  padding: 8px 16px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+
+.btn-sync:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.btn-sync:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-unlink {
+  color: #ea4335;
+}
+
+.btn-unlink:hover {
+  background: #fef1f0;
+  border-color: #ea4335;
+}
+
+.create-sheet-section {
+  background: white;
+  border: 2px dashed #dadce0;
+  border-radius: 8px;
+  padding: 25px;
+  text-align: center;
+}
+
+.create-sheet-section h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.create-sheet-section p {
+  color: #666;
+  margin: 0 0 20px 0;
+}
+
+.btn-primary {
+  background: #1a73e8;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1557b0;
+}
+
+.alternative-options {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.alternative-options h5 {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 1em;
+}
+
+.links-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.links-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.test-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.test-link:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.link-icon {
+  font-size: 1.2em;
+  color: #6c757d;
+}
+
+.link-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.link-category {
+  font-size: 0.8em;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Auto-sync indicator */
+.auto-sync-info {
+  margin: 20px 0;
+  padding: 15px;
+  background: #e8f4fd;
+  border-radius: 6px;
+  border: 1px solid #c2e0ff;
+}
+
+.auto-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #1a73e8;
+  color: white;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #4caf50;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.auto-sync-description {
+  margin: 10px 0 0 0;
+  font-size: 0.9em;
+  color: #1a73e8;
+}
+
+/* Features list */
+.features-list {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  color: #555;
+  font-size: 0.95em;
+}
+
+.feature-icon {
+  font-size: 1.2em;
 }
 </style> 
