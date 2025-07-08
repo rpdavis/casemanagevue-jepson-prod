@@ -9,6 +9,7 @@
   "dependencies": {
     "@vueuse/core": "^10.9.0",
     "firebase": "^10.0.0",
+    "googleapis": "^150.0.1",
     "papaparse": "^5.5.3",
     "pinia": "^2.1.0",
     "vue": "^3.4.0",

@@ -3,17 +3,49 @@
   <div>
     <div class="admin-header">
       <h1>Admin Panel</h1>
+      <div class="admin-nav">
+        <button 
+          @click="setActiveCategory('users-students')" 
+          :class="{ active: activeCategory === 'users-students' }"
+          class="category-btn"
+        >
+          User & Student Management
+        </button>
+        <button 
+          @click="setActiveCategory('aide-management')" 
+          :class="{ active: activeCategory === 'aide-management' }"
+          class="category-btn"
+        >
+          Aide Management
+        </button>
+        <button 
+          @click="setActiveCategory('data-integration')" 
+          :class="{ active: activeCategory === 'data-integration' }"
+          class="category-btn"
+        >
+          Data & Integration
+        </button>
+        <button 
+          @click="setActiveCategory('system-config')" 
+          :class="{ active: activeCategory === 'system-config' }"
+          class="category-btn"
+        >
+          System Configuration
+        </button>
+      </div>
       <button @click="goToStudents" class="return-btn">
         <span>←</span> Return to Students
       </button>
     </div>
     
-    <!-- Tab Bar -->
-    <TabBar 
-      :tabs="tabs" 
-      :active-tab="activeTab" 
-      @tab-change="handleTabChange" 
-    />
+    <!-- Sub Tab Bar - Only show when a category is selected -->
+    <div v-if="activeCategory" class="sub-tab-container">
+      <TabBar 
+        :tabs="getTabsForCategory(activeCategory)" 
+        :active-tab="activeTab" 
+        @tab-change="handleTabChange" 
+      />
+    </div>
 
     <!-- Tab Content -->
     <div class="admin-section">
@@ -69,6 +101,29 @@
         <AppSettings />
       </div>
 
+      <!-- Testing Links Tab -->
+      <div v-if="activeTab === 'testing-links'" class="admin-section">
+        <TestingLinks :students="students" :userMap="userMap" />
+      </div>
+
+      <!-- Teacher Feedback Forms Tab -->
+      <div v-if="activeTab === 'teacher-feedback'" class="admin-section">
+        <div class="admin-section">
+          <h2>Teacher Feedback Forms</h2>
+          <p>Configure Google Forms integration for teacher feedback.</p>
+          <!-- TODO: Add TeacherFeedbackForms component here -->
+          <div class="placeholder-content">
+            <h3>Google Forms Integration</h3>
+            <p>This section will allow you to:</p>
+            <ul>
+              <li>Link multiple Google Forms for teacher feedback</li>
+              <li>Configure form responses and data collection</li>
+              <li>Set up automated feedback processing</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <!-- Backup & Restore Tab -->
       <div v-if="activeTab === 'backup-restore'" class="admin-section">
         <AdminBackupRestore />
@@ -79,8 +134,10 @@
 
 <script>
 import '../assets/bass/admin-panel.css'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import useStudents from '@/composables/useStudents.js'
+import useUsers from '@/composables/useUsers.js'
 import TabBar from '../components/TabBar.vue'
 import UserAddForm from '../components/UserAddForm.vue'
 import UserTable from '../components/UserTable.vue'
@@ -97,6 +154,7 @@ import AdminAideAssignment from './AdminAideAssignment.vue'
 import AdminTimeTable from './AdminTimeTable.vue'
 import AdminAideSchedule from './AdminAideSchedule.vue'
 import AdminBackupRestore from './AdminBackupRestore.vue'
+import TestingLinks from '../components/TestingLinks.vue'
 
 export default {
   name: 'AdminView',
@@ -115,11 +173,26 @@ export default {
     AdminAideAssignment,
     AdminTimeTable,
     AdminAideSchedule,
-    AdminBackupRestore
+    AdminBackupRestore,
+    TestingLinks
   },
   setup() {
     const router = useRouter()
     const activeTab = ref('usersAdd')
+    const activeCategory = ref('users-students')
+    
+    // Load students and users data
+    const { students, fetchStudents } = useStudents()
+    const { users: userMap, fetchUsers } = useUsers()
+    
+    // Fetch data on mount
+    onMounted(async () => {
+      try {
+        await Promise.all([fetchStudents(), fetchUsers()])
+      } catch (error) {
+        console.error('Error loading data:', error)
+      }
+    })
 
     const tabs = [
       { key: 'usersAdd', label: 'Add Users', category: 'users-students' },
@@ -128,12 +201,27 @@ export default {
       { key: 'aide-assignment', label: 'Aide Assignment', category: 'aide-management' },
       { key: 'aide-schedule', label: 'Aide Schedule', category: 'aide-management' },
       { key: 'time-table', label: 'Time Table', category: 'aide-management' },
+      { key: 'seis', label: 'SEIS Import', category: 'data-integration' },
+      { key: 'aeries', label: 'Aeries API & Import', category: 'data-integration' },
+      { key: 'testing-links', label: 'Testing Links', category: 'data-integration' },
+      { key: 'teacher-feedback', label: 'Teacher Feedback Forms', category: 'data-integration' },
+      { key: 'backup-restore', label: 'Backup & Restore', category: 'data-integration' },
       { key: 'permissions', label: 'Permissions', category: 'system-config' },
-      { key: 'seis', label: 'SEIS Import', category: 'system-config' },
-      { key: 'aeries', label: 'Aeries API & Import', category: 'system-config' },
-      { key: 'settings', label: 'App Settings', category: 'system-config' },
-      { key: 'backup-restore', label: 'Backup & Restore', category: 'system-config' }
+      { key: 'settings', label: 'App Settings', category: 'system-config' }
     ]
+
+    const getTabsForCategory = (categoryKey) => {
+      return tabs.filter(tab => tab.category === categoryKey)
+    }
+
+    const setActiveCategory = (categoryKey) => {
+      activeCategory.value = categoryKey
+      // Set the first tab of the selected category as active
+      const categoryTabs = getTabsForCategory(categoryKey)
+      if (categoryTabs.length > 0) {
+        activeTab.value = categoryTabs[0].key
+      }
+    }
 
     const handleTabChange = (tabKey) => {
       activeTab.value = tabKey
@@ -145,7 +233,12 @@ export default {
 
     return {
       activeTab,
+      activeCategory,
       tabs,
+      students,
+      userMap,
+      getTabsForCategory,
+      setActiveCategory,
       handleTabChange,
       goToStudents
     }
@@ -171,6 +264,38 @@ export default {
   font-size: 2rem;
 }
 
+.admin-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.category-btn {
+  padding: 12px 20px;
+  background: #f8f9fa;
+  color: #495057;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.category-btn:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  color: #212529;
+}
+
+.category-btn.active {
+  background: #2a79c9;
+  border-color: #2a79c9;
+  color: white;
+  box-shadow: 0 2px 4px rgba(42, 121, 201, 0.3);
+}
+
 .return-btn {
   display: flex;
   align-items: center;
@@ -192,5 +317,31 @@ export default {
 
 .return-btn span {
   font-size: 1.2rem;
+}
+
+.sub-tab-container {
+  margin-bottom: 1.5em;
+}
+
+.placeholder-content {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 2rem;
+  margin-top: 1rem;
+}
+
+.placeholder-content h3 {
+  color: #495057;
+  margin-bottom: 1rem;
+}
+
+.placeholder-content ul {
+  margin-left: 1.5rem;
+}
+
+.placeholder-content li {
+  margin-bottom: 0.5rem;
+  color: #6c757d;
 }
 </style>

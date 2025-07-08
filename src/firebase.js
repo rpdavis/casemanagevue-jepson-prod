@@ -26,8 +26,9 @@ const storage = getStorage(app);
 // Initialize Firebase Functions with the correct region
 const functions = getFunctions(app, 'us-central1');
 
-// Configure Google OAuth Provider (removed Calendar scopes)
+// Configure Google OAuth Provider with Sheets API scope
 const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
 
 // Export the services for use throughout the application
 export {

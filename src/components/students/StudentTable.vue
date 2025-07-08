@@ -31,12 +31,6 @@
               <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
               <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
             </div>
-            
-            <!-- Flags -->
-            <div v-if="hasFlags(student)" class="flag-overlay">
-              <div v-if="getFlagValue(student, 'flag1')" class="flag-preferential-seating">Preferential Seating</div>
-              <div v-if="getFlagValue(student, 'flag2')" class="flag-separate-setting">Separate Setting</div>
-            </div>
           </td>
           
           <!-- Schedule Cell (same as regular view) -->
@@ -79,9 +73,9 @@
               <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
             </div>
             <div class="student-dates print">
-              <span class="badge badge-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
-              <span class="badge badge-reeval" :class="getReevalUrgencyClass(student)">RE: {{ formatDate(getDisplayValue(student, 'reevalDate')) }}</span>
-              <span class="badge badge-meeting" :class="[getMeetingUrgencyClass(student), getDisplayValue(student, 'meetingDate') ? 'date-set' : '']">
+              <span class="badge badge-review plan-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
+              <span class="badge badge-reeval reeval-due" :class="getReevalUrgencyClass(student)">RE: {{ formatDate(getDisplayValue(student, 'reevalDate')) }}</span>
+              <span class="badge badge-meeting meeting-date" :class="[getMeetingUrgencyClass(student), getDisplayValue(student, 'meetingDate') ? 'date-set' : '']">
                 🗓 {{ formatDate(getDisplayValue(student, 'meetingDate')) || 'Not set' }}
               </span>
             </div>
@@ -90,94 +84,52 @@
             <div v-if="currentUser?.role === 'paraeducator' && isDirectAssignment(student.id)" class="direct-assignment-badge">
               <span class="badge badge-direct">Direct Assignment</span>
             </div>
-            
-            <!-- Flags -->
-            <div v-if="hasFlags(student)" class="flag-overlay">
-              <div v-if="getFlagValue(student, 'flag1')" class="flag-preferential-seating">Preferential Seating</div>
-              <div v-if="getFlagValue(student, 'flag2')" class="flag-separate-setting">Separate Setting</div>
-            </div>
           </td>
           
           <!-- Services Cell -->
-          <td>
-            <template v-if="getClassServices(student).length > 0 || getOtherServices(student).length > 0 || hasServiceProviders(student)">
-              <div v-if="getClassServices(student).length > 0">
-                <strong>Class Services:</strong>
-                <span v-for="service in getClassServices(student)" :key="service" class="service-pill">{{ service }}</span>
-              </div>
-              <div v-if="getOtherServices(student).length > 0 || hasServiceProviders(student)">
-                <strong>Related Services:</strong>
-                <span v-for="other in getOtherServices(student)" :key="other" class="service-pill">{{ other }}</span>
-                <template v-if="appSettings && appSettings.value && appSettings.value.serviceProviders">
-                  <span v-for="abbr in appSettings.value.serviceProviders" :key="abbr" 
-                        v-if="getServiceProviderId(student, getProviderFieldName(abbr))" 
-                        class="service-pill">
-                    {{ abbr }} ({{ getUserInitials(getServiceProviderId(student, getProviderFieldName(abbr))) }})
-                  </span>
-                </template>
-                <template v-else>
-                  <!-- Fallback to hardcoded providers if app settings not available -->
-                  <span v-if="getServiceProviderId(student, 'speechId')" class="service-pill">SP ({{ getUserInitials(getServiceProviderId(student, 'speechId')) }})</span>
-                  <span v-if="getServiceProviderId(student, 'mhId')" class="service-pill">MH ({{ getUserInitials(getServiceProviderId(student, 'mhId')) }})</span>
-                  <span v-if="getServiceProviderId(student, 'otId')" class="service-pill">OT ({{ getUserInitials(getServiceProviderId(student, 'otId')) }})</span>
-                  <span v-if="getServiceProviderId(student, 'ptId')" class="service-pill">PT ({{ getUserInitials(getServiceProviderId(student, 'ptId')) }})</span>
-                  <span v-if="getServiceProviderId(student, 'scId')" class="service-pill">SC ({{ getUserInitials(getServiceProviderId(student, 'scId')) }})</span>
-                  <span v-if="getServiceProviderId(student, 'trId')" class="service-pill">TR ({{ getUserInitials(getServiceProviderId(student, 'trId')) }})</span>
-                </template>
-              </div>
-            </template>
-            <template v-else>
-              —
-            </template>
-          </td>
+          <StudentServicesCell
+            :student="student"
+            :app-settings="appSettings"
+            :get-class-services="getClassServices"
+            :get-other-services="getOtherServices"
+            :has-service-providers="hasServiceProviders"
+            :get-service-provider-id="getServiceProviderId"
+            :get-provider-field-name="getProviderFieldName"
+            :get-user-initial-last-name="getUserInitialLastName"
+          />
           
           <!-- Schedule Cell -->
-          <td>
-            <div v-if="getSchedule(student)" class="schedule-list">
-              <ul>
-                <li v-for="(teacherId, period) in getSchedule(student)" :key="period">
-                  <span class="service-pill">{{ period }}:</span> {{ getUserInitialLastName(teacherId) }}
-                </li>
-              </ul>
-            </div>
-            <div v-else-if="!getSchedule(student)">—</div>
-          </td>
+          <StudentScheduleCell
+            :student="student"
+            :get-schedule="getSchedule"
+            :get-user-initial-last-name="getUserInitialLastName"
+          />
           
           <!-- Instruction Accom. Cell -->
-          <td class="instruction-cell" :class="{ 'with-flag': getFlagValue(student, 'flag1') }">
-            <div v-if="getFlagValue(student, 'flag1')" class="flag-overlay flag-preferential-seating">Preferential Seating</div>
-            <div v-if="getDisplayValue(student, 'instruction')" class="bullet-list">
-              <div v-html="formatListFromText(getDisplayValue(student, 'instruction'))"></div>
-            </div>
-            <div v-else>—</div>
-          </td>
+          <StudentInstructionAccomCell
+            :student="student"
+            :get-flag-value="getFlagValue"
+            :format-list-from-text="formatListFromText"
+          />
           
           <!-- Assessment Accom. Cell -->
-          <td class="instruction-cell" :class="{ 'with-flag': getFlagValue(student, 'flag2') }">
-            <div v-if="getFlagValue(student, 'flag2')" class="flag-overlay flag-separate-setting">Separate setting</div>
-            <div v-if="getDisplayValue(student, 'assessment')" class="bullet-list">
-              <div v-html="formatListFromText(getDisplayValue(student, 'assessment'))"></div>
-            </div>
-            <div v-else>—</div>
-          </td>
+          <StudentAssessmentAccomCell
+            :student="student"
+            :get-flag-value="getFlagValue"
+            :format-list-from-text="formatListFromText"
+          />
           
           <!-- Docs Cell -->
-          <td>
-            <div class="docs-item">
-              <a v-if="getDocumentUrl(student, 'ataglancePdfUrl')" :href="getDocumentUrl(student, 'ataglancePdfUrl')" target="_blank">At-A-Glance</a>
-              <a v-if="getDocumentUrl(student, 'bipPdfUrl')" :href="getDocumentUrl(student, 'bipPdfUrl')" target="_blank">BIP</a>
-            </div>
-          </td>
+          <StudentDocsCell :student="student" :get-document-url="getDocumentUrl" />
           
           <!-- Actions Cell -->
-          <td>
-            <button class="edit-btn" @click="$emit('edit', student.id)" title="Edit Student">✏️</button>
-            <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
-            <button v-if="currentUser?.role === 'teacher'" 
-                    class="teacher-feedback-btn" 
-                    @click="$emit('teacher-feedback', student.id)" 
-                    title="Teacher Feedback">📝</button>
-          </td>
+          <StudentActionsCell
+            :student="student"
+            :current-user="currentUser"
+            @edit="$emit('edit', student.id)"
+            @email="$emit('email', student.id)"
+            @teacher-feedback="$emit('teacher-feedback', student.id)"
+          />
         </template>
       </tr>
     </tbody>
@@ -188,6 +140,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { formatListFromText, getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
+import './table/StudentTable.css'
+import StudentDocsCell from './table/StudentDocsCell.vue'
+import StudentActionsCell from './table/StudentActionsCell.vue'
+import StudentScheduleCell from './table/StudentScheduleCell.vue'
+import StudentServicesCell from './table/StudentServicesCell.vue'
+import StudentInstructionAccomCell from './table/StudentInstructionAccomCell.vue'
+import StudentAssessmentAccomCell from './table/StudentAssessmentAccomCell.vue'
 
 const props = defineProps({
   students: {

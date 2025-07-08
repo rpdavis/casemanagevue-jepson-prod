@@ -1,0 +1,346 @@
+/* StudentTable Component Styles */
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.students-table th,
+.students-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.students-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.student-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.data-source {
+  font-size: 12px;
+  opacity: 0.7;
+  cursor: help;
+}
+
+.data-source:hover {
+  opacity: 1;
+}
+
+/* Testing view column widths */
+.students-table.testing-view th:nth-child(3),
+.students-table.testing-view td:nth-child(3) {
+  width: 50%;
+}
+
+/* Service pills */
+.service-pill {
+  display: inline-block;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 6px;
+  margin: 1px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+/* Badge container */
+.student-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .5rem;
+  position: relative;
+}
+
+.student-dates span {
+  position: relative;
+  margin-right: 1em;
+  cursor: help;
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: .85rem;
+  padding: .2rem .6rem;
+  border-radius: .25rem;
+  background: #f5f5f5;
+  color: #333;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.1);
+  border-left-width: 8px;
+  border-left-style: solid;
+}
+
+/* Badge colors with left borders */
+.badge-review {
+  border-left-color: #fb8c00;
+}
+
+.badge-reeval {
+  border-left-color: #35d2e5;
+}
+
+.badge-meeting {
+  border-left-color: #43a047;
+  background-color: #e2efff;
+}
+
+.badge-direct {
+  background-color: #ffebee;
+  color: #d32f2f;
+  border-left-color: #f44336;
+}
+
+/* Urgency flag classes for badges */
+.badge.flag-critical { 
+  border-left-color: #e53935; 
+  background: #ffc1bf; 
+}
+
+.badge.flag-high { 
+  border-left-color: #e53935; 
+}
+
+.badge.flag-medium { 
+  border-left-color: #fb8c00; 
+}
+
+.badge.flag-mid { 
+  border-left-color: #fdd835; 
+}
+
+.badge.flag-low { 
+  border-left-color: #d0df30; 
+}
+
+.badge.flag-prep { 
+  border-left-color: #43a047; 
+}
+
+.badge.flag-prep-reeval { 
+  border-left-color: #35d2e5; 
+}
+
+/* Meeting date set state */
+.badge.badge-meeting.date-set {
+  background: #eef7ee;
+}
+
+/* Hover tooltips for date badges */
+.plan-review:hover::after,
+.reeval-due:hover::after,
+.meeting-date:hover::after {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.plan-review:hover::after {
+  content: "Plan Review Due";
+}
+
+.reeval-due:hover::after {
+  content: "Reevaluation Due";
+}
+
+.meeting-date:hover::after {
+  content: "Meeting Date";
+}
+
+/* Flag overlays */
+.flag-overlay {
+  margin-top: 0.5rem;
+}
+
+.flag-overlay > div {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  margin: 0.1rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.flag-preferential-seating {
+  background: #babfff;
+}
+
+.flag-separate-setting {
+  background: #ffeeba;
+}
+
+/* Instruction cell with flags */
+.instruction-cell {
+  background: #f6f8fb;
+  border-radius: 0.25rem;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+  border-left: 6px solid #e6ecf6;
+  padding-top: 1.2rem;
+  position: relative;
+}
+
+.instruction-cell .bullet-list {
+  background: transparent;
+  padding: 0.2rem 0 0.2rem 0;
+  border-radius: 0.25rem;
+  box-shadow: none;
+}
+
+.instruction-cell .flag-overlay {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: calc(100% - 0.4rem);
+  z-index: 2;
+  margin-top: 0;
+}
+
+.instruction-cell .flag-overlay > div,
+.instruction-cell .flag-overlay {
+  background: #ffeeba;
+  color: #333;
+  font-size: 0.75rem;
+  padding: 0 6px;
+  border-radius: 3px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0.1rem 0.4rem;
+  width: 90%;
+}
+
+.instruction-cell.with-flag {
+  padding-top: 2.5rem;
+}
+
+/* Schedule list */
+.schedule-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.schedule-list li {
+  margin-bottom: 2px;
+}
+
+/* Bullet list for accommodations */
+.bullet-list {
+  list-style: disc !important;
+  background: linear-gradient(to top, #f4f6f9 100%, transparent);
+}
+
+.bullet-list ul {
+  list-style: disc !important;
+  padding-left: 1.2rem;
+  margin: 0;
+}
+
+.bullet-list li {
+  line-height: 1.3;
+  margin-bottom: 0.2rem;
+}
+
+/* Document links */
+.docs-item a {
+  display: block;
+  color: #1976d2;
+  text-decoration: none;
+  margin-bottom: 2px;
+}
+
+.docs-item a:hover {
+  text-decoration: underline;
+}
+
+/* Action buttons */
+.edit-btn,
+.email-btn,
+.teacher-feedback-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin: 1px;
+  border-radius: 4px;
+  font-size: 1.1em;
+}
+
+.edit-btn:hover,
+.email-btn:hover,
+.teacher-feedback-btn:hover {
+  background-color: #f5f5f5;
+}
+
+/* Direct assignment badge */
+.direct-assignment-badge {
+  margin-top: 4px;
+}
+
+/* Student dates */
+.student-dates {
+  margin-top: 4px;
+}
+
+.student-dates .badge {
+  margin-right: 4px;
+}
+
+/* Urgency classes for dates */
+.flag-critical {
+  background-color: #ffebee !important;
+  color: #d32f2f !important;
+}
+
+.flag-high {
+  background-color: #fff3e0 !important;
+  color: #f57c00 !important;
+}
+
+.flag-medium {
+  background-color: #fff8e1 !important;
+  color: #fbc02d !important;
+}
+
+.flag-mid {
+  background-color: #f1f8e9 !important;
+  color: #689f38 !important;
+}
+
+.flag-low {
+  background-color: #e8f5e8 !important;
+  color: #388e3c !important;
+}
+
+.flag-prep {
+  background-color: #e3f2fd !important;
+  color: #1976d2 !important;
+}
+
+.flag-prep-reeval {
+  background-color: #f3e5f5 !important;
+  color: #7b1fa2 !important;
+} 
