@@ -5,6 +5,13 @@
       <h1>Admin Panel</h1>
       <div class="admin-nav">
         <button 
+          @click="setActiveCategory('dashboard')" 
+          :class="{ active: activeCategory === 'dashboard' }"
+          class="category-btn"
+        >
+          Dashboard
+        </button>
+        <button 
           @click="setActiveCategory('users-students')" 
           :class="{ active: activeCategory === 'users-students' }"
           class="category-btn"
@@ -49,6 +56,14 @@
 
     <!-- Tab Content -->
     <div class="admin-section">
+      <!-- Dashboard Tab -->
+      <div v-if="activeTab === 'dashboard'" class="admin-section">
+        <AdminDashboard 
+          @go-to-category="handleGoToCategory"
+          @go-to-students="goToStudents"
+        />
+      </div>
+
       <!-- Add Users Tab -->
       <div v-if="activeTab === 'usersAdd'" class="admin-section">
         <UserAddForm />
@@ -122,7 +137,7 @@
 <script>
 import '../assets/bass/admin-panel.css'
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
 import TabBar from '../components/TabBar.vue'
@@ -143,6 +158,7 @@ import AdminAideSchedule from './AdminAideSchedule.vue'
 import AdminBackupRestore from './AdminBackupRestore.vue'
 import AdminTeacherFeedback from './AdminTeacherFeedback.vue'
 import TestingLinks from '../components/TestingLinks.vue'
+import AdminDashboard from '../components/AdminDashboard.vue'
 
 export default {
   name: 'AdminView',
@@ -163,12 +179,14 @@ export default {
     AdminAideSchedule,
     AdminBackupRestore,
     AdminTeacherFeedback,
-    TestingLinks
+    TestingLinks,
+    AdminDashboard
   },
   setup() {
     const router = useRouter()
-    const activeTab = ref('usersAdd')
-    const activeCategory = ref('users-students')
+    const route = useRoute()
+    const activeTab = ref('dashboard')
+    const activeCategory = ref('dashboard')
     
     // Load students and users data
     const { students, fetchStudents } = useStudents()
@@ -178,12 +196,19 @@ export default {
     onMounted(async () => {
       try {
         await Promise.all([fetchStudents(), fetchUsers()])
+        
+        // Check for category parameter in URL
+        const categoryParam = route.query.category
+        if (categoryParam) {
+          setActiveCategory(categoryParam)
+        }
       } catch (error) {
         console.error('Error loading data:', error)
       }
     })
 
     const tabs = [
+      { key: 'dashboard', label: 'Dashboard', category: 'dashboard' },
       { key: 'usersAdd', label: 'Add Users', category: 'users-students' },
       { key: 'usersEdit', label: 'Manage Users', category: 'users-students' },
       { key: 'students', label: 'Students', category: 'users-students' },
@@ -220,17 +245,27 @@ export default {
       router.push('/students')
     }
 
-    return {
-      activeTab,
-      activeCategory,
-      tabs,
-      students,
-      userMap,
-      getTabsForCategory,
-      setActiveCategory,
-      handleTabChange,
-      goToStudents
+    const goToDashboard = () => {
+      router.push('/admin/dashboard')
     }
+
+    const handleGoToCategory = (categoryKey) => {
+      setActiveCategory(categoryKey)
+    }
+
+          return {
+        activeTab,
+        activeCategory,
+        tabs,
+        students,
+        userMap,
+        getTabsForCategory,
+        setActiveCategory,
+        handleTabChange,
+        goToStudents,
+        goToDashboard,
+        handleGoToCategory
+      }
   }
 }
 </script>
@@ -284,6 +319,8 @@ export default {
   color: white;
   box-shadow: 0 2px 4px rgba(42, 121, 201, 0.3);
 }
+
+
 
 .return-btn {
   display: flex;

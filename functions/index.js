@@ -7,6 +7,7 @@ const { onCall } = require("firebase-functions/v2/https");
 const { HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const functions = require("firebase-functions");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 // Firebase Admin
 const { initializeApp } = require("firebase-admin/app");
@@ -336,7 +337,7 @@ exports.syncFormResponses = onCall(async (request) => {
 });
 
 // ─── SCHEDULED FUNCTIONS ─────────────────────────────────────────────────────
-exports.autoSyncFormResponses = functions.pubsub.schedule("every 30 minutes").onRun(async (context) => {
+exports.autoSyncFormResponses = onSchedule("every 30 minutes", async (event) => {
   try {
     const formsSnapshot = await db.collection("feedbackForms")
       .where("active", "==", true)

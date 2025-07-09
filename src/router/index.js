@@ -46,6 +46,7 @@ const routes = [
       allowedRoles: ADMIN_ONLY,
     },
   },
+
   {
     path: '/admin/aide-assignment',
     name: 'AdminAideAssignment',
