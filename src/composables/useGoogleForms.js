@@ -28,18 +28,23 @@ export function useGoogleForms() {
 
       window.gapi.load('auth2:client', async () => {
         try {
+          // Initialize the client first
           await window.gapi.client.init({
-            apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-            clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+            apiKey: 'AIzaSyDx1jbQT-FzgzjASFqVA2kbAHWJ_TeUzdY',
             discoveryDocs: [
               'https://forms.googleapis.com/$discovery/rest?version=v1',
               'https://sheets.googleapis.com/$discovery/rest?version=v4'
-            ],
+            ]
+          })
+
+          // Initialize auth2 separately with proper configuration
+          await window.gapi.auth2.init({
+            client_id: '756483333257-kh1cv865e0buv0cv9g0v1h7ghq7s0e70.apps.googleusercontent.com',
             scope: REQUIRED_SCOPES.join(' ')
           })
 
           isInitialized.value = true
-          console.log('🔍 Google Forms API initialized')
+          console.log('🔍 Google Forms API and Auth2 initialized')
           resolve()
         } catch (error) {
           console.error('Failed to initialize Google Forms API:', error)
@@ -55,7 +60,18 @@ export function useGoogleForms() {
       formsStatus.value = 'loading'
       formsMessage.value = 'Requesting Google authorization...'
 
+      // Check if auth is initialized
+      if (!isInitialized.value) {
+        console.log('🔍 Auth not initialized, initializing now...')
+        await initializeGoogleAuth()
+      }
+
       const authInstance = window.gapi.auth2.getAuthInstance()
+      
+      if (!authInstance) {
+        throw new Error('Google Auth2 instance not available. Please check your Google API configuration.')
+      }
+
       const user = await authInstance.signIn({
         scope: REQUIRED_SCOPES.join(' ')
       })
@@ -71,7 +87,7 @@ export function useGoogleForms() {
     } catch (error) {
       console.error('Failed to get access token:', error)
       formsStatus.value = 'error'
-      formsMessage.value = 'Authorization failed'
+      formsMessage.value = `Authorization failed: ${error.message}`
       throw error
     }
   }
@@ -202,8 +218,136 @@ export function useGoogleForms() {
     }
   }
 
+  // Create a custom feedback form with specific questions
+  const createCustomFeedbackForm = async (formConfig) => {
+    if (!accessToken.value) {
+      await requestAccessToken()
+    }
+
+    try {
+      formsStatus.value = 'loading'
+      formsMessage.value = 'Creating custom feedback form...'
+
+      // Create the form
+      const createResponse = await window.gapi.client.forms.forms.create({
+        resource: {
+          info: {
+            title: formConfig.title,
+            description: formConfig.description
+          }
+        }
+      })
+
+      const formId = createResponse.result.formId
+      const formUrl = `https://docs.google.com/forms/d/${formId}/edit`
+
+      console.log('🔍 Created custom form:', formId)
+
+      // Prepare questions for Google Forms API
+      const requests = []
+      let questionIndex = 0
+
+      formConfig.questions.forEach(question => {
+        const questionItem = {
+          createItem: {
+            item: {
+              title: question.title,
+              description: question.description || '',
+              questionItem: {
+                question: {
+                  required: question.required || false
+                }
+              }
+            },
+            location: { index: questionIndex++ }
+          }
+        }
+
+        // Set question type based on our custom types
+        switch (question.type) {
+          case 'short_text':
+            questionItem.createItem.item.questionItem.question.textQuestion = {
+              paragraph: false
+            }
+            break
+          case 'long_text':
+            questionItem.createItem.item.questionItem.question.textQuestion = {
+              paragraph: true
+            }
+            break
+          case 'multiple_choice':
+            questionItem.createItem.item.questionItem.question.choiceQuestion = {
+              type: 'RADIO',
+              options: question.options.map(opt => ({ value: opt }))
+            }
+            break
+          case 'checkboxes':
+            questionItem.createItem.item.questionItem.question.choiceQuestion = {
+              type: 'CHECKBOX',
+              options: question.options.map(opt => ({ value: opt }))
+            }
+            break
+          case 'dropdown':
+            questionItem.createItem.item.questionItem.question.choiceQuestion = {
+              type: 'DROP_DOWN',
+              options: question.options.map(opt => ({ value: opt }))
+            }
+            break
+          case 'linear_scale':
+            questionItem.createItem.item.questionItem.question.scaleQuestion = {
+              low: parseInt(question.scaleMin) || 1,
+              high: parseInt(question.scaleMax) || 5,
+              lowLabel: question.scaleLowLabel || '',
+              highLabel: question.scaleHighLabel || ''
+            }
+            break
+          case 'date':
+            questionItem.createItem.item.questionItem.question.dateQuestion = {
+              includeTime: false
+            }
+            break
+          case 'time':
+            questionItem.createItem.item.questionItem.question.timeQuestion = {
+              duration: false
+            }
+            break
+        }
+
+        requests.push(questionItem)
+      })
+
+      // Add all questions to the form
+      if (requests.length > 0) {
+        await window.gapi.client.forms.forms.batchUpdate({
+          formId: formId,
+          resource: {
+            requests: requests
+          }
+        })
+      }
+
+      const formData = {
+        formId: formId,
+        editUrl: formUrl,
+        responseUrl: `https://docs.google.com/forms/d/${formId}/viewform`
+      }
+
+      formsStatus.value = 'success'
+      formsMessage.value = 'Custom feedback form created successfully!'
+
+      console.log('🔍 Custom form created successfully:', formData)
+      return formData
+
+    } catch (error) {
+      console.error('Error creating custom feedback form:', error)
+      formsStatus.value = 'error'
+      formsMessage.value = `Failed to create custom form: ${error.message}`
+      throw error
+    }
+  }
+
   // Create a feedback form
-  const createFeedbackForm = async (student, teachers, templateKeys, excludedPeriods = []) => {
+  const createFeedbackForm = async (student, teachers, templateKeys, excludedPeriods = [], customTitle = null) => {
     if (!accessToken.value) {
       await requestAccessToken()
     }
@@ -220,7 +364,7 @@ export function useGoogleForms() {
       }
 
       // Create the form
-      const formTitle = `Teacher Feedback - ${student.firstName} ${student.lastName} (Grade ${student.grade})`
+      const formTitle = customTitle || `Teacher Feedback - ${student.firstName} ${student.lastName} (Grade ${student.grade})`
       const formDescription = `Please provide feedback for ${student.firstName} ${student.lastName}. This information will be used for IEP planning and academic support.`
 
       const createResponse = await window.gapi.client.forms.forms.create({
@@ -457,6 +601,7 @@ export function useGoogleForms() {
     initializeGoogleAuth,
     requestAccessToken,
     createFeedbackForm,
+    createCustomFeedbackForm,
     getFormResponses,
     loadExistingForms,
     deleteFeedbackForm,

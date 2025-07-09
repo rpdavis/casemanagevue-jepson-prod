@@ -132,7 +132,6 @@
           :user-map="userMapObj"
           :current-user="currentUser"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
-          :feedback-forms="linkedForms"
           @edit="editStudent"
           @email="emailStudent"
           @teacher-feedback="handleTeacherFeedback"
@@ -149,7 +148,6 @@
             :user-map="userMapObj"
             :current-user="currentUser"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
-            :feedback-forms="linkedForms"
             @edit="editStudent"
             @email="emailStudent"
             @teacher-feedback="handleTeacherFeedback"
@@ -164,7 +162,6 @@
             :user-map="userMapObj"
             :current-user="currentUser"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
-            :feedback-forms="linkedForms"
             @edit="editStudent"
             @email="emailStudent"
             @teacher-feedback="handleTeacherFeedback"
@@ -180,7 +177,6 @@
           :current-user="currentUser"
           :testing-view="true"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
-          :feedback-forms="linkedForms"
           @edit="editStudent"
           @email="emailStudent"
           @teacher-feedback="handleTeacherFeedback"
@@ -216,6 +212,14 @@
       @close="showAddStudent = false"
       @saved="handleStudentAdded"
     />
+    
+    <TeacherFeedbackDialog
+      v-if="showFeedbackDialog"
+      :student="getStudentById(feedbackStudentId)"
+      :current-user="currentUser"
+      @close="showFeedbackDialog = false"
+      @form-sent="handleFormSent"
+    />
   </div>
 </template>
 
@@ -236,6 +240,7 @@ import StudentEditDialog from '@/components/students/StudentEditDialog.vue'
 import StudentsEmailDialog from '@/components/students/StudentsEmailDialog.vue'
 import StudentForm from '@/components/students/StudentForm.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
+import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.vue'
 
 const router = useRouter()
 const { students, fetchStudents } = useStudents()
@@ -613,9 +618,10 @@ function handleTeacherFeedback(studentId) {
   showFeedbackDialog.value = true
 }
 
-// Get feedback forms for a specific student
-const getFeedbackFormsForStudent = (studentId) => {
-  return linkedForms.value.filter(form => form.student.id === studentId)
+// Handle form sent event
+const handleFormSent = () => {
+  // Form sent successfully - no need to refresh anything since we removed the column
+  console.log('Teacher feedback form sent successfully')
 }
 
 function handleStudentAdded() {

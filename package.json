@@ -8,13 +8,14 @@
   },
   "dependencies": {
     "@vueuse/core": "^10.9.0",
-    "firebase": "^10.0.0",
+    "firebase": "^10.14.1",
     "googleapis": "^150.0.1",
     "papaparse": "^5.5.3",
     "pinia": "^2.1.0",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0",
     "vuedraggable": "^4.1.0",
+    "vuefire": "^3.2.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

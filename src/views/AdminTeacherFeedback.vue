@@ -10,300 +10,302 @@
     </div>
 
     <!-- Status Messages -->
-    <div v-if="formsMessage" :class="['status-message', formsStatus]">
-      {{ formsMessage }}
+    <div v-if="isLoading" class="status-message loading">
+      Processing...
+    </div>
+    <div v-if="successMessage" class="status-message success">
+      {{ successMessage }}
+    </div>
+    <div v-if="error" class="status-message error">
+      {{ error }}
     </div>
 
     <!-- Quick Actions -->
     <div class="quick-actions">
       <button 
-        @click="showCreateForm = true" 
+        @click="showCreateModal = true" 
         class="primary-btn"
-        :disabled="formsStatus === 'loading'"
+        :disabled="isLoading"
       >
-        <span>📝</span> Create New Feedback Form
-      </button>
-      <button 
-        @click="refreshForms" 
-        class="secondary-btn"
-        :disabled="formsStatus === 'loading'"
-      >
-        <span>🔄</span> Refresh Forms
+        <span>📝</span> Add Form
       </button>
     </div>
 
-    <!-- Create Form Dialog -->
-    <div v-if="showCreateForm" class="modal-overlay" @click="closeCreateForm">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Create Teacher Feedback Form</h3>
-          <button @click="closeCreateForm" class="close-btn">×</button>
-        </div>
-        
-        <div class="modal-body">
-          <!-- Student Selection -->
-          <div class="form-group">
-            <label>Select Student:</label>
-            <select v-model="selectedStudent" required>
-              <option value="">Choose a student...</option>
-              <option 
-                v-for="student in studentsWithSeparateSetting" 
-                :key="student.id" 
-                :value="student"
-              >
-                {{ student.firstName }} {{ student.lastName }} (Grade {{ student.grade }})
-              </option>
-            </select>
-          </div>
-
-          <!-- Template Selection -->
-          <div class="form-group">
-            <label>Select Feedback Templates:</label>
-            <div class="template-checkboxes">
-              <div v-for="(template, key) in formTemplates" :key="key" class="checkbox-item">
-                <input 
-                  type="checkbox" 
-                  :id="key" 
-                  :value="key" 
-                  v-model="selectedTemplates"
-                >
-                <label :for="key">
-                  <strong>{{ template.name }}</strong>
-                  <span class="template-description">{{ template.description }}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Teacher Selection -->
-          <div class="form-group" v-if="selectedStudent">
-            <label>Teachers to Send Form To:</label>
-            <div class="teacher-selection">
-              <div class="teacher-checkboxes">
-                <div v-for="teacher in getTeachersForStudent(selectedStudent)" :key="teacher.id" class="checkbox-item">
-                  <input 
-                    type="checkbox" 
-                    :id="teacher.id" 
-                    :value="teacher" 
-                    v-model="selectedTeachers"
-                  >
-                  <label :for="teacher.id">
-                    {{ teacher.name }} ({{ teacher.email }})
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Period Exclusion -->
-          <div class="form-group" v-if="selectedStudent">
-            <label>Exclude Periods (optional):</label>
-            <div class="period-checkboxes">
-              <div v-for="(period, index) in periodLabels" :key="index" class="checkbox-item">
-                <input 
-                  type="checkbox" 
-                  :id="`period-${index}`" 
-                  :value="index.toString()" 
-                  v-model="excludedPeriods"
-                >
-                <label :for="`period-${index}`">{{ period }}</label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button @click="closeCreateForm" class="secondary-btn">Cancel</button>
-          <button 
-            @click="createForm" 
-            class="primary-btn"
-            :disabled="!canCreateForm || formsStatus === 'loading'"
-          >
-            <span v-if="formsStatus === 'loading'">Creating...</span>
-            <span v-else>Create Form</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Existing Forms List -->
-    <div class="forms-list">
-      <h3>Existing Feedback Forms</h3>
-      
-      <div v-if="linkedForms.length === 0" class="empty-state">
-        <p>No feedback forms created yet.</p>
-        <p>Click "Create New Feedback Form" to get started.</p>
-      </div>
-
-      <div v-else class="forms-grid">
-        <div v-for="form in linkedForms" :key="form.id" class="form-card">
-          <div class="form-header">
-            <h4>{{ form.title }}</h4>
-            <span class="form-date">{{ formatDate(form.createdAt) }}</span>
+                  <!-- Add Form Dialog -->
+      <div v-if="showCreateModal" class="modal-overlay" @click="closeCreateForm">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <h3>Add Teacher Feedback Form</h3>
+            <button @click="closeCreateForm" class="close-btn">×</button>
           </div>
           
-          <div class="form-details">
-            <p><strong>Student:</strong> {{ form.student.name }}</p>
-            <p><strong>Grade:</strong> {{ form.student.grade }}</p>
-            <p><strong>Templates:</strong> {{ form.templates.join(', ') }}</p>
-            <p><strong>Teachers:</strong> {{ form.teachers.length }}</p>
-            <p><strong>Responses:</strong> {{ form.responseCount || 0 }}</p>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>Form Title:</label>
+              <input 
+                type="text" 
+                v-model="formTitle" 
+                placeholder="Enter a descriptive title for this form"
+                class="form-input"
+                required
+              >
+            </div>
+
+            <div class="form-group">
+              <label>Form Description (optional):</label>
+              <textarea 
+                v-model="formDescription" 
+                placeholder="Brief description of what this form is for"
+                class="form-textarea"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Google Form URL:</label>
+              <input 
+                type="url" 
+                v-model="formUrl" 
+                placeholder="https://docs.google.com/forms/d/your-form-id/viewform"
+                class="form-input"
+                required
+              >
+              <small class="form-help">Paste the Google Form URL here (viewform link)</small>
+            </div>
+
+            <div class="form-group">
+              <label>Response Spreadsheet URL:</label>
+              <input 
+                type="url" 
+                v-model="responseSpreadsheetUrl" 
+                placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id"
+                class="form-input"
+                required
+              >
+              <small class="form-help">Link to the Google Sheet where responses are collected</small>
+            </div>
+
+            <div class="form-info">
+              <h4>📋 Setup Instructions:</h4>
+              <ol>
+                <li>Create your Google Form manually with the questions you want</li>
+                <li>Go to <strong>Responses</strong> tab in your form</li>
+                <li>Click <strong>Create Spreadsheet</strong> to link it to a Google Sheet</li>
+                <li>Copy both URLs and paste them above</li>
+              </ol>
+            </div>
           </div>
 
-          <div class="form-actions">
-            <button @click="openForm(form.editUrl)" class="secondary-btn">
-              <span>📝</span> Edit Form
-            </button>
-            <button @click="openForm(form.responseUrl)" class="secondary-btn">
-              <span>📋</span> View Form
-            </button>
-            <button @click="openForm(form.sheetUrl)" class="secondary-btn">
-              <span>📊</span> View Responses
-            </button>
-            <button @click="deleteForm(form.id)" class="danger-btn">
-              <span>🗑️</span> Remove
+          <div class="modal-footer">
+            <button @click="closeCreateForm" class="secondary-btn">Cancel</button>
+            <button 
+              @click="addForm" 
+              class="primary-btn"
+              :disabled="!canAddForm || isLoading"
+            >
+              <span v-if="isLoading">Adding Form...</span>
+              <span v-else>Add Form</span>
             </button>
           </div>
         </div>
       </div>
-    </div>
+
+
+
+      <!-- Forms List -->
+      <div class="forms-list">
+        <h3>Feedback Forms</h3>
+        
+        <div v-if="formsLoading" class="loading">Loading forms...</div>
+        
+        <div v-else-if="activeForms.length === 0" class="empty-state">
+          <p>No feedback forms added yet.</p>
+          <p>Click "Add Form" to get started.</p>
+        </div>
+        
+        <div v-else class="forms-grid">
+          <div v-for="form in activeForms" :key="form.id" class="form-card">
+            <div class="form-header">
+              <h4>{{ form.title || 'Untitled Form' }}</h4>
+              <div class="form-actions">
+                <button @click="openForm(form)" class="action-btn view" title="View Form">
+                  👁️
+                </button>
+                <button @click="syncFormResponses(form)" class="action-btn sync" title="Sync Responses">
+                  🔄
+                </button>
+                <button @click="editForm(form)" class="action-btn edit" title="Edit Form">
+                  ✏️
+                </button>
+                <button @click="deleteForm(form)" class="action-btn delete" title="Delete Form">
+                  🗑️
+                </button>
+              </div>
+            </div>
+            
+            <div class="form-meta">
+              <p><strong>Created:</strong> {{ formatDate(form.createdAt) }}</p>
+              <p v-if="form.description"><strong>Description:</strong> {{ form.description }}</p>
+              <p><strong>Form URL:</strong> <a :href="form.formUrl" target="_blank" class="form-link">Open Form</a></p>
+              <p><strong>Responses:</strong> <a :href="getSpreadsheetUrl(form.responseSpreadsheetId)" target="_blank" class="form-link">View Sheet</a></p>
+            </div>
+            
+            <div class="form-stats">
+              <div class="stat">
+                <span class="stat-label">Responses:</span>
+                <span class="stat-value">{{ getResponseCount(form.responseSpreadsheetId) }}</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Last Sync:</span>
+                <span class="stat-value">{{ getLastSyncDate(form.responseSpreadsheetId) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { useGoogleForms } from '@/composables/useGoogleForms.js'
+import { useTeacherFeedback } from '@/composables/useTeacherFeedback.js'
 import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
-import { useAppSettings } from '@/composables/useAppSettings.js'
+import { useAuthStore } from '@/store/authStore'
 
 export default {
   name: 'AdminTeacherFeedback',
   setup() {
     // Composables
     const { 
-      formsStatus, 
-      formsMessage, 
-      linkedForms, 
-      initializeGoogleAuth,
+      isLoading,
+      error,
+      successMessage,
+      formsLoading,
+      responsesLoading,
+      feedbackForms,
+      feedbackResponses,
+      activeForms,
+      totalResponses,
       createFeedbackForm,
-      loadExistingForms,
+      updateFeedbackForm,
       deleteFeedbackForm,
-      getFormTemplates
-    } = useGoogleForms()
+      syncResponses,
+      getResponsesForSpreadsheet,
+      clearMessages,
+      extractSpreadsheetId,
+      extractFormId
+    } = useTeacherFeedback()
     
     const { students, fetchStudents } = useStudents()
     const { users, fetchUsers } = useUsers()
-    const { appSettings, loadAppSettings } = useAppSettings()
+    const authStore = useAuthStore()
 
     // State
-    const showCreateForm = ref(false)
-    const selectedStudent = ref('')
-    const selectedTemplates = ref(['academic'])
-    const selectedTeachers = ref([])
-    const excludedPeriods = ref([])
+    const showCreateModal = ref(false)
+    const formTitle = ref('')
+    const formDescription = ref('')
+    const formUrl = ref('')
+    const responseSpreadsheetUrl = ref('')
 
     // Computed
-    const formTemplates = computed(() => getFormTemplates())
-    
-    const studentsWithSeparateSetting = computed(() => {
-      return students.value.filter(student => {
-        const hasSeparateSetting = student.app?.flags?.flag1 || student.flag1 || false
-        return hasSeparateSetting
-      })
-    })
-
-    const periodLabels = computed(() => {
-      return appSettings.value?.periodLabels || ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'SH']
-    })
-
-    const canCreateForm = computed(() => {
-      return selectedStudent.value && 
-             selectedTemplates.value.length > 0 && 
-             selectedTeachers.value.length > 0
+    const canAddForm = computed(() => {
+      return formTitle.value.trim() && 
+             formUrl.value.trim() && 
+             responseSpreadsheetUrl.value.trim()
     })
 
     // Methods
-    const getTeachersForStudent = (student) => {
-      if (!student || !users.value) return []
+    const addForm = async () => {
+      if (!canAddForm.value) return
       
-      const teacherIds = new Set()
-      
-      // Get teachers from schedule data
-      if (student.app?.schedule?.periods) {
-        Object.values(student.app.schedule.periods).forEach(teacherId => {
-          if (teacherId) teacherIds.add(teacherId)
-        })
-      }
-      
-      // Get teachers from aeries data
-      if (student.aeries?.schedule) {
-        Object.values(student.aeries.schedule).forEach(period => {
-          if (period?.teacherId) teacherIds.add(period.teacherId)
-        })
-      }
-      
-      // Convert to teacher objects
-      return Array.from(teacherIds)
-        .map(id => users.value.find(u => u.id === id))
-        .filter(Boolean)
-        .filter(user => user.role === 'teacher')
-    }
-
-    const createForm = async () => {
       try {
-        await createFeedbackForm(
-          selectedStudent.value,
-          selectedTeachers.value,
-          selectedTemplates.value,
-          excludedPeriods.value
-        )
+        clearMessages()
+        
+        const formData = {
+          title: formTitle.value.trim(),
+          description: formDescription.value.trim(),
+          formUrl: formUrl.value.trim(),
+          responseSpreadsheetId: extractSpreadsheetId(responseSpreadsheetUrl.value),
+          createdBy: authStore.user.uid
+        }
+        
+        await createFeedbackForm(formData)
         closeCreateForm()
+        
       } catch (error) {
-        console.error('Error creating form:', error)
+        console.error('Error adding form:', error)
       }
     }
 
     const closeCreateForm = () => {
-      showCreateForm.value = false
-      selectedStudent.value = ''
-      selectedTemplates.value = ['academic']
-      selectedTeachers.value = []
-      excludedPeriods.value = []
+      showCreateModal.value = false
+      formTitle.value = ''
+      formDescription.value = ''
+      formUrl.value = ''
+      responseSpreadsheetUrl.value = ''
+      clearMessages()
     }
 
-    const openForm = (url) => {
-      window.open(url, '_blank')
+    const openForm = (form) => {
+      window.open(form.formUrl, '_blank')
     }
 
-    const deleteForm = async (formId) => {
-      if (confirm('Are you sure you want to remove this form from the list?')) {
+    const syncFormResponses = async (form) => {
+      try {
+        await syncResponses(form.responseSpreadsheetId)
+      } catch (error) {
+        console.error('Error syncing responses:', error)
+      }
+    }
+
+    const editForm = async (form) => {
+      // For now, just open the form URL for editing
+      window.open(form.formUrl, '_blank')
+    }
+
+    const deleteForm = async (form) => {
+      if (confirm(`Are you sure you want to delete "${form.title}"?`)) {
         try {
-          await deleteFeedbackForm(formId)
+          await deleteFeedbackForm(form.id)
         } catch (error) {
           console.error('Error deleting form:', error)
         }
       }
     }
 
-    const refreshForms = () => {
-      loadExistingForms()
+    const getResponseCount = (spreadsheetId) => {
+      const responses = getResponsesForSpreadsheet(spreadsheetId)
+      return responses.value.length
     }
 
-    const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString()
+    const getLastSyncDate = (spreadsheetId) => {
+      const responses = getResponsesForSpreadsheet(spreadsheetId)
+      if (responses.value.length === 0) return 'Never'
+      
+      const lastSync = responses.value[0]?.syncedAt || responses.value[0]?.autoSyncedAt
+      return lastSync ? new Date(lastSync.seconds * 1000).toLocaleDateString() : 'Never'
     }
+
+    const getSpreadsheetUrl = (spreadsheetId) => {
+      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+    }
+
+    const formatDate = (date) => {
+      if (!date) return 'N/A'
+      const dateObj = date.seconds ? new Date(date.seconds * 1000) : new Date(date)
+      return dateObj.toLocaleDateString()
+    }
+
+
 
     // Initialize
     onMounted(async () => {
       try {
         await Promise.all([
-          initializeGoogleAuth(),
           fetchStudents(),
-          fetchUsers(),
-          loadAppSettings()
+          fetchUsers()
         ])
-        loadExistingForms()
       } catch (error) {
         console.error('Error initializing teacher feedback:', error)
       }
@@ -311,28 +313,34 @@ export default {
 
     return {
       // State
-      formsStatus,
-      formsMessage,
-      linkedForms,
-      showCreateForm,
-      selectedStudent,
-      selectedTemplates,
-      selectedTeachers,
-      excludedPeriods,
+      isLoading,
+      error,
+      successMessage,
+      showCreateModal,
+      formTitle,
+      formDescription,
+      formUrl,
+      responseSpreadsheetUrl,
+      
+      // Data
+      formsLoading,
+      feedbackForms,
+      activeForms,
+      totalResponses,
       
       // Computed
-      formTemplates,
-      studentsWithSeparateSetting,
-      periodLabels,
-      canCreateForm,
+      canAddForm,
       
       // Methods
-      getTeachersForStudent,
-      createForm,
+      addForm,
       closeCreateForm,
       openForm,
+      syncFormResponses,
+      editForm,
       deleteForm,
-      refreshForms,
+      getResponseCount,
+      getLastSyncDate,
+      getSpreadsheetUrl,
       formatDate
     }
   }
@@ -456,6 +464,11 @@ export default {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.large-modal {
+  max-width: 900px;
+  width: 95%;
 }
 
 .modal-header {
@@ -613,6 +626,110 @@ export default {
   font-size: 0.9rem;
 }
 
+.action-btn {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.action-btn.view:hover {
+  background: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.action-btn.sync:hover {
+  background: #fff3e0;
+  border-color: #ff9800;
+}
+
+.action-btn.edit:hover {
+  background: #e8f5e8;
+  border-color: #4caf50;
+}
+
+.action-btn.delete:hover {
+  background: #ffebee;
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.form-link {
+  color: #2a79c9;
+  text-decoration: none;
+}
+
+.form-link:hover {
+  text-decoration: underline;
+}
+
+.form-meta {
+  margin-bottom: 1rem;
+}
+
+.form-meta p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.form-stats {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-info {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.form-info h4 {
+  margin: 0 0 0.75rem 0;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.form-info ol {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.form-info li {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
 .period-checkboxes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -625,5 +742,313 @@ export default {
   border: 1px solid #dee2e6;
   border-radius: 4px;
   padding: 1rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-help {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.bulk-student-selection {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.control-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.control-btn:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.selection-count {
+  color: #6c757d;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.student-list {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Form Builder Styles */
+.form-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.form-section h4 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.add-question-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.add-question-btn:hover {
+  background: #218838;
+}
+
+.empty-questions {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 2px dashed #dee2e6;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.question-item {
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #f8f9fa;
+  overflow: hidden;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #495057;
+  background: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.question-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.control-btn {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-btn.danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.control-btn.danger:hover:not(:disabled) {
+  background: #f5c6cb;
+}
+
+.question-content {
+  padding: 1rem;
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.form-select.small {
+  width: auto;
+  min-width: 60px;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.option-item .form-input {
+  flex: 1;
+}
+
+.add-option-btn {
+  padding: 0.5rem 1rem;
+  border: 2px dashed #ced4da;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: #6c757d;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.add-option-btn:hover {
+  border-color: #007bff;
+  color: #007bff;
+  background: #f8f9fa;
+}
+
+.scale-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scale-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scale-range label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.scale-range span {
+  color: #6c757d;
+  font-size: 0.9rem;
+}
+
+.scale-labels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.label-group label {
+  font-size: 0.9rem;
+  color: #495057;
+  margin: 0;
 }
 </style> 

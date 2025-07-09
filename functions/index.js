@@ -1,26 +1,29 @@
 /* eslint-disable */
 // functions/index.js
 
-// ─── Imports ──────────────────────────────────────────────────────────────────
-// UPDATED: Using 2nd gen Firebase Functions
-const {onDocumentWritten, onCall} = require("firebase-functions/v2/firestore");
-const {onCall: onCallHttps} = require("firebase-functions/v2/https");
-const {initializeApp} = require("firebase-admin/app");
-const {getFirestore} = require("firebase-admin/firestore");
-const {getAuth} = require("firebase-admin/auth");
-const axios = require("axios"); // Add axios for HTTP requests
+// ─── IMPORTS ──────────────────────────────────────────────────────────────────
+// Firebase Functions v2
+const { onCall } = require("firebase-functions/v2/https");
+const { HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const functions = require("firebase-functions");
 
-// ─── Init Admin SDK ───────────────────────────────────────────────────────────
-// Initialize Firebase Admin with explicit service account
-initializeApp({
-  projectId: 'casemangervue'
-});
+// Firebase Admin
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getAuth } = require("firebase-admin/auth");
 
+// Utilities
+const axios = require("axios");
+const { google } = require("googleapis");
+
+// ─── INITIALIZATION ───────────────────────────────────────────────────────────
+initializeApp();
 const db = getFirestore();
-const adminAuth = getAuth(); // Renamed to avoid conflict with 'auth' from firebase-functions
+const adminAuth = getAuth();
 
-// Define valid roles for server-side validation
-const VALID_ROLES_SERVER = [
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const VALID_ROLES = [
   "admin",
   "administrator",
   "administrator_504_CM",
@@ -31,378 +34,386 @@ const VALID_ROLES_SERVER = [
   "paraeducator"
 ];
 
-// ─── 1) Auth trigger: runs when a new user account is created ─────────────────
-// This function is currently commented out. If uncommented, it would set claims
-// when a user first signs up via Firebase Auth itself.
-// exports.onUserSignIn = auth.user().onCreate(async (user) => {
-//     const email = (user.email || "").toLowerCase();
-//     const displayName = user.displayName || "";
+const ADMIN_ROLES = [
+  "admin",
+  "administrator",
+  "administrator_504_CM",
+  "sped_chair"
+];
 
-//     if (!email) {
-//         console.log("⚠️ New user has no email; skipping role assignment.");
-//         return;
-//     }
+// ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
+function requireAuth(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required");
+  }
+}
 
-//     try {
-//         // Fetch user doc from Firestore based on email (assuming initial email-based docs exist or are created elsewhere)
-//         const userSnap = await db.collection("users").doc(email).get();
-//         if (!userSnap.exists) {
-//             console.log(`ℹ️ No /users/${email} doc; skipping setting custom claims on Auth user.`);
-//             return;
-//         }
+function requireRole(request, allowedRoles) {
+  requireAuth(request);
+  if (!allowedRoles.includes(request.auth.token.role)) {
+    throw new HttpsError("permission-denied", "Insufficient permissions");
+  }
+}
 
-//         const { role, name } = userSnap.data();
-//         if (role) {
-//             await adminAuth.setCustomUserClaims(user.uid, { role });
-//             console.log(`✅ Set custom claim for ${email}: role='${role}'`);
-//         }
+// Google Auth Helper
+const getGoogleAuth = () => {
+  const credentials = process.env.GOOGLE_KEY ? 
+    JSON.parse(process.env.GOOGLE_KEY) : 
+    require("./service-account.json");
+  
+  return new google.auth.GoogleAuth({
+    credentials,
+    scopes: [
+      "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/forms.responses.readonly",
+      "https://www.googleapis.com/auth/gmail.send"
+    ],
+  });
+};
 
-//         // Ensure usersByUID collection is always kept in sync
-//         await db.collection("usersByUID").doc(user.uid).set({
-//             uid: user.uid,
-//             email,
-//             name: name || displayName,
-//             role: role || null,
-//             createdAt: new Date().toISOString()
-//         }, { merge: true });
-//         console.log(`✅ Synced usersByUID/${user.uid} on user creation.`);
-//     } catch (err) {
-//         console.error("❌ onUserSignIn error:", err);
-//     }
-// });
-
-
-// ─── 2) Firestore trigger: sync on writes to users/{uid} ──────────────────────
-// UPDATED: Using 2nd gen onDocumentWritten
-// This function syncs custom claims whenever a user document in 'users/{uid}' is written.
-// This is useful as a fallback or if user roles can be changed directly in Firestore.
+// ─── USER MANAGEMENT FUNCTIONS ────────────────────────────────────────────────
 exports.syncUserClaims = onDocumentWritten("users/{uid}", async (event) => {
-      const uid = event.params.uid;
-      const afterData = event.data?.after?.data();
-
-      try {
-        if (!event.data?.after?.exists) {
-          // Document deleted, remove claims from Auth user (if user still exists in Auth)
-          const userRec = await adminAuth.getUser(uid);
-          await adminAuth.setCustomUserClaims(userRec.uid, null);
-          console.log(`✅ Removed claims for UID: ${uid} (Firestore doc deleted)`);
-          return;
-        }
-
-        const {role, name, email: firestoreEmail} = afterData;
-        if (!role) {
-          console.log(`ℹ️ /users/${uid} missing role in Firestore doc; skipping custom claim sync.`);
-          return;
-        }
-
-        // Get the user record by UID directly from Auth
-        const userRec = await adminAuth.getUser(uid);
-
-        // Set custom claims on the Firebase Auth user record
-        await adminAuth.setCustomUserClaims(userRec.uid, {role});
-        console.log(`✅ Updated custom claims for UID ${uid}: role='${role}'`);
-
-        // Optionally: keep usersByUID collection in sync (if used for other purposes)
-        await db.collection("usersByUID").doc(userRec.uid).set({
-          uid: userRec.uid,
-          email: firestoreEmail || userRec.email, // Prefer email from Firestore, fallback to Auth user
-          name: name || userRec.displayName || "",
-          role,
-        }, {merge: true});
-        console.log(`✅ Synced usersByUID/${userRec.uid}`);
-      } catch (err) {
-        // auth/user-not-found occurs if a Firestore user doc exists but no corresponding Auth user.
-        if (err.code === "auth/user-not-found") {
-          console.log(`ℹ️ No Auth user for UID ${uid} yet; will sync when Auth user is created/linked.`);
-        } else {
-          console.error(`❌ syncUserClaims error for UID ${uid}:`, err);
-        }
-      }
-    });
-
-// ─── NEW: HTTPS Callable Function to Add User via Admin Panel ─────────────
-// UPDATED: Using 2nd gen onCall
-// This function securely creates a user in Auth, adds their data to Firestore by UID,
-// and sets their custom claims.
-exports.addUserWithRole = onCallHttps(async (request) => {
-  // 1. Authentication & Authorization Check
-  // Only allow signed-in users with the 'admin' role (from custom claims) to call this function.
-  if (!request.auth || request.auth.token.role !== "admin") {
-    throw new Error("Only administrators are authorized to add users.");
-  }
-
-  const {name, email, role, provider, aeriesId} = request.data;
-
-  // 2. Input Validation
-  if (!name || !email || !role) {
-    throw new Error("Name, email, and role are required fields.");
-  }
-
-  // 3. Role Validation
-  const validRoles = [
-    "admin",
-    "administrator", 
-    "administrator_504_CM",
-    "sped_chair",
-    "case_manager",
-    "teacher",
-    "service_provider",
-    "paraeducator"
-  ];
-  if (!validRoles.includes(role)) {
-    throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
-  }
+  const uid = event.params.uid;
+  const afterData = event.data?.after?.data();
 
   try {
-    // 4. Create User in Firebase Auth
-    const userRecord = await adminAuth.createUser({
-      email: email,
-      password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8), // Generate a random password
-      displayName: name,
-    });
-
-    // 5. Set Custom Claims (Role-based permissions)
-    await adminAuth.setCustomUserClaims(userRecord.uid, { role: role });
-
-    // 6. Store Additional User Data in Firestore
-    const userData = {
-      name: name,
-      email: email,
-      role: role,
-      createdAt: new Date(),
-    };
-
-    // Add optional fields if provided
-    if (provider) {
-      userData.provider = provider;
-    }
-    if (aeriesId) {
-      userData.aeriesId = aeriesId;
+    if (!event.data?.after?.exists) {
+      const userRec = await adminAuth.getUser(uid);
+      await adminAuth.setCustomUserClaims(userRec.uid, null);
+      console.log(`✅ Removed claims for UID: ${uid}`);
+      return;
     }
 
-    await db.collection("users").doc(userRecord.uid).set(userData);
+    const { role, name, email: firestoreEmail } = afterData;
+    if (!role) {
+      console.log(`ℹ️ No role in document; skipping sync`);
+      return;
+    }
 
-    // 7. Return Success Response
-    return {
-      message: `User "${name}" (${email}) created successfully with role "${role}". They will need to reset their password on first login.`,
-      uid: userRecord.uid,
-    };
+    const userRec = await adminAuth.getUser(uid);
+    await adminAuth.setCustomUserClaims(userRec.uid, { role });
+    console.log(`✅ Updated claims for ${uid}: ${role}`);
 
-  } catch (error) {
-    console.error("Error creating user:", error);
-
-    // Handle specific Firebase Auth errors
-    if (error.code === "auth/email-already-exists") {
-      throw new Error(`A user with the email "${email}" already exists.`);
-    } else if (error.code === "auth/invalid-email") {
-      throw new Error(`The email address "${email}" is not valid.`);
+    await db.collection("usersByUID").doc(uid).set({
+      uid,
+      email: firestoreEmail || userRec.email,
+      name: name || userRec.displayName || "",
+      role
+    }, { merge: true });
+    
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      console.log(`ℹ️ Auth user not found for UID ${uid}`);
     } else {
-      throw new Error(`Failed to create user: ${error.message}`);
+      console.error(`❌ syncUserClaims error:`, err);
     }
   }
 });
 
-// ─── Aeries API Proxy Functions ───────────────────────────────────────────────
-// UPDATED: Using 2nd gen onCall
-// These functions handle Aeries API calls server-side to avoid CORS issues
-// Updated permissions to allow admin, administrator, administrator_504_CM, and sped_chair roles
+exports.addUserWithRole = onCall(async (request) => {
+  requireRole(request, ["admin"]);
 
-// Helper function to check if user has admin access
-function hasAdminAccess(request) {
-  if (!request.auth) return false;
+  const { name, email, role, provider, aeriesId } = request.data;
   
-  const adminRoles = ["admin", "administrator", "administrator_504_CM", "sped_chair"];
-  return adminRoles.includes(request.auth.token.role);
-}
-
-// Get Aeries OAuth token
-exports.getAeriesToken = onCallHttps(async (request) => {
-  // Check if user is authenticated and has admin role
-  if (!hasAdminAccess(request)) {
-    throw new Error("Only administrators can access Aeries API.");
+  if (!name || !email || !role) {
+    throw new HttpsError("invalid-argument", "Name, email, and role are required");
   }
 
-  const { baseUrl, clientId, clientSecret } = request.data;
-
-  if (!baseUrl || !clientId || !clientSecret) {
-    throw new Error("Base URL, Client ID, and Client Secret are required.");
+  if (!VALID_ROLES.includes(role)) {
+    throw new HttpsError("invalid-argument", `Invalid role. Valid roles: ${VALID_ROLES.join(", ")}`);
   }
 
   try {
-    // Create base64 encoded credentials
-    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    
+    const userRecord = await adminAuth.createUser({
+      email,
+      password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8),
+      displayName: name,
+    });
+
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role });
+
+    const userData = {
+      name,
+      email,
+      role,
+      createdAt: new Date().toISOString(),
+      ...(provider && { provider }),
+      ...(aeriesId && { aeriesId })
+    };
+
+    await db.collection("users").doc(userRecord.uid).set(userData);
+
+    return { 
+      success: true,
+      message: `User "${name}" created successfully`,
+      uid: userRecord.uid
+    };
+
+  } catch (error) {
+    if (error.code === "auth/email-already-exists") {
+      throw new HttpsError("already-exists", `Email "${email}" already in use`);
+    }
+    throw new HttpsError("internal", `User creation failed: ${error.message}`);
+  }
+});
+
+// ─── AERIES API FUNCTIONS ────────────────────────────────────────────────────
+exports.getAeriesToken = onCall(async (request) => {
+  requireRole(request, ADMIN_ROLES);
+
+  const { baseUrl, clientId, clientSecret } = request.data;
+  if (!baseUrl || !clientId || !clientSecret) {
+    throw new HttpsError("invalid-argument", "Missing required parameters");
+  }
+
+  try {
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
     const response = await axios.post(`${baseUrl}/token`, 
-      'grant_type=client_credentials',
+      "grant_type=client_credentials",
       {
         headers: {
-          'Authorization': `Basic ${credentials}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded"
         }
       }
     );
 
     return {
-      success: true,
       access_token: response.data.access_token,
-      token_type: response.data.token_type,
       expires_in: response.data.expires_in
     };
 
   } catch (error) {
-    console.error('Aeries token error:', error.response?.data || error.message);
-    throw new Error(`Failed to get Aeries token: ${error.response?.data?.error_description || error.message}`);
+    console.error("Aeries token error:", error.response?.data || error.message);
+    throw new HttpsError("internal", "Failed to get Aeries token");
   }
 });
 
-// Test Aeries API endpoint
-exports.testAeriesEndpoint = onCallHttps(async (request) => {
-  // Check if user is authenticated and has admin role
-  if (!hasAdminAccess(request)) {
-    throw new Error("Only administrators can access Aeries API.");
-  }
+// ─── TEACHER FEEDBACK FUNCTIONS ──────────────────────────────────────────────
+exports.sendTeacherFeedbackForm = onCall(async (request) => {
+  requireRole(request, ["case_manager"]);
 
-  const { baseUrl, endpoint, accessToken } = request.data;
-
-  if (!baseUrl || !endpoint || !accessToken) {
-    throw new Error("Base URL, endpoint, and access token are required.");
+  const { formUrl, studentId, teacherEmails, formTitle, customMessage } = request.data;
+  
+  if (!formUrl || !studentId || !teacherEmails?.length) {
+    throw new HttpsError("invalid-argument", "Missing required fields");
   }
 
   try {
-    const startTime = Date.now();
+    // Get student data
+    const studentDoc = await db.collection("students").doc(studentId).get();
+    if (!studentDoc.exists) {
+      throw new HttpsError("not-found", "Student not found");
+    }
+    const student = studentDoc.data();
+
+    // Prepare email
+    const studentName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
+    const caseManager = request.auth.token.name || request.auth.token.email;
     
-    const response = await axios.get(`${baseUrl}/ims/oneroster/v1p1${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const subject = formTitle || `Teacher Feedback Request - ${studentName}`;
+    const message = customMessage || 
+`Dear Teacher,
 
-    const endTime = Date.now();
-    const responseTime = endTime - startTime;
+Please provide feedback for ${studentName} (Grade ${student.grade || "N/A"}):
 
-    return {
-      success: true,
-      data: response.data,
-      responseTime,
-      status: response.status
-    };
+${formUrl}
 
-  } catch (error) {
-    console.error('Aeries API error:', error.response?.data || error.message);
-    throw new Error(`API call failed: ${error.response?.data?.error_description || error.message}`);
-  }
-});
+Thank you,
+${caseManager}
+Case Manager`.trim();
 
-// Test custom Aeries endpoints (for special education data)
-exports.testCustomAeriesEndpoint = onCallHttps(async (request) => {
-  // Check if user is authenticated and has admin role
-  if (!hasAdminAccess(request)) {
-    throw new Error("Only administrators can access Aeries API.");
-  }
+    // Send emails via Gmail API
+    const auth = getGoogleAuth();
+    const gmail = google.gmail({ version: "v1", auth: await auth.getClient() });
 
-  const { baseUrl, endpoint, accessToken } = request.data;
+    const results = await Promise.allSettled(
+      teacherEmails.map(email => {
+        const raw = [
+          `To: ${email}`,
+          `Subject: ${subject}`,
+          "Content-Type: text/plain; charset=UTF-8",
+          "",
+          message
+        ].join("\n");
 
-  if (!baseUrl || !endpoint || !accessToken) {
-    throw new Error("Base URL, endpoint, and access token are required.");
-  }
+        return gmail.users.messages.send({
+          userId: "me",
+          requestBody: {
+            raw: Buffer.from(raw).toString("base64")
+              .replace(/\+/g, "-")
+              .replace(/\//g, "_")
+              .replace(/=+$/, "")
+          }
+        });
+      })
+    );
 
-  try {
-    const startTime = Date.now();
-    
-    const response = await axios.get(`${baseUrl}${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const endTime = Date.now();
-    const responseTime = endTime - startTime;
-
-    return {
-      success: true,
-      data: response.data,
-      responseTime,
-      status: response.status
-    };
-
-  } catch (error) {
-    console.error('Custom Aeries API error:', error.response?.data || error.message);
-    return {
-      success: false,
-      error: error.response?.data?.error_description || error.message,
-      status: error.response?.status
-    };
-  }
-});
-
-// TEMPORARY: Function to set user role (for testing purposes)
-exports.setUserRole = onCallHttps(async (request) => {
-  // Only allow this in development/testing
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error("This function is not available in production.");
-  }
-
-  const { userId, role } = request.data;
-
-  if (!userId || !role) {
-    throw new Error("User ID and role are required.");
-  }
-
-  const validRoles = ["admin", "administrator", "administrator_504_CM", "sped_chair", "case_manager", "teacher", "service_provider"];
-  if (!validRoles.includes(role)) {
-    throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
-  }
-
-  try {
-    await db.collection("users").doc(userId).update({
-      role: role
+    // Log results
+    const successful = results.filter(r => r.status === "fulfilled").length;
+    await db.collection("feedbackSendLog").add({
+      studentId,
+      studentName,
+      caseManagerId: request.auth.uid,
+      caseManager,
+      formUrl,
+      teacherEmails,
+      successful,
+      failed: results.length - successful,
+      sentAt: new Date().toISOString()
     });
 
     return {
       success: true,
-      message: `Role set to '${role}' for user ${userId}`
+      sent: successful,
+      failed: results.length - successful
     };
 
   } catch (error) {
-    console.error("Error setting user role:", error);
-    throw new Error(`Failed to set user role: ${error.message}`);
+    console.error("Feedback form error:", error);
+    throw new HttpsError("internal", "Failed to send feedback forms");
   }
 });
 
-// TEMPORARY: Function to manually trigger user claims sync
-exports.triggerUserClaimsSync = onCallHttps(async (request) => {
-  const { userId } = request.data;
-
-  if (!userId) {
-    throw new Error("User ID is required.");
+// ─── MANUAL SYNC FUNCTION ────────────────────────────────────────────────────
+exports.syncFormResponses = onCall(async (request) => {
+  requireRole(request, ["case_manager", "admin", "sped_chair"]);
+  
+  const { spreadsheetId, sheetName = "Form Responses 1" } = request.data;
+  
+  if (!spreadsheetId) {
+    throw new HttpsError("invalid-argument", "Spreadsheet ID required");
   }
 
   try {
-    // Get the current user document
-    const userDoc = await db.collection("users").doc(userId).get();
-    
-    if (!userDoc.exists) {
-      throw new Error(`User ${userId} not found in Firestore.`);
+    const auth = getGoogleAuth();
+    const sheets = google.sheets({ version: "v4", auth: await auth.getClient() });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${sheetName}!A:Z`
+    });
+
+    const rows = response.data.values || [];
+    if (rows.length <= 1) {
+      return { success: true, message: "No responses found", synced: 0 };
     }
 
-    const userData = userDoc.data();
-    console.log(`Current user data for ${userId}:`, userData);
+    const batch = db.batch();
+    const [headers, ...dataRows] = rows;
+    let syncedCount = 0;
 
-    // Update the document to trigger the sync function
-    await db.collection("users").doc(userId).update({
-      lastSyncTrigger: new Date().toISOString()
+    dataRows.forEach((row, index) => {
+      if (!row.length) return;
+      
+      const docRef = db.collection("feedbackResponses").doc(`${spreadsheetId}_row_${index + 2}`);
+      const data = headers.reduce((obj, header, i) => ({ 
+        ...obj, 
+        [header]: row[i] || "" 
+      }), {
+        spreadsheetId,
+        rowNumber: index + 2,
+        syncedAt: new Date().toISOString(),
+        syncedBy: request.auth.uid
+      });
+
+      batch.set(docRef, data, { merge: true });
+      syncedCount++;
     });
+
+    await batch.commit();
 
     return {
       success: true,
-      message: `Triggered sync for user ${userId}. Check function logs for details.`,
-      currentRole: userData.role
+      message: `Successfully synced ${syncedCount} responses`,
+      synced: syncedCount
     };
 
   } catch (error) {
-    console.error("Error triggering user claims sync:", error);
-    throw new Error(`Failed to trigger sync: ${error.message}`);
+    console.error("Manual sync error:", error);
+    throw new HttpsError("internal", "Failed to sync responses");
+  }
+});
+
+// ─── SCHEDULED FUNCTIONS ─────────────────────────────────────────────────────
+exports.autoSyncFormResponses = functions.pubsub.schedule("every 30 minutes").onRun(async (context) => {
+  try {
+    const formsSnapshot = await db.collection("feedbackForms")
+      .where("active", "==", true)
+      .get();
+
+    if (formsSnapshot.empty) return;
+
+    const auth = getGoogleAuth();
+    const sheets = google.sheets({ version: "v4", auth: await auth.getClient() });
+
+    for (const formDoc of formsSnapshot.docs) {
+      const { responseSpreadsheetId, title } = formDoc.data();
+      if (!responseSpreadsheetId) continue;
+
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId: responseSpreadsheetId,
+          range: "Form Responses 1!A:Z"
+        });
+
+        const rows = response.data.values || [];
+        if (rows.length <= 1) continue;
+
+        const batch = db.batch();
+        const [headers, ...dataRows] = rows;
+
+        dataRows.forEach((row, index) => {
+          if (!row.length) return;
+          
+          const docRef = db.collection("feedbackResponses").doc(`${responseSpreadsheetId}_row_${index + 2}`);
+          const data = headers.reduce((obj, header, i) => ({ 
+            ...obj, 
+            [header]: row[i] || "" 
+          }), {
+            spreadsheetId,
+            formId: formDoc.id,
+            formTitle: title,
+            rowNumber: index + 2,
+            syncedAt: new Date().toISOString()
+          });
+
+          batch.set(docRef, data, { merge: true });
+        });
+
+        await batch.commit();
+        console.log(`Synced ${dataRows.length} responses for ${title}`);
+
+      } catch (error) {
+        console.error(`Sync failed for ${title}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error("Auto-sync error:", error);
+  }
+});
+
+// ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
+exports.getStudentFeedback = onCall(async (request) => {
+  requireAuth(request);
+  
+  const { studentId } = request.data;
+  if (!studentId) {
+    throw new HttpsError("invalid-argument", "Student ID required");
+  }
+
+  try {
+    const snapshot = await db.collection("feedbackResponses")
+      .where("studentId", "==", studentId)
+      .orderBy("syncedAt", "desc")
+      .get();
+
+    return {
+      responses: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    };
+
+  } catch (error) {
+    console.error("Get feedback error:", error);
+    throw new HttpsError("internal", "Failed to retrieve feedback");
   }
 });

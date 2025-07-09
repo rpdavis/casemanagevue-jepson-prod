@@ -1,30 +1,24 @@
 <template>
   <td class="feedback-cell">
-    <div v-if="feedbackForms.length > 0" class="feedback-list">
-      <div v-for="form in feedbackForms" :key="form.id" class="feedback-item">
+    <div v-if="sentForms.length > 0" class="feedback-list">
+      <div v-for="record in sentForms" :key="record.id" class="feedback-item">
         <div class="feedback-header">
-          <span class="feedback-title">{{ form.title }}</span>
-          <span class="feedback-date">{{ formatDate(form.createdAt) }}</span>
+          <span class="feedback-title">{{ record.formTitle }}</span>
+          <span class="feedback-date">{{ formatDate(record.sentAt) }}</span>
         </div>
         <div class="feedback-details">
-          <span class="feedback-templates">{{ form.templates.join(', ') }}</span>
-          <span class="feedback-responses">{{ form.responseCount || 0 }} responses</span>
+          <span class="feedback-method">{{ record.method === 'copy' ? 'Link copied' : 'Email sent' }}</span>
+          <span class="feedback-teachers">To: {{ record.teachers.map(t => t.name || t.email).join(', ') }}</span>
         </div>
         <div class="feedback-actions">
-          <button @click="openForm(form.responseUrl)" class="feedback-btn view-btn" title="View Form">
-            📋
-          </button>
-          <button @click="openForm(form.sheetUrl)" class="feedback-btn responses-btn" title="View Responses">
-            📊
+          <button @click="showDetails(record)" class="feedback-btn details-btn" title="View Details">
+            👁️
           </button>
         </div>
       </div>
     </div>
     <div v-else class="no-feedback">
-      <span class="no-feedback-text">No feedback forms</span>
-      <button @click="$emit('create-feedback', student.id)" class="create-feedback-btn" title="Create Feedback Form">
-        ➕
-      </button>
+      <span class="no-feedback-text">No forms sent</span>
     </div>
   </td>
 </template>
@@ -35,13 +29,11 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  feedbackForms: {
+  sentForms: {
     type: Array,
     default: () => []
   }
 })
-
-const emit = defineEmits(['create-feedback'])
 
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -52,8 +44,17 @@ const formatDate = (dateString) => {
   })
 }
 
-const openForm = (url) => {
-  window.open(url, '_blank')
+const showDetails = (record) => {
+  // Show details in an alert for now (could be enhanced with a modal)
+  const details = `
+Form: ${record.formTitle}
+Sent: ${formatDate(record.sentAt)}
+Method: ${record.method === 'copy' ? 'Link copied to clipboard' : 'Email generated'}
+Case Manager: ${record.caseManagerName}
+Teachers: ${record.teachers.map(t => `${t.name || t.email} (${t.email})`).join(', ')}
+  `.trim()
+  
+  alert(details)
 }
 </script>
 
@@ -110,9 +111,9 @@ const openForm = (url) => {
   color: #555;
 }
 
-.feedback-responses {
-  font-size: 0.7rem;
-  color: #777;
+.feedback-method, .feedback-teachers {
+  font-size: 0.75rem;
+  color: #555;
 }
 
 .feedback-actions {
@@ -130,22 +131,13 @@ const openForm = (url) => {
   transition: all 0.2s;
 }
 
-.view-btn {
-  background: #e3f2fd;
-  color: #1976d2;
+.details-btn {
+  background: #f3e5f5;
+  color: #7b1fa2;
 }
 
-.view-btn:hover {
-  background: #bbdefb;
-}
-
-.responses-btn {
-  background: #e8f5e8;
-  color: #2e7d32;
-}
-
-.responses-btn:hover {
-  background: #c8e6c9;
+.details-btn:hover {
+  background: #e1bee7;
 }
 
 .no-feedback {

@@ -50,6 +50,41 @@ service cloud.firestore {
       );
     }
     
+    // Teacher Feedback Forms - allow case managers and admins to manage
+    match /feedbackForms/{formId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair" ||
+        request.auth.token.role == "case_manager"
+      );
+    }
+    
+    // Teacher Feedback Responses - read-only for case managers, write-only for functions
+    match /feedbackResponses/{responseId} {
+      allow read: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair" ||
+        request.auth.token.role == "case_manager"
+      );
+      allow write: if false; // Only Cloud Functions can write responses
+    }
+    
+    // Teacher Feedback Send Log - read-only for case managers, write-only for functions
+    match /feedbackSendLog/{logId} {
+      allow read: if request.auth != null && (
+        request.auth.token.role == "admin" || 
+        request.auth.token.role == "administrator" || 
+        request.auth.token.role == "administrator_504_CM" || 
+        request.auth.token.role == "sped_chair" ||
+        request.auth.token.role == "case_manager"
+      );
+      allow write: if false; // Only Cloud Functions can write send logs
+    }
+    
     // Default rule - allow all reads and writes for authenticated users
     match /{document=**} {
       allow read, write: if request.auth != null;

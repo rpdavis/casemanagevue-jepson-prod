@@ -2,10 +2,10 @@
   <td>
     <button class="edit-btn" @click="$emit('edit', student.id)" title="Edit Student">✏️</button>
     <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
-    <button v-if="currentUser?.role === 'teacher'" 
+    <button v-if="currentUser?.role === 'case_manager'" 
             class="teacher-feedback-btn" 
             @click="$emit('teacher-feedback', student.id)" 
-            title="Teacher Feedback">📝</button>
+            title="Send Teacher Feedback Form">📝</button>
   </td>
 </template>
 
