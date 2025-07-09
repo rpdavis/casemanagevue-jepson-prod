@@ -1,8 +1,9 @@
 <template>
-  <div class="user-role-switcher" v-if="isDevelopment" :class="{ collapsed: !isExpanded }">
+  <div class="user-role-switcher" v-if="canShowDebugMenu && isDebugMenuVisible" :class="{ collapsed: !isExpanded }">
     <div class="switcher-header" @click="toggleExpanded" :title="isExpanded ? 'Collapse Debug Panel' : 'Expand Debug Panel'">
       <span class="debug-icon">🔧</span>
       <span v-if="isExpanded" class="debug-label">Debug</span>
+      <button @click.stop="hideDebugMenu" class="close-debug-btn" title="Close Debug Menu">×</button>
     </div>
     
     <div v-if="isExpanded" class="switcher-content">
@@ -104,6 +105,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/store/authStore'
 import { usePermissions } from '@/composables/usePermissions'
+import { useDebugMenu } from '@/composables/useDebugMenu'
 import { VALID_ROLES, PERMISSION_ACTIONS } from '@/config/roles'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/firebase'
@@ -113,16 +115,12 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const { hasPermission } = usePermissions()
+    const { isDebugMenuVisible, canShowDebugMenu, hideDebugMenu } = useDebugMenu()
     
     const isExpanded = ref(false)
     const selectedRole = ref('')
     const permissionsMatrix = ref({})
     const loadingPermissions = ref(false)
-    
-    // Check if we're in development mode
-    const isDevelopment = computed(() => {
-      return import.meta.env.DEV || window.location.hostname === 'localhost'
-    })
     
     const currentUser = computed(() => authStore.user)
     
@@ -294,11 +292,18 @@ export default {
         }
       }
       
-      // Add keyboard shortcut (Ctrl+Shift+R) to toggle the switcher
+      // Add keyboard shortcut (Ctrl+Shift+D) to toggle the debug menu
       const handleKeydown = (event) => {
-        if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+        if (event.ctrlKey && event.shiftKey && event.key === 'D') {
           event.preventDefault()
-          toggleExpanded()
+          if (canShowDebugMenu.value) {
+            if (isDebugMenuVisible.value) {
+              toggleExpanded()
+            } else {
+              isDebugMenuVisible.value = true
+              isExpanded.value = true
+            }
+          }
         }
       }
       
@@ -311,7 +316,9 @@ export default {
     })
     
     return {
-      isDevelopment,
+      isDebugMenuVisible,
+      canShowDebugMenu,
+      hideDebugMenu,
       isExpanded,
       selectedRole,
       currentUser,
@@ -378,6 +385,28 @@ export default {
   font-size: 12px;
   font-weight: 600;
   color: #ecf0f1;
+  flex: 1;
+}
+
+.close-debug-btn {
+  background: none;
+  border: none;
+  color: #ecf0f1;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 8px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.close-debug-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .switcher-content {

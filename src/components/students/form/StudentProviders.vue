@@ -22,17 +22,56 @@
       </template>
       <template v-else>
         <div class="no-services-message">
-          <span class="info-icon">ℹ️</span> No service providers configured.
+          <span class="info-icon">ℹ️</span> No service providers configured. 
           <a href="/admin" class="settings-link">Configure in App Settings</a>
         </div>
       </template>
     </div>
   </fieldset>
 </template>
+
 <script setup>
-import ServiceSelect from './ServiceSelect.vue'
+import ServiceSelect from '../ServiceSelect.vue'
+
+// Props
 const props = defineProps({
-  form: Object, serviceProviders: Array, customServiceProviders: Array,
-  userRoles: Object, getProviderLabel: Function, getProviderUsers: Function, providerFieldMap: Object
+  form: { type: Object, required: true },
+  serviceProviders: { type: Array, required: true },
+  customServiceProviders: { type: Array, required: true },
+  providerFieldMap: { type: Object, required: true },
+  getProviderLabel: { type: Function, required: true },
+  getProviderUsers: { type: Function, required: true }
 })
-</script> 
+
+// No local state needed - all data flows through props
+</script>
+
+<style scoped>
+.no-services-message {
+  grid-column: span 3;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+.info-icon {
+  font-size: 16px;
+}
+
+.settings-link {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.settings-link:hover {
+  text-decoration: underline;
+}
+</style> 

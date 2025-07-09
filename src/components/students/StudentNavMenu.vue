@@ -59,6 +59,16 @@
           </div>
         </div>
 
+        <!-- Debug Section (Development Only) -->
+        <div v-if="canShowDebugMenu" class="nav-section">
+          <h4>Debug</h4>
+          <div class="nav-buttons">
+            <button @click="toggleDebugMenu" class="nav-btn secondary">
+              <span>🔧</span> {{ isDebugMenuVisible ? 'Hide' : 'Show' }} Debug Menu
+            </button>
+          </div>
+        </div>
+
         <!-- Paraeducator Actions Section -->
         <div v-if="currentUser?.role === 'paraeducator'" class="nav-section">
           <h4>Schedule</h4>
@@ -91,6 +101,7 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
+import { useDebugMenu } from '@/composables/useDebugMenu'
 
 const props = defineProps({
   currentUser: {
@@ -105,6 +116,7 @@ const props = defineProps({
 
 const emit = defineEmits(['action'])
 
+const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu } = useDebugMenu()
 const isMenuOpen = ref(false)
 
 function toggleMenu() {
