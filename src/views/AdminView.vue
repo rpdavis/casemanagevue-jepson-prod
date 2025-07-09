@@ -108,20 +108,7 @@
 
       <!-- Teacher Feedback Forms Tab -->
       <div v-if="activeTab === 'teacher-feedback'" class="admin-section">
-        <div class="admin-section">
-          <h2>Teacher Feedback Forms</h2>
-          <p>Configure Google Forms integration for teacher feedback.</p>
-          <!-- TODO: Add TeacherFeedbackForms component here -->
-          <div class="placeholder-content">
-            <h3>Google Forms Integration</h3>
-            <p>This section will allow you to:</p>
-            <ul>
-              <li>Link multiple Google Forms for teacher feedback</li>
-              <li>Configure form responses and data collection</li>
-              <li>Set up automated feedback processing</li>
-            </ul>
-          </div>
-        </div>
+        <AdminTeacherFeedback />
       </div>
 
       <!-- Backup & Restore Tab -->
@@ -154,6 +141,7 @@ import AdminAideAssignment from './AdminAideAssignment.vue'
 import AdminTimeTable from './AdminTimeTable.vue'
 import AdminAideSchedule from './AdminAideSchedule.vue'
 import AdminBackupRestore from './AdminBackupRestore.vue'
+import AdminTeacherFeedback from './AdminTeacherFeedback.vue'
 import TestingLinks from '../components/TestingLinks.vue'
 
 export default {
@@ -174,6 +162,7 @@ export default {
     AdminTimeTable,
     AdminAideSchedule,
     AdminBackupRestore,
+    AdminTeacherFeedback,
     TestingLinks
   },
   setup() {

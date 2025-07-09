@@ -132,6 +132,7 @@
           :user-map="userMapObj"
           :current-user="currentUser"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
+          :feedback-forms="linkedForms"
           @edit="editStudent"
           @email="emailStudent"
           @teacher-feedback="handleTeacherFeedback"
@@ -148,6 +149,7 @@
             :user-map="userMapObj"
             :current-user="currentUser"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
+            :feedback-forms="linkedForms"
             @edit="editStudent"
             @email="emailStudent"
             @teacher-feedback="handleTeacherFeedback"
@@ -162,6 +164,7 @@
             :user-map="userMapObj"
             :current-user="currentUser"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
+            :feedback-forms="linkedForms"
             @edit="editStudent"
             @email="emailStudent"
             @teacher-feedback="handleTeacherFeedback"
@@ -177,6 +180,7 @@
           :current-user="currentUser"
           :testing-view="true"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
+          :feedback-forms="linkedForms"
           @edit="editStudent"
           @email="emailStudent"
           @teacher-feedback="handleTeacherFeedback"
@@ -224,6 +228,7 @@ import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
 import useAideAssignment from '@/composables/useAideAssignment.js'
 import { useAuthStore } from '@/store/authStore'
+import { useGoogleForms } from '@/composables/useGoogleForms.js'
 import { getDisplayValue } from '@/utils/studentUtils'
 import StudentNavMenu from '@/components/students/StudentNavMenu.vue'
 import StudentTable from '@/components/students/StudentTable.vue'
@@ -243,6 +248,12 @@ const {
   aideAssignment
 } = useAideAssignment()
 const authStore = useAuthStore()
+const { 
+  linkedForms, 
+  loadExistingForms, 
+  initializeGoogleAuth,
+  createFeedbackForm 
+} = useGoogleForms()
 
 const currentUser = computed(() => authStore.currentUser)
 
@@ -391,6 +402,8 @@ const emailingStudentId = ref(null)
 const showExport = ref(false)
 const showAddStudent = ref(false)
 const showFilters = ref(false)
+const showFeedbackDialog = ref(false)
+const feedbackStudentId = ref(null)
 
 // Debounced apply filters for search
 let debounceTimer = null
@@ -423,15 +436,18 @@ async function fetchData() {
   try {
     const promises = [
       fetchStudents(),
-      fetchUsers()
+      fetchUsers(),
+      loadAideAssignments(),
+      initializeGoogleAuth()
     ]
-    
-    // Load aide assignments for all users so paraeducator filter works
-    promises.push(loadAideAssignments())
     
     await Promise.all(promises)
     console.log('StudentsView - loaded students:', students.value)
     console.log('StudentsView - loaded users:', userMap.value)
+    
+    // Load existing feedback forms
+    loadExistingForms()
+    
     applyFilters({}) // Initial render
   } catch (error) {
     console.error('Error fetching data:', error)
@@ -593,8 +609,13 @@ function emailStudent(studentId) {
 }
 
 function handleTeacherFeedback(studentId) {
-  // Handle teacher feedback action
-  console.log('Teacher feedback for student:', studentId)
+  feedbackStudentId.value = studentId
+  showFeedbackDialog.value = true
+}
+
+// Get feedback forms for a specific student
+const getFeedbackFormsForStudent = (studentId) => {
+  return linkedForms.value.filter(form => form.student.id === studentId)
 }
 
 function handleStudentAdded() {

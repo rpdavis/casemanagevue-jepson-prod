@@ -11,9 +11,9 @@
         <div class="status-card success">
           <h5>📊 Linked Google Sheet</h5>
           <p>Your student data is synced to Google Sheets</p>
-          <a :href="linkedSheetUrl" target="_blank" class="sheet-link">
+          <button @click="openGoogleSheet" class="sheet-link">
             Open Google Sheet →
-          </a>
+          </button>
           <div class="sync-info">
             <span v-if="lastSyncTime">Last synced: {{ formatTime(lastSyncTime) }}</span>
             <span v-if="syncStatus === 'syncing'" class="syncing">🔄 Syncing...</span>
@@ -89,6 +89,24 @@
               </div>
             </div>
             
+            <div class="form-group">
+              <label>Exclude Periods (Optional)</label>
+              <div class="period-checkboxes">
+                <label 
+                  v-for="period in availablePeriods" 
+                  :key="period.value"
+                  class="checkbox-label"
+                >
+                  <input 
+                    type="checkbox" 
+                    :value="period.value"
+                    v-model="selectedExcludedPeriods"
+                  >
+                  {{ period.label }}
+                </label>
+              </div>
+            </div>
+            
             <!-- Preview -->
             <div v-if="selectedTeachers.length > 0" class="preview-section">
               <h6>Preview ({{ filteredStudentsPreview.length }} students)</h6>
@@ -107,13 +125,13 @@
                       <td>{{ student.firstName }} {{ student.lastName }}</td>
                       <td>{{ student.grade || student.app?.studentData?.grade }}</td>
                       <td>
-                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers)" :key="idx">
-                          {{ period.period }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers).length - 1">, </span>
+                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers, selectedExcludedPeriods)" :key="idx">
+                          {{ period.period }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers, selectedExcludedPeriods).length - 1">, </span>
                         </span>
                       </td>
                       <td>
-                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers)" :key="idx">
-                          {{ period.teacherName }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers).length - 1">, </span>
+                        <span v-for="(period, idx) in getStudentTeacherPeriods(student, selectedTeachers, selectedExcludedPeriods)" :key="idx">
+                          {{ period.teacherName }}<span v-if="idx < getStudentTeacherPeriods(student, selectedTeachers, selectedExcludedPeriods).length - 1">, </span>
                         </span>
                       </td>
                     </tr>
@@ -129,7 +147,7 @@
               <button @click="addCustomTab" class="btn-primary">
                 Create Tab
               </button>
-              <button @click="showAddTabForm = false; selectedTeachers = []; newTabName = ''" class="btn-secondary">
+              <button @click="showAddTabForm = false; selectedTeachers = []; selectedExcludedPeriods = []; newTabName = ''" class="btn-secondary">
                 Cancel
               </button>
             </div>
@@ -193,36 +211,21 @@
       </div>
     </div>
 
-    <!-- Existing Testing Links -->
-    <div class="links-section">
-      <h4>Testing Links</h4>
-      <div class="links-grid">
-        <a 
-          v-for="link in testingLinks" 
-          :key="link.path"
-          :href="link.path" 
-          target="_blank"
-          class="test-link"
-          :class="link.category"
-        >
-          <span class="link-icon">{{ link.icon }}</span>
-          <span class="link-text">{{ link.name }}</span>
-          <span class="link-category">{{ link.category }}</span>
-        </a>
-      </div>
-    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import useStudents from '@/composables/useStudents'
 import { useGoogleSheetsRealtime } from '@/composables/useGoogleSheetsRealtime'
 import useUsers from '@/composables/useUsers'
+import { useAppSettings } from '@/composables/useAppSettings'
 
 // Composables
 const { students, fetchStudents } = useStudents()
 const { userList: users, fetchUsers } = useUsers()
+const { appSettings, loadAppSettings } = useAppSettings()
 const { 
   linkedSheetId,
   linkedSheetUrl,
@@ -243,7 +246,30 @@ const customTabs = ref([])
 const showAddTabForm = ref(false)
 const newTabName = ref('')
 const selectedTeachers = ref([])
+const selectedExcludedPeriods = ref([])
 const maxCustomTabs = 5
+
+// Get available periods from app settings
+const availablePeriods = computed(() => {
+  if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
+    return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods).map((label, index) => ({
+      value: index.toString(), // Use index (0, 1, 2, 3, 4, 5, 6) instead of period number
+      label: label,
+      periodIndex: index // Keep track of the actual index
+    }))
+  }
+  
+  // Fallback to default periods
+  return [
+    { value: '0', label: 'Per1', periodIndex: 0 },
+    { value: '1', label: 'Per2', periodIndex: 1 },
+    { value: '2', label: 'Per3', periodIndex: 2 },
+    { value: '3', label: 'Per4', periodIndex: 3 },
+    { value: '4', label: 'Per5', periodIndex: 4 },
+    { value: '5', label: 'Per6', periodIndex: 5 },
+    { value: '6', label: 'Per7', periodIndex: 6 }
+  ]
+})
 
 // Get unique teachers from student schedules
 const availableTeachers = computed(() => {
@@ -308,34 +334,77 @@ const availableTeachers = computed(() => {
 })
 
 // Get students for selected teachers
-const getStudentsForTeachers = (teacherIds) => {
+const getStudentsForTeachers = (teacherIds, excludedPeriods = []) => {
+  // Helper function to check if a period should be excluded
+  const isPeriodExcluded = (periodKey) => {
+    // Find the index of this period in the default configuration
+    let periodIndex = -1
+    
+    // Handle numeric periods (1, 2, 3, etc.)
+    if (/^\d+$/.test(periodKey)) {
+      periodIndex = parseInt(periodKey) - 1 // Convert 1-based to 0-based
+    }
+    // Handle "SH" period
+    else if (periodKey === 'SH') {
+      periodIndex = 6 // SH is at index 6
+    }
+    // Handle "Per1", "Per2", etc. format
+    else if (periodKey.startsWith('Per')) {
+      const num = periodKey.replace('Per', '')
+      if (/^\d+$/.test(num)) {
+        periodIndex = parseInt(num) - 1
+      }
+    }
+    
+    return excludedPeriods.includes(periodIndex.toString())
+  }
+
   return students.value.filter(student => {
+    // Only include students with separate setting flag
+    const hasSeparateSetting = student.app?.flags?.flag1 || student.flag1 || false
+    if (!hasSeparateSetting) {
+      return false
+    }
     // Check aeries schedule structure
     if (student.aeries?.schedule) {
-      for (const period of Object.values(student.aeries.schedule)) {
+      const scheduleEntries = Object.entries(student.aeries.schedule)
+      for (let i = 0; i < scheduleEntries.length; i++) {
+        const [periodKey, period] = scheduleEntries[i]
         if (period && period.teacherId && teacherIds.includes(String(period.teacherId))) {
-          return true
+          // Use the period key mapping instead of array index
+          if (!isPeriodExcluded(periodKey)) {
+            return true
+          }
         }
       }
     }
     
     // Check app.schedule.periods structure
     if (student.app?.schedule?.periods) {
-      for (const teacherId of Object.values(student.app.schedule.periods)) {
+      const periodEntries = Object.entries(student.app.schedule.periods)
+      for (let i = 0; i < periodEntries.length; i++) {
+        const [periodKey, teacherId] = periodEntries[i]
         if (teacherId && teacherIds.includes(String(teacherId))) {
-          return true
+          // Use the period key mapping instead of array index
+          if (!isPeriodExcluded(periodKey)) {
+            return true
+          }
         }
       }
     }
     
     // Also check for direct period properties (from CSV import)
-    for (let i = 1; i <= 7; i++) {
-      const teacherIdField = `period${i}TeacherId`
+    // For this, we need to check each period index (0-6 maps to period1-period7)
+    for (let i = 0; i < 7; i++) {
+      const teacherIdField = `period${i + 1}TeacherId` // period1TeacherId, period2TeacherId, etc.
       const teacherId = student[teacherIdField] || 
                        student.aeries?.[teacherIdField] ||
                        student.app?.[teacherIdField]
       if (teacherId && teacherIds.includes(String(teacherId))) {
-        return true
+        // Use the index (i) for CSV fields
+        if (!excludedPeriods.includes(i.toString())) {
+          return true
+        }
       }
     }
     
@@ -346,7 +415,7 @@ const getStudentsForTeachers = (teacherIds) => {
 // Preview of filtered students
 const filteredStudentsPreview = computed(() => {
   if (selectedTeachers.value.length === 0) return []
-  return getStudentsForTeachers(selectedTeachers.value)
+  return getStudentsForTeachers(selectedTeachers.value, selectedExcludedPeriods.value)
 })
 
 // Add custom tab
@@ -363,14 +432,15 @@ const addCustomTab = async () => {
   
   try {
     // Get the filtered students for these teachers
-    const filteredStudents = getStudentsForTeachers(selectedTeachers.value)
+    const filteredStudents = getStudentsForTeachers(selectedTeachers.value, selectedExcludedPeriods.value)
     
     // Create the tab in Google Sheets
     const result = await createCustomTab(
       newTabName.value.trim(),
       filteredStudents,
       selectedTeachers.value,
-      users.value // Pass users data for teacher name lookup
+      users.value, // Pass users data for teacher name lookup
+      selectedExcludedPeriods.value // Pass excluded periods
     )
     
     // Store the tab info locally with the sheet ID
@@ -387,6 +457,7 @@ const addCustomTab = async () => {
     // Reset form
     newTabName.value = ''
     selectedTeachers.value = []
+    selectedExcludedPeriods.value = []
     showAddTabForm.value = false
     
     console.log('Custom tab added:', tab)
@@ -426,106 +497,112 @@ const removeCustomTab = async (tabId) => {
 }
 
 // Get student's periods for selected teachers
-const getStudentTeacherPeriods = (student, teacherIds) => {
+const getStudentTeacherPeriods = (student, teacherIds, excludedPeriods = []) => {
   const periods = []
+  
+  // Helper function to check if a period should be excluded
+  const isPeriodExcluded = (periodKey) => {
+    // Find the index of this period in the default configuration
+    let periodIndex = -1
+    
+    // Handle numeric periods (1, 2, 3, etc.)
+    if (/^\d+$/.test(periodKey)) {
+      periodIndex = parseInt(periodKey) - 1 // Convert 1-based to 0-based
+    }
+    // Handle "SH" period
+    else if (periodKey === 'SH') {
+      periodIndex = 6 // SH is at index 6
+    }
+    // Handle "Per1", "Per2", etc. format
+    else if (periodKey.startsWith('Per')) {
+      const num = periodKey.replace('Per', '')
+      if (/^\d+$/.test(num)) {
+        periodIndex = parseInt(num) - 1
+      }
+    }
+    
+    return excludedPeriods.includes(periodIndex.toString())
+  }
   
   // Check aeries schedule structure
   if (student.aeries?.schedule) {
-    Object.entries(student.aeries.schedule).forEach(([periodKey, period]) => {
+    const scheduleEntries = Object.entries(student.aeries.schedule)
+    for (let i = 0; i < scheduleEntries.length; i++) {
+      const [periodKey, period] = scheduleEntries[i]
       if (period && period.teacherId && teacherIds.includes(String(period.teacherId))) {
-        // Extract period number from key (e.g., "period1" -> "1")
-        const periodNum = periodKey.replace('period', '')
-        
-        // Find user by aeriesId or ID
-        let user = users.value.find(u => u.id === String(period.teacherId))
-        if (!user && /^\d+$/.test(period.teacherId)) {
-          user = users.value.find(u => u.aeriesId === String(period.teacherId))
+        // Only include if period is not excluded (using period key mapping)
+        if (!isPeriodExcluded(periodKey)) {
+          // Find user by aeriesId or ID
+          let user = users.value.find(u => u.id === String(period.teacherId))
+          if (!user && /^\d+$/.test(period.teacherId)) {
+            user = users.value.find(u => u.aeriesId === String(period.teacherId))
+          }
+          
+          // Get the actual period label from app settings
+          const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+          
+          periods.push({
+            period: periodLabel,
+            teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${period.teacherId}`
+          })
         }
-        
-        periods.push({
-          period: periodNum,
-          teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${period.teacherId}`
-        })
       }
-    })
+    }
   }
   
   // Check app.schedule.periods structure
   if (student.app?.schedule?.periods) {
-    Object.entries(student.app.schedule.periods).forEach(([periodNum, teacherId]) => {
+    const periodEntries = Object.entries(student.app.schedule.periods)
+    for (let i = 0; i < periodEntries.length; i++) {
+      const [periodKey, teacherId] = periodEntries[i]
       if (teacherId && teacherIds.includes(String(teacherId))) {
-        const user = users.value.find(u => u.id === String(teacherId))
-        periods.push({
-          period: periodNum,
-          teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
-        })
+        // Only include if period is not excluded (using period key mapping)
+        if (!isPeriodExcluded(periodKey)) {
+          const user = users.value.find(u => u.id === String(teacherId))
+          
+          // Get the actual period label from app settings
+          const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+          
+          periods.push({
+            period: periodLabel,
+            teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
+          })
+        }
       }
-    })
+    }
   }
   
   // Also check for direct period properties (from CSV import)
-  for (let i = 1; i <= 7; i++) {
-    const teacherIdField = `period${i}TeacherId`
+  for (let i = 0; i < 7; i++) {
+    const teacherIdField = `period${i + 1}TeacherId`
     const teacherId = student[teacherIdField] || 
                      student.aeries?.[teacherIdField] ||
                      student.app?.[teacherIdField]
     
     if (teacherId && teacherIds.includes(String(teacherId))) {
-      // Find user by aeriesId or ID
-      let user = users.value.find(u => u.id === String(teacherId))
-      if (!user && /^\d+$/.test(teacherId)) {
-        user = users.value.find(u => u.aeriesId === String(teacherId))
+      // Only include if period is not excluded (using index for CSV fields)
+      if (!excludedPeriods.includes(i.toString())) {
+        // Find user by aeriesId or ID
+        let user = users.value.find(u => u.id === String(teacherId))
+        if (!user && /^\d+$/.test(teacherId)) {
+          user = users.value.find(u => u.aeriesId === String(teacherId))
+        }
+        
+        // Get the actual period label from app settings
+        const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+        
+        periods.push({
+          period: periodLabel,
+          teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
+        })
       }
-      
-      periods.push({
-        period: i.toString(),
-        teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
-      })
     }
   }
   
   return periods
 }
 
-// Testing links data
-const testingLinks = ref([
-  { 
-    name: 'Student Table Test', 
-    path: '/testing#student-table',
-    category: 'components',
-    icon: '📊'
-  },
-  { 
-    name: 'Auth Flow Test', 
-    path: '/testing#auth',
-    category: 'auth',
-    icon: '🔐'
-  },
-  { 
-    name: 'Permissions Test', 
-    path: '/testing#permissions',
-    category: 'auth',
-    icon: '🛡️'
-  },
-  { 
-    name: 'API Integration Test', 
-    path: '/testing#api',
-    category: 'api',
-    icon: '🔌'
-  },
-  { 
-    name: 'Form Validation Test', 
-    path: '/testing#forms',
-    category: 'components',
-    icon: '📝'
-  },
-  { 
-    name: 'Data Import Test', 
-    path: '/testing#import',
-    category: 'data',
-    icon: '📥'
-  }
-])
+
 
 // Initialize Google Auth on mount
 onMounted(async () => {
@@ -540,10 +617,12 @@ onMounted(async () => {
     // Fetch students and users data first
     await Promise.all([
       fetchStudents(),
-      fetchUsers()
+      fetchUsers(),
+      loadAppSettings()
     ])
     console.log('Students loaded:', students.value.length)
     console.log('Users loaded:', users.value.length)
+    console.log('App settings loaded:', appSettings.value)
     
     await initializeGoogleAuth()
     
@@ -553,6 +632,8 @@ onMounted(async () => {
       if (isConnected) {
         // Do an initial sync
         await syncNow()
+        // Start the hourly auto-sync
+        setupAutoSync()
       }
     }
   } catch (error) {
@@ -560,21 +641,62 @@ onMounted(async () => {
   }
 })
 
-// Watch for student changes and auto-sync
-watch(() => students.value, async (newStudents, oldStudents) => {
-  if (linkedSheetId.value && newStudents !== oldStudents) {
-    // Debounce to avoid too many updates
-    clearTimeout(window.autoSyncTimeout)
-    window.autoSyncTimeout = setTimeout(async () => {
-      await syncNow()
-    }, 5000) // Wait 5 seconds after changes stop
+// Auto-sync every hour if there have been changes
+let autoSyncInterval = null
+let hasChanges = false
+let lastStudentCount = 0
+
+// Watch for student changes to track if sync is needed
+watch(() => students.value, (newStudents, oldStudents) => {
+  if (newStudents && oldStudents && newStudents !== oldStudents) {
+    hasChanges = true
+    console.log('📝 Student data changed, will sync on next interval')
   }
+  
+  // Update count for change detection
+  lastStudentCount = newStudents?.length || 0
 }, { deep: true })
+
+// Set up hourly auto-sync interval
+const setupAutoSync = () => {
+  if (autoSyncInterval) {
+    clearInterval(autoSyncInterval)
+  }
+  
+  // Auto-sync every hour (3600000 ms) if there are changes
+  // To change frequency:
+  // - Every 30 minutes: 1800000 ms
+  // - Every 2 hours: 7200000 ms  
+  // - Every 6 hours: 21600000 ms
+  // - Once per day: 86400000 ms
+  autoSyncInterval = setInterval(async () => {
+    if (linkedSheetId.value && hasChanges && syncStatus.value !== 'syncing') {
+      try {
+        console.log('🔄 Hourly auto-sync starting...')
+        await syncNow()
+        hasChanges = false // Reset change flag after successful sync
+        console.log('✅ Hourly auto-sync completed')
+      } catch (error) {
+        console.error('❌ Hourly auto-sync failed:', error)
+        // Don't reset hasChanges so it will try again next hour
+      }
+    }
+  }, 3600000) // 1 hour = 3600000 ms
+}
+
+// Cleanup auto-sync interval on unmount
+onUnmounted(() => {
+  if (autoSyncInterval) {
+    clearInterval(autoSyncInterval)
+  }
+})
 
 // Create and link a Google Sheet
 const createLinkedGoogleSheet = async () => {
   try {
-    await createLinkedSheet(students.value)
+    await createLinkedSheet(students.value, users.value)
+    // Start the hourly auto-sync for the new sheet
+    setupAutoSync()
   } catch (error) {
     console.error('Failed to create linked sheet:', error)
     alert('Failed to create Google Sheet. Please make sure you are signed in to Google.')
@@ -583,12 +705,25 @@ const createLinkedGoogleSheet = async () => {
 
 // Sync the linked sheet
 const syncNow = async () => {
-  if (!linkedSheetId.value) return
+  if (!linkedSheetId.value || syncStatus.value === 'syncing') return
   
   try {
-    await updateSheetData(students.value)
+    await updateSheetData(students.value, users.value)
   } catch (error) {
     console.error('Failed to sync sheet:', error)
+    alert('Failed to sync sheet. Please try again.')
+  }
+}
+
+// Force open sheet in new tab (prevent redirect issues)
+const openGoogleSheet = () => {
+  if (linkedSheetUrl.value) {
+    // Use window.open with specific parameters to ensure new tab
+    const newWindow = window.open(linkedSheetUrl.value, '_blank', 'noopener,noreferrer')
+    if (!newWindow) {
+      // Fallback if popup blocked
+      window.location.href = linkedSheetUrl.value
+    }
   }
 }
 
@@ -799,12 +934,12 @@ const formatTime = (date) => {
 }
 
 .btn-sync {
-  background: #28a745;
+  background: #1a73e8;
   color: white;
 }
 
 .btn-sync:hover:not(:disabled) {
-  background: #218838;
+  background: #1557b0;
 }
 
 .btn-sync:disabled {
@@ -1076,10 +1211,15 @@ const formatTime = (date) => {
   font-size: 1rem;
 }
 
-.teacher-checkboxes {
+.teacher-checkboxes,
+.period-checkboxes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.5rem;
+}
+
+.period-checkboxes {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
 }
 
 .checkbox-label {
@@ -1327,6 +1467,12 @@ const formatTime = (date) => {
   text-decoration: none;
   font-weight: 500;
   margin: 10px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
 }
 
 .sheet-link:hover {
@@ -1363,18 +1509,25 @@ const formatTime = (date) => {
 .btn-sync,
 .btn-unlink {
   padding: 8px 16px;
-  border: 1px solid #dadce0;
+  border: 1px solid #1a73e8;
   border-radius: 4px;
-  background: white;
+  background: #1a73e8;
+  color: white;
   cursor: pointer;
   font-size: 0.9em;
   transition: all 0.2s;
 }
 
+.btn-unlink {
+  border: 1px solid #dadce0;
+  background: white;
+  color: #ea4335;
+}
+
 .btn-sync:hover:not(:disabled) {
-  background: #f8f9fa;
+  background: #1a73e8;
   border-color: #1a73e8;
-  color: #1a73e8;
+  color: white;
 }
 
 .btn-sync:disabled {

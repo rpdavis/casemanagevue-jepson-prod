@@ -16,6 +16,7 @@
           <th class="print">Instruction Accom.</th>
           <th class="print">Assessment Accom.</th>
           <th class="print">Docs</th>
+          <th class="print">Feedback Forms</th>
           <th class="print">Actions</th>
         </template>
       </tr>
@@ -122,6 +123,13 @@
           <!-- Docs Cell -->
           <StudentDocsCell :student="student" :get-document-url="getDocumentUrl" />
           
+          <!-- Feedback Forms Cell -->
+          <StudentFeedbackCell
+            :student="student"
+            :feedback-forms="getFeedbackFormsForStudent(student.id)"
+            @create-feedback="$emit('teacher-feedback', student.id)"
+          />
+          
           <!-- Actions Cell -->
           <StudentActionsCell
             :student="student"
@@ -147,6 +155,7 @@ import StudentScheduleCell from './table/StudentScheduleCell.vue'
 import StudentServicesCell from './table/StudentServicesCell.vue'
 import StudentInstructionAccomCell from './table/StudentInstructionAccomCell.vue'
 import StudentAssessmentAccomCell from './table/StudentAssessmentAccomCell.vue'
+import StudentFeedbackCell from './table/StudentFeedbackCell.vue'
 
 const props = defineProps({
   students: {
@@ -168,6 +177,10 @@ const props = defineProps({
   aideSchedule: {
     type: Object,
     default: () => ({})
+  },
+  feedbackForms: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -526,6 +539,11 @@ function isDirectAssignment(studentId) {
   }
   
   return aideData?.directAssignment === studentId
+}
+
+// Get feedback forms for a specific student
+function getFeedbackFormsForStudent(studentId) {
+  return props.feedbackForms.filter(form => form.student.id === studentId)
 }
 
 function getScheduleForForm(student) {
