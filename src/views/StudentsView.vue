@@ -224,16 +224,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '@/firebase'
-import useStudents from '@/composables/useStudents.js'
-import useUsers from '@/composables/useUsers.js'
-import useAideAssignment from '@/composables/useAideAssignment.js'
-import { useAuthStore } from '@/store/authStore'
-import { useGoogleForms } from '@/composables/useGoogleForms.js'
-import { getDisplayValue } from '@/utils/studentUtils'
+// Composables
+import { useStudentData } from '@/composables/useStudentData.js'
+import { useStudentFilters } from '@/composables/useStudentFilters.js'
+import { useStudentViews } from '@/composables/useStudentViews.js'
+import { useStudentNavActions } from '@/composables/useStudentNavActions.js'
+
+// Components
 import StudentNavMenu from '@/components/students/StudentNavMenu.vue'
 import StudentTable from '@/components/students/StudentTable.vue'
 import StudentEditDialog from '@/components/students/StudentEditDialog.vue'
@@ -242,452 +239,69 @@ import StudentForm from '@/components/students/StudentForm.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
 import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.vue'
 
-const router = useRouter()
-const { students, fetchStudents } = useStudents()
-const { users: userMap, userList, fetchUsers, caseManagers, teacherList, userRoles } = useUsers()
-const { 
-  loadAideAssignment,
-  loadAideAssignments, 
-  shouldAideSeeStudent, 
-  getStudentsForAide,
-  aideAssignment
-} = useAideAssignment()
-const authStore = useAuthStore()
-const { 
-  linkedForms, 
-  loadExistingForms, 
-  initializeGoogleAuth,
-  createFeedbackForm 
-} = useGoogleForms()
+// Initialize composables
+const studentData = useStudentData()
+const filterData = useStudentFilters(studentData)
+const viewData = useStudentViews(studentData, filterData)
+const navActions = useStudentNavActions(studentData)
 
-const currentUser = computed(() => authStore.currentUser)
+// Extract data from composables
+const {
+  // Data
+  students,
+  userMapObj,
+  caseManagers,
+  teacherList,
+  userRoles,
+  aideAssignment,
+  paraeducators,
+  // Computed
+  currentUser,
+  isAdmin,
+  showProviderView,
+  // Methods
+  getStudentById
+} = studentData
 
-// Check if user is admin
-const isAdmin = computed(() => {
-  const role = currentUser.value?.role
-  return ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'].includes(role)
-})
+const {
+  // State
+  showFilters,
+  filteredStudents,
+  currentFilters,
+  // Methods
+  toggleFilters,
+  clearFilters,
+  applyFilters,
+  debouncedApplyFilters
+} = filterData
 
-// Group students by class (period)
-const studentsByClass = computed(() => {
-  console.log('Computing studentsByClass from filteredStudents:', filteredStudents.value.length)
-  console.log('Filtered students:', filteredStudents.value.map(s => ({ id: s.id, name: getDisplayValue(s, 'firstName') + ' ' + getDisplayValue(s, 'lastName') })))
-  
-  const groups = {}
-  
-  // Check if we're filtering by paraeducator
-  const currentFilters = getCurrentFilters()
-  const isParaeducatorFilter = currentFilters.paraeducator && currentFilters.paraeducator !== 'all'
-  
-  filteredStudents.value.forEach(student => {
-    const schedule = getSchedule(student)
-    if (schedule) {
-      Object.entries(schedule).forEach(([period, data]) => {
-        if (!groups[period]) {
-          groups[period] = []
-        }
-        
-        // Extract teacherId from both simple and complex schedule structures
-        let teacherId
-        if (typeof data === 'string') {
-          teacherId = data
-        } else if (data && typeof data === 'object') {
-          teacherId = data.teacherId
-        } else {
-          return // Skip if no valid teacherId
-        }
-        
-        // If filtering by paraeducator, only add student to periods where aide is assigned
-        if (isParaeducatorFilter) {
-          const aideData = aideAssignment.value[currentFilters.paraeducator]
-          if (aideData && aideData.classAssignment && aideData.classAssignment[period]) {
-            const teacherIds = Array.isArray(aideData.classAssignment[period]) ? aideData.classAssignment[period] : [aideData.classAssignment[period]]
-            if (teacherIds.includes(teacherId)) {
-              groups[period].push(student)
-            }
-          }
-        } else {
-          // No paraeducator filter, add student to all their periods
-          groups[period].push(student)
-        }
-      })
-    }
-  })
-  
-  // Remove periods with no students
-  Object.keys(groups).forEach(period => {
-    if (groups[period].length === 0) {
-      delete groups[period]
-    }
-  })
-  
-  console.log('studentsByClass result:', Object.keys(groups).map(period => `${period}: ${groups[period].length} students`))
-  Object.entries(groups).forEach(([period, students]) => {
-    console.log(`Period ${period} students:`, students.map(s => getDisplayValue(s, 'firstName') + ' ' + getDisplayValue(s, 'lastName')))
-  })
-  
-  return groups
-})
+const {
+  // State
+  currentViewMode,
+  // Computed data
+  studentsByClass,
+  directAssignmentStudents
+} = viewData
 
-// Get directly assigned students for paraeducator filter
-const directAssignmentStudents = computed(() => {
-  const currentFilters = getCurrentFilters()
-  const isParaeducatorFilter = currentFilters.paraeducator && currentFilters.paraeducator !== 'all'
-  
-  if (!isParaeducatorFilter) {
-    return []
-  }
-  
-  const aideData = aideAssignment.value[currentFilters.paraeducator]
-  if (!aideData || !aideData.directAssignment) {
-    return []
-  }
-  
-  const directStudentIds = Array.isArray(aideData.directAssignment) ? aideData.directAssignment : [aideData.directAssignment]
-  return filteredStudents.value.filter(s => directStudentIds.includes(s.id))
-})
-
-// Group students by case manager
-const studentsByCaseManager = computed(() => {
-  const groups = {}
-  filteredStudents.value.forEach(student => {
-    const cmId = getCaseManagerId(student)
-    if (cmId) {
-      if (!groups[cmId]) {
-        groups[cmId] = []
-      }
-      groups[cmId].push(student)
-    }
-  })
-  return groups
-})
-
-// Helper function to get case manager ID from nested structure
-function getCaseManagerId(student) {
-  return student.app?.studentData?.caseManagerId || 
-         student.caseManagerId || 
-         student.casemanager_id
-}
-
-// Helper function to get schedule data from nested structure
-function getSchedule(student) {
-  // Check Aeries schedule structure first (direct schedule object)
-  if (student.schedule) {
-    return student.schedule
-  }
-  
-  // Check new nested structure
-  if (student.app?.schedule?.periods) {
-    return student.app.schedule.periods
-  }
-  
-  // Check Aeries schedule.periods structure (your current format)
-  if (student.aeries?.schedule?.periods) {
-    return student.aeries.schedule.periods
-  }
-  
-  // Check legacy Aeries schedule structure
-  if (student.aeries?.schedule) {
-    return student.aeries.schedule
-  }
-  
-  return null
-}
-
-// Get paraeducators for filter dropdown - use userList which includes UID as id field
-const paraeducators = computed(() => {
-  return userList.value?.filter(user => user.role === 'paraeducator') || []
-})
-
-const filteredStudents = ref([])
-const currentViewMode = ref('list')
-const currentParaeducatorFilter = ref('all')
-const editingStudentId = ref(null)
-const emailingStudentId = ref(null)
-const showExport = ref(false)
-const showAddStudent = ref(false)
-const showFilters = ref(false)
-const showFeedbackDialog = ref(false)
-const feedbackStudentId = ref(null)
-
-// Debounced apply filters for search
-let debounceTimer = null
-const debouncedApplyFilters = () => {
-  if (debounceTimer) clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    applyFilters()
-  }, 300) // 300ms delay
-}
-
-// Current filters state
-const currentFilters = reactive({
-  sortBy: 'firstName',
-  cm: 'all',
-  teacher: 'all',
-  paraeducator: 'all',
-  search: '',
-  providerView: 'all',
-  viewMode: 'list'
-})
-
-// Check if provider view should be shown
-const showProviderView = computed(() => {
-  return ['case_manager', 'administrator_504_CM', 'sped_chair'].includes(currentUser.value?.role)
-})
-
-const userMapObj = computed(() => userMap.value || {})
-
-async function fetchData() {
-  try {
-    const promises = [
-      fetchStudents(),
-      fetchUsers(),
-      loadAideAssignments(),
-      initializeGoogleAuth()
-    ]
-    
-    await Promise.all(promises)
-    console.log('StudentsView - loaded students:', students.value)
-    console.log('StudentsView - loaded users:', userMap.value)
-    
-    // Load existing feedback forms
-    loadExistingForms()
-    
-    applyFilters({}) // Initial render
-  } catch (error) {
-    console.error('Error fetching data:', error)
-  }
-}
-
-onMounted(fetchData)
-
-function getStudentById(studentId) {
-  return students.value.find(s => s.id === studentId) || {}
-}
-
-function getUserName(userId) {
-  const user = userMap.value[userId]
-  return user ? (user.name || user.email || userId) : userId
-}
-
-function getCaseManagerName(caseManagerId) {
-  if (!caseManagerId) return 'N/A'
-  const user = userMap.value[caseManagerId]
-  return user ? (user.name || user.email || caseManagerId) : caseManagerId
-}
-
-function toggleFilters() {
-  showFilters.value = !showFilters.value
-}
-
-function clearFilters() {
-  currentFilters.sortBy = 'firstName'
-  currentFilters.cm = 'all'
-  currentFilters.teacher = 'all'
-  currentFilters.paraeducator = 'all'
-  currentFilters.search = ''
-  currentFilters.providerView = 'all'
-  currentFilters.viewMode = 'list'
-  applyFilters()
-}
-
-function applyFilters(filters = currentFilters) {
-  let result = students.value
-
-  // Apply provider view filtering (for case managers)
-  if (filters.providerView === 'case_manager') {
-    result = result.filter(s => getCaseManagerId(s) === currentUser.value?.uid)
-  } else if (filters.providerView === 'service_provider') {
-    result = result.filter(s => {
-      // Check if user is in schedule (handle both simple and complex structures)
-      const schedule = getSchedule(s)
-      const isInSchedule = schedule ? Object.entries(schedule).some(([period, data]) => {
-        if (typeof data === 'string') {
-          return data === currentUser.value?.uid
-        } else if (data && typeof data === 'object') {
-          return data.teacherId === currentUser.value?.uid
-        }
-        return false
-      }) : false
-      
-      const isInServices = (s.services || []).some(service => service.includes(currentUser.value?.uid))
-      const isNotCaseManager = getCaseManagerId(s) !== currentUser.value?.uid
-      return (isInSchedule || isInServices) && isNotCaseManager
-    })
-  }
-
-  // Apply role-based filtering
-  if (currentUser.value?.role === 'case_manager' && filters.providerView === 'all') {
-    result = result.filter(s => getCaseManagerId(s) === currentUser.value.uid)
-  } else if (currentUser.value?.role === 'paraeducator') {
-    // Filter students based on aide assignments
-    result = result.filter(s => {
-      try {
-        return shouldAideSeeStudent(currentUser.value.uid, s.id, students.value, userMap.value)
-      } catch (error) {
-        console.error('Error filtering student for aide:', error)
-        return false
-      }
-    })
-  }
-
-  // Apply text search
-  if (filters.search) {
-    const search = filters.search.toLowerCase()
-    result = result.filter(s => {
-      const firstName = getDisplayValue(s, 'firstName') || ''
-      const lastName = getDisplayValue(s, 'lastName') || ''
-      return `${firstName} ${lastName}`.toLowerCase().includes(search)
-    })
-  }
-  
-  // Apply case manager filter
-  if (filters.cm && filters.cm !== 'all') {
-    result = result.filter(s => getCaseManagerId(s) === filters.cm)
-  }
-
-  // Apply teacher filter
-  if (filters.teacher && filters.teacher !== 'all') {
-    result = result.filter(s => {
-      const schedule = getSchedule(s)
-      if (!schedule) return false
-      
-      // Handle both simple schedule structure (period -> teacherId) and complex structure (period -> {teacherId, subject, room})
-      return Object.entries(schedule).some(([period, data]) => {
-        if (typeof data === 'string') {
-          // Simple structure: period -> teacherId
-          return data === filters.teacher
-        } else if (data && typeof data === 'object') {
-          // Complex structure: period -> {teacherId, subject, room}
-          return data.teacherId === filters.teacher
-        }
-        return false
-      })
-    })
-  }
-
-  // Apply paraeducator filter
-  if (filters.paraeducator && filters.paraeducator !== 'all') {
-    // Track the current paraeducator filter
-    currentParaeducatorFilter.value = filters.paraeducator
-    
-    result = result.filter(s => {
-      try {
-        return shouldAideSeeStudent(filters.paraeducator, s.id, students.value, userMap.value)
-      } catch (error) {
-        console.error('Error filtering student for paraeducator:', error)
-        return false
-      }
-    })
-  }
-
-  // Apply sorting
-  if (filters.sortBy) {
-    result.sort((a, b) => {
-      const valA = getDisplayValue(a, filters.sortBy) || ''
-      const valB = getDisplayValue(b, filters.sortBy) || ''
-      
-      // Handle date sorting
-      if (['reviewDate', 'reevalDate', 'meetingDate'].includes(filters.sortBy)) {
-        const dateA = valA ? new Date(valA).getTime() : 0
-        const dateB = valB ? new Date(valB).getTime() : 0
-        return dateA - dateB
-      }
-      
-      return valA.toString().toLowerCase().localeCompare(valB.toString().toLowerCase())
-    })
-  }
-
-  // Store the filtered results
-  filteredStudents.value = result
-  
-  // Handle view mode
-  currentViewMode.value = filters.viewMode || 'list'
-}
-
-function editStudent(studentId) {
-  editingStudentId.value = studentId
-}
-
-function emailStudent(studentId) {
-  emailingStudentId.value = studentId
-}
-
-function handleTeacherFeedback(studentId) {
-  feedbackStudentId.value = studentId
-  showFeedbackDialog.value = true
-}
-
-// Handle form sent event
-const handleFormSent = () => {
-  // Form sent successfully - no need to refresh anything since we removed the column
-  console.log('Teacher feedback form sent successfully')
-}
-
-function handleStudentAdded() {
-  showAddStudent.value = false
-  fetchData() // Refresh the data
-}
-
-function handleStudentSaved() {
-  // Handle student saved event
-  console.log('Student saved')
-  fetchData() // Refresh the data
-}
-
-function navigateToAdmin() {
-  router.push('/admin')
-}
-
-function navigateToTesting() {
-  router.push('/testing')
-}
-
-function navigateToAideSchedule() {
-  router.push('/aide-schedule')
-}
-
-async function handleNavAction(action) {
-  switch (action) {
-    case 'add-student':
-      showAddStudent.value = true
-      break
-    case 'export':
-      showExport.value = true
-      break
-    case 'print':
-      window.print()
-      break
-    case 'admin':
-      navigateToAdmin()
-      break
-    case 'testing':
-      navigateToTesting()
-      break
-    case 'aide-schedule':
-      navigateToAideSchedule()
-      break
-    case 'logout':
-      handleLogout()
-      break
-  }
-}
-
-async function handleLogout() {
-  try {
-    await authStore.logout()
-    router.push('/login')
-  } catch (error) {
-    console.error('Logout failed:', error)
-  }
-}
-
-// Helper function to get current filters
-function getCurrentFilters() {
-  return {
-    paraeducator: currentFilters.paraeducator
-  }
-}
+const {
+  // Dialog states
+  editingStudentId,
+  emailingStudentId,
+  showExport,
+  showAddStudent,
+  showFeedbackDialog,
+  feedbackStudentId,
+  // Student actions
+  editStudent,
+  emailStudent,
+  handleTeacherFeedback,
+  // Event handlers
+  handleFormSent,
+  handleStudentAdded,
+  handleStudentSaved,
+  // Navigation
+  handleNavAction
+} = navActions
 </script>
 
 <style scoped>
@@ -962,5 +576,4 @@ function getCurrentFilters() {
   padding-bottom: 8px;
   margin-bottom: 15px;
 }
-
 </style>
