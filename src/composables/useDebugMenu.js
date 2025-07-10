@@ -1,16 +1,15 @@
 import { ref, computed } from 'vue'
+import { isDevelopment, shouldEnableDebugMenu } from '@/utils/environment'
 
 // Global state for debug menu visibility
 const isDebugMenuVisible = ref(false)
 
 export function useDebugMenu() {
-  // Check if we're in development mode
-  const isDevelopment = computed(() => {
-    return import.meta.env.DEV || window.location.hostname === 'localhost'
-  })
-
-  // Only show debug menu in development mode
-  const canShowDebugMenu = computed(() => isDevelopment.value)
+  // Use centralized environment detection
+  const isDev = computed(() => isDevelopment())
+  
+  // Use centralized debug menu enable check
+  const canShowDebugMenu = computed(() => shouldEnableDebugMenu())
 
   const toggleDebugMenu = () => {
     if (canShowDebugMenu.value) {
@@ -30,7 +29,7 @@ export function useDebugMenu() {
 
   return {
     isDebugMenuVisible,
-    isDevelopment,
+    isDevelopment: isDev,
     canShowDebugMenu,
     toggleDebugMenu,
     showDebugMenu,

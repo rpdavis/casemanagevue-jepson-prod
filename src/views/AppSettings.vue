@@ -196,6 +196,13 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAppSettings } from '../composables/useAppSettings.js'
 import { useAuth } from '../composables/useAuth.js'
+import { 
+  sanitizeString, 
+  checkSecurityThreats, 
+  validateStringLength,
+  checkRateLimit,
+  sanitizeNumber
+} from '@/utils/validation.js'
 
 const { currentUser } = useAuth()
 const userRole = computed(() => currentUser.value?.role || null)
@@ -212,6 +219,7 @@ const gradeOptions = [
 ]
 
 const CORE_SUBCATEGORIES = ['English', 'Math', 'History', 'Science']
+
 const DEFAULT_SERVICE_PROVIDERS = [
   { name: 'Speech-Language Therapy', abbreviation: 'SLP' },
   { name: 'Occupational Therapy', abbreviation: 'OT' },
@@ -228,229 +236,266 @@ const DEFAULT_SERVICE_PROVIDERS = [
   { name: 'Health/Nursing Services', abbreviation: 'HN' },
   { name: 'Social Work Services', abbreviation: 'SW' }
 ]
-const { saveAppSettings, loadAppSettings, resetAppSettings, loading, error } = useAppSettings()
+
+const { loadAppSettings, saveAppSettings } = useAppSettings()
+
+const loading = ref(false)
 const saveLoading = ref(false)
+const status = ref('')
+const statusError = ref(false)
+
+// Initialize default settings structure
 const settings = ref({
-  grades: [],
+  grades: ['7', '8'],
   classServices: [
-    { name: 'SDC', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'Co-teach', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'RSP', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'Directed Studies', subcategories: ['Directed Studies'], enabledSubcategories: ['Directed Studies'] },
-    { name: 'FA', subcategories: ['FA'], enabledSubcategories: ['FA'] }
+    {
+      name: 'SDC',
+      enabledSubcategories: [...CORE_SUBCATEGORIES]
+    },
+    {
+      name: 'Co-teach',
+      enabledSubcategories: [...CORE_SUBCATEGORIES]
+    }
   ],
-  directedStudiesFA: {
-    directedStudies: true,
-    fa: true
-  },
-  serviceProviders: DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
+  serviceProviders: ['SLP', 'OT', 'MH'],
+  serviceProvidersDetails: DEFAULT_SERVICE_PROVIDERS,
   customServiceProviders: [],
   numPeriods: 7,
   periodLabels: ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
 })
 
-const customClassService = ref('')
-const customServiceProvider = ref('')
-const status = ref('')
-const statusError = ref(false)
+// Enhanced validation functions
+const validateSettings = () => {
+  // Validate number of periods
+  const sanitizedNumPeriods = sanitizeNumber(settings.value.numPeriods, {
+    min: 1,
+    max: 15,
+    decimals: 0
+  })
+  
+  if (sanitizedNumPeriods === null) {
+    showStatus('Invalid number of periods. Must be between 1 and 15.', true)
+    return false
+  }
+  
+  settings.value.numPeriods = sanitizedNumPeriods
 
-const allGradesSelected = computed(() => settings.value.grades.length === gradeOptions.length)
-const toggleAllGrades = () => {
-  if (allGradesSelected.value) {
-    settings.value.grades = []
-  } else {
+  // Validate period labels
+  for (let i = 0; i < settings.value.numPeriods; i++) {
+    if (!settings.value.periodLabels[i]) {
+      settings.value.periodLabels[i] = `Per${i + 1}`
+    }
+
+    // Sanitize period label
+    const sanitizedLabel = sanitizeString(settings.value.periodLabels[i], {
+      trim: true,
+      maxLength: 3,
+      removeDangerous: true
+    })
+
+    // Security threat detection
+    const securityCheck = checkSecurityThreats(sanitizedLabel)
+    if (!securityCheck.isSafe) {
+      showStatus(`Security threat detected in period ${i + 1} label: ${securityCheck.threats.join(', ')}`, true)
+      return false
+    }
+
+    // Validate length
+    const lengthValidation = validateStringLength(sanitizedLabel, { max: 3, fieldName: `Period ${i + 1} label` })
+    if (!lengthValidation.isValid) {
+      showStatus(lengthValidation.error, true)
+      return false
+    }
+
+    settings.value.periodLabels[i] = sanitizedLabel
+  }
+
+  // Validate custom service providers
+  if (settings.value.customServiceProviders) {
+    for (let i = 0; i < settings.value.customServiceProviders.length; i++) {
+      const provider = settings.value.customServiceProviders[i]
+      
+      if (provider.name) {
+        const sanitizedName = sanitizeString(provider.name, {
+          trim: true,
+          maxLength: 100,
+          removeDangerous: true
+        })
+
+        const securityCheck = checkSecurityThreats(sanitizedName)
+        if (!securityCheck.isSafe) {
+          showStatus(`Security threat detected in custom provider ${i + 1}: ${securityCheck.threats.join(', ')}`, true)
+          return false
+        }
+
+        provider.name = sanitizedName
+      }
+
+      if (provider.abbreviation) {
+        const sanitizedAbbr = sanitizeString(provider.abbreviation, {
+          trim: true,
+          maxLength: 10,
+          removeDangerous: true
+        })
+
+        const securityCheck = checkSecurityThreats(sanitizedAbbr)
+        if (!securityCheck.isSafe) {
+          showStatus(`Security threat detected in custom provider abbreviation ${i + 1}: ${securityCheck.threats.join(', ')}`, true)
+          return false
+        }
+
+        provider.abbreviation = sanitizedAbbr
+      }
+    }
+  }
+
+  return true
+}
+
+// Computed properties
+const allGradesSelected = computed(() => {
+  return gradeOptions.every(grade => settings.value.grades.includes(grade.value))
+})
+
+const toggleAllGrades = (event) => {
+  if (event.target.checked) {
     settings.value.grades = gradeOptions.map(g => g.value)
-  }
-}
-
-const newServiceName = ref('')
-const newServiceSubcat = ref('')
-const newServiceSubcats = ref([])
-
-function addNewServiceSubcat() {
-  const val = newServiceSubcat.value.trim()
-  if (val && !newServiceSubcats.value.includes(val)) {
-    newServiceSubcats.value.push(val)
-    newServiceSubcat.value = ''
-  }
-}
-function removeNewServiceSubcat(idx) {
-  newServiceSubcats.value.splice(idx, 1)
-}
-function addClassService() {
-  const name = newServiceName.value.trim()
-  if (!name || settings.value.classServices.some(s => s.name === name)) return
-  settings.value.classServices.push({ name, subcategories: [...newServiceSubcats.value] })
-  newServiceName.value = ''
-  newServiceSubcat.value = ''
-  newServiceSubcats.value = []
-}
-function removeClassService(idx) {
-  settings.value.classServices.splice(idx, 1)
-}
-function addSubcategory(serviceIdx) {
-  const val = prompt('Enter new subcategory:')
-  if (val && !settings.value.classServices[serviceIdx].subcategories.includes(val)) {
-    settings.value.classServices[serviceIdx].subcategories.push(val)
-  }
-}
-function removeSubcategory(serviceIdx, subIdx) {
-  settings.value.classServices[serviceIdx].subcategories.splice(subIdx, 1)
-}
-
-const addCustomServiceProvider = () => {
-  const val = customServiceProvider.value.trim()
-  if (val && val.length <= 18 && !settings.value.customServiceProviders.includes(val)) {
-    settings.value.customServiceProviders.push(val)
-    customServiceProvider.value = ''
-  }
-}
-const removeCustomServiceProvider = idx => {
-  settings.value.customServiceProviders.splice(idx, 1)
-}
-
-function normalizeSettings(loaded) {
-  // Ensure all required fields exist and have correct structure
-  const defaultClassServices = [
-    { name: 'SDC', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'Co-teach', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'RSP', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-    { name: 'Directed Studies', subcategories: ['Directed Studies'], enabledSubcategories: ['Directed Studies'] },
-    { name: 'FA', subcategories: ['FA'], enabledSubcategories: ['FA'] }
-  ]
-  
-  // Handle period labels migration
-  let periodLabels = []
-  if (Array.isArray(loaded.periodLabels)) {
-    periodLabels = loaded.periodLabels
-  } else if (loaded.periodLabel) {
-    // Migration from old single periodLabel to array
-    const numPeriods = loaded.numPeriods || 7
-    periodLabels = Array(numPeriods).fill(loaded.periodLabel)
   } else {
-    // Default period labels
-    const numPeriods = loaded.numPeriods || 7
-    periodLabels = Array(numPeriods).fill('Per')
+    settings.value.grades = []
   }
-  
-  const merged = {
-    grades: loaded.grades || [],
-    classServices: Array.isArray(loaded.classServices) ? loaded.classServices.map((svc, i) => ({
-      name: svc.name || defaultClassServices[i]?.name || '',
-      subcategories: Array.isArray(svc.subcategories) ? svc.subcategories : (defaultClassServices[i]?.subcategories || []),
-      enabledSubcategories: Array.isArray(svc.enabledSubcategories) ? svc.enabledSubcategories : (defaultClassServices[i]?.enabledSubcategories || [])
-    })) : defaultClassServices,
-    directedStudiesFA: loaded.directedStudiesFA || { directedStudies: true, fa: true },
-    serviceProviders: Array.isArray(loaded.serviceProviders) ? loaded.serviceProviders : DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
-    customServiceProviders: Array.isArray(loaded.customServiceProviders) ? loaded.customServiceProviders : [],
-    numPeriods: loaded.numPeriods || 7,
-    periodLabels: periodLabels
+}
+
+// Service provider management
+const addCustomServiceProvider = () => {
+  settings.value.customServiceProviders.push({
+    name: '',
+    abbreviation: ''
+  })
+}
+
+const removeCustomServiceProvider = (index) => {
+  settings.value.customServiceProviders.splice(index, 1)
+}
+
+// Watchers for validation
+watch(() => settings.value.numPeriods, (newVal) => {
+  // Sanitize and validate on change
+  const sanitizedVal = sanitizeNumber(newVal, { min: 1, max: 15, decimals: 0 })
+  if (sanitizedVal !== null && sanitizedVal !== newVal) {
+    settings.value.numPeriods = sanitizedVal
   }
-  // Ensure classServices has at least 5 entries
-  while (merged.classServices.length < 5) {
-    merged.classServices.push(defaultClassServices[merged.classServices.length])
+
+  // Ensure period labels array matches number of periods
+  if (settings.value.periodLabels.length < settings.value.numPeriods) {
+    // Add missing labels
+    for (let i = settings.value.periodLabels.length; i < settings.value.numPeriods; i++) {
+      settings.value.periodLabels.push(`Per${i + 1}`)
+    }
   }
-  return merged
+})
+
+// Watch period labels for validation
+watch(() => settings.value.periodLabels, (newLabels) => {
+  newLabels.forEach((label, index) => {
+    if (label && label.length > 3) {
+      settings.value.periodLabels[index] = label.substring(0, 3)
+    }
+  })
+}, { deep: true })
+
+// Status message helper
+const showStatus = (message, isError = false) => {
+  status.value = message
+  statusError.value = isError
+  setTimeout(() => {
+    status.value = ''
+    statusError.value = false
+  }, 5000)
+}
+
+// Main functions
+const loadSettings = async (showMessage = false) => {
+  loading.value = true
+  try {
+    const loadedSettings = await loadAppSettings()
+    if (loadedSettings) {
+      // Merge with defaults to ensure all properties exist
+      settings.value = {
+        ...settings.value,
+        ...loadedSettings
+      }
+      
+      // Ensure periodLabels array exists and has correct length
+      if (!settings.value.periodLabels || settings.value.periodLabels.length < settings.value.numPeriods) {
+        settings.value.periodLabels = []
+        for (let i = 0; i < settings.value.numPeriods; i++) {
+          settings.value.periodLabels[i] = settings.value.periodLabels[i] || `Per${i + 1}`
+        }
+      }
+      
+      if (showMessage) showStatus('Settings loaded successfully')
+    }
+  } catch (error) {
+    showStatus('Error loading settings', true)
+    console.error('Load settings error:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 const saveSettings = async () => {
+  // Rate limiting for save operations
+  const rateCheck = checkRateLimit('saveAppSettings', 10, 60000) // 10 saves per minute
+  if (!rateCheck.allowed) {
+    showStatus('Too many save requests. Please wait before saving again.', true)
+    return
+  }
+
+  // Validate settings before saving
+  if (!validateSettings()) {
+    return
+  }
+
   saveLoading.value = true
-  status.value = ''
-  statusError.value = false
   try {
-    console.log('Saving settings:', JSON.stringify(settings.value, null, 2))
     await saveAppSettings(settings.value)
-    status.value = '✅ Settings saved successfully!'
-    // Clear status after 3 seconds
-    setTimeout(() => {
-      if (status.value === '✅ Settings saved successfully!') {
-        status.value = ''
-      }
-    }, 3000)
-  } catch (e) {
-    console.error('Error saving settings:', e)
-    status.value = '❌ Failed to save settings: ' + (e && e.message ? e.message : e)
-    statusError.value = true
+    showStatus('Settings saved successfully')
+  } catch (error) {
+    showStatus('Error saving settings', true)
+    console.error('Save settings error:', error)
   } finally {
     saveLoading.value = false
   }
 }
-const loadSettings = async (showMessage = false) => {
-  status.value = ''
-  statusError.value = false
-  try {
-    const loaded = await loadAppSettings()
-    if (loaded) {
-      settings.value = normalizeSettings(loaded)
-      if (showMessage) {
-        status.value = '✅ Settings loaded!'
-        setTimeout(() => {
-          if (status.value === '✅ Settings loaded!') {
-            status.value = ''
-          }
-        }, 3000)
-      }
-    } else {
-      settings.value = normalizeSettings({})
-      if (showMessage) {
-        status.value = 'No saved settings found.'
-        setTimeout(() => {
-          if (status.value === 'No saved settings found.') {
-            status.value = ''
-          }
-        }, 3000)
-      }
-    }
-  } catch (e) {
-    status.value = '❌ Failed to load settings.'
-    statusError.value = true
-  }
-}
+
 const resetSettings = () => {
-  settings.value = {
-    grades: [],
-    classServices: [
-      { name: 'SDC', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-      { name: 'Co-teach', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-      { name: 'RSP', subcategories: [...CORE_SUBCATEGORIES], enabledSubcategories: [...CORE_SUBCATEGORIES] },
-      { name: 'Directed Studies', subcategories: ['Directed Studies'], enabledSubcategories: ['Directed Studies'] },
-      { name: 'FA', subcategories: ['FA'], enabledSubcategories: ['FA'] }
-    ],
-    directedStudiesFA: {
-      directedStudies: true,
-      fa: true
-    },
-    serviceProviders: DEFAULT_SERVICE_PROVIDERS.map(s => s.abbreviation),
-    customServiceProviders: [],
-    numPeriods: 7,
-    periodLabels: ['1', '2', '3', '4', '5', '6', 'SH']
-  }
-  status.value = 'Settings reset to defaults.'
-  setTimeout(() => {
-    if (status.value === 'Settings reset to defaults.') {
-      status.value = ''
+  if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+    settings.value = {
+      grades: ['7', '8'],
+      classServices: [
+        {
+          name: 'SDC',
+          enabledSubcategories: [...CORE_SUBCATEGORIES]
+        },
+        {
+          name: 'Co-teach',
+          enabledSubcategories: [...CORE_SUBCATEGORIES]
+        }
+      ],
+      serviceProviders: ['SLP', 'OT', 'MH'],
+      serviceProvidersDetails: DEFAULT_SERVICE_PROVIDERS,
+      customServiceProviders: [],
+      numPeriods: 7,
+      periodLabels: ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
     }
-  }, 3000)
+    showStatus('Settings reset to defaults')
+  }
 }
 
-const serviceProviders = computed(() => DEFAULT_SERVICE_PROVIDERS)
-
-// Watch for changes in numPeriods and adjust periodLabels array
-watch(() => settings.value.numPeriods, (newNumPeriods, oldNumPeriods) => {
-  if (newNumPeriods > oldNumPeriods) {
-    // Adding periods - add default labels
-    while (settings.value.periodLabels.length < newNumPeriods) {
-      settings.value.periodLabels.push(`Per${settings.value.periodLabels.length + 1}`)
-    }
-  } else if (newNumPeriods < oldNumPeriods) {
-    // Removing periods - trim the array
-    settings.value.periodLabels = settings.value.periodLabels.slice(0, newNumPeriods)
-  }
-}, { immediate: true })
-
-onMounted(() => loadSettings(false))
-
-// TODO: Wire these settings into the rest of the app (forms, filters, etc)
+// Initialize on mount
+onMounted(() => {
+  loadSettings()
+})
 </script>
 
 <style scoped>

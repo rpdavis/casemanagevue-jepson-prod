@@ -8,7 +8,7 @@
         type="text" 
         v-model="searchTerm" 
         placeholder="Search by name or email"
-        @input="handleSearch"
+        @input="debouncedHandleSearch"
       />
       <select v-model="searchType" @change="handleSearch">
         <option value="name">Name</option>
@@ -129,7 +129,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { 
   getFirestore, 
   collection, 
@@ -168,6 +168,15 @@ export default {
     const appSettingsComposable = useAppSettings()
     const appSettings = appSettingsComposable.appSettings
     const loadAppSettings = appSettingsComposable.loadAppSettings
+
+    // Debounced search implementation
+    let debounceTimer = null
+    const debouncedHandleSearch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        handleSearch()
+      }, 300) // 300ms delay to prevent rapid API calls
+    }
 
     const providersLoaded = computed(() =>
       Array.isArray(appSettings.value?.serviceProviders) && appSettings.value.serviceProviders.length > 0
@@ -357,6 +366,13 @@ export default {
       fetchUsers()
     })
 
+    // Cleanup on unmount
+    onUnmounted(() => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
+    })
+
     return {
       users,
       currentPage,
@@ -368,6 +384,7 @@ export default {
       hasNextPage,
       validRoles,
       handleSearch,
+      debouncedHandleSearch,
       startEdit,
       cancelEdit,
       updateUserField,

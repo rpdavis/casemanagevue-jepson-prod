@@ -1,9 +1,8 @@
 import { ref } from 'vue'
 
-// TODO: Replace with your real credentials from Google Cloud Console
-// UPDATE: Create a new OAuth 2.0 Client ID in Google Cloud Console and replace this
-const CLIENT_ID = '756483333257-kh1cv865e0buv0cv9g0v1h7ghq7s0e70.apps.googleusercontent.com'
-const API_KEY = 'AIzaSyDx1jbQT-FzgzjASFqVA2kbAHWJ_TeUzdY'
+// Environment-based Google API configuration
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY
 const DISCOVERY_DOCS = [
   'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ]
@@ -15,6 +14,13 @@ export default function useGoogleSheetsClient() {
   const currentSheetId = ref('')
   const currentSheetUrl = ref('')
   const errorMessage = ref('')
+
+  // Log configuration in development
+  if (import.meta.env.DEV) {
+    console.log('🔑 Google Sheets Client Configuration:')
+    console.log('  CLIENT_ID:', CLIENT_ID ? CLIENT_ID.substring(0, 20) + '...' : 'Not set')
+    console.log('  API_KEY:', API_KEY ? API_KEY.substring(0, 20) + '...' : 'Not set')
+  }
 
   function loadGapi() {
     return new Promise((resolve, reject) => {

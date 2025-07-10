@@ -8,7 +8,7 @@
         <input 
           type="text" 
           v-model="searchTerm" 
-          @input="handleSearch"
+          @input="debouncedHandleSearch"
           placeholder="Search by name"
           class="search-input"
         />
@@ -120,37 +120,50 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import useStudents from '../composables/useStudents.js'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { getFirestore, collection, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
+import useStudents from '@/composables/useStudents'
 import { getDisplayValue } from '@/utils/studentUtils'
+import { 
+  sanitizeString, 
+  checkSecurityThreats, 
+  validateStringLength,
+  checkRateLimit,
+  validateStudentData,
+  sanitizeStudentFormData
+} from '@/utils/validation.js'
 
-const PAGE_SIZE = 20
+const db = getFirestore()
+const { students, fetchStudents, updateStudent, deleteStudent } = useStudents()
 
-// Reactive state
-const students = ref([])
-const filteredStudents = ref([])
 const searchTerm = ref('')
+const filteredStudents = ref([])
 const currentPage = ref(1)
+const studentsPerPage = 50
 const activeEditId = ref(null)
+const editingStudent = ref({})
 const statusMessage = ref('')
 const isError = ref(false)
-const editingStudent = ref({})
 
-// Composables
-const { fetchAllStudents, updateStudent, deleteStudent } = useStudents()
+// Debounced search implementation
+let debounceTimer = null
+const debouncedHandleSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    handleSearch()
+  }, 300) // 300ms delay to prevent rapid API calls
+}
 
-// Computed
 const paginatedStudents = computed(() => {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  const end = start + PAGE_SIZE
+  const start = (currentPage.value - 1) * studentsPerPage
+  const end = start + studentsPerPage
   return filteredStudents.value.slice(start, end)
 })
 
 const totalPages = computed(() => {
-  return Math.max(1, Math.ceil(filteredStudents.value.length / PAGE_SIZE))
+  return Math.ceil(filteredStudents.value.length / studentsPerPage)
 })
 
-// Methods
 const showStatus = (message, error = false) => {
   statusMessage.value = message
   isError.value = error
@@ -161,7 +174,34 @@ const showStatus = (message, error = false) => {
 }
 
 const handleSearch = () => {
-  const term = searchTerm.value.trim().toLowerCase()
+  // Rate limiting for search operations
+  const rateCheck = checkRateLimit('studentSearch', 20, 60000) // 20 searches per minute
+  if (!rateCheck.allowed) {
+    showStatus('Too many search requests. Please wait before searching again.', true)
+    return
+  }
+
+  // Sanitize search term
+  const sanitizedTerm = sanitizeString(searchTerm.value, {
+    trim: true,
+    maxLength: 100,
+    removeDangerous: true
+  })
+
+  // Security threat detection
+  const securityCheck = checkSecurityThreats(sanitizedTerm)
+  if (!securityCheck.isSafe) {
+    showStatus(`Security threat detected in search: ${securityCheck.threats.join(', ')}`, true)
+    searchTerm.value = sanitizedTerm // Apply sanitized version
+    return
+  }
+
+  // Apply sanitized term back to the input
+  if (sanitizedTerm !== searchTerm.value) {
+    searchTerm.value = sanitizedTerm
+  }
+
+  const term = sanitizedTerm.toLowerCase()
   if (!term) {
     filteredStudents.value = students.value
   } else {
@@ -192,12 +232,48 @@ const cancelEdit = () => {
 
 const updateStudentField = (studentId, field, value) => {
   if (editingStudent.value.id === studentId) {
-    editingStudent.value[field] = value
+    // Sanitize the input value
+    let sanitizedValue = value
+    
+    if (typeof value === 'string') {
+      sanitizedValue = sanitizeString(value, {
+        trim: true,
+        maxLength: field === 'caseManagerId' ? 50 : 100,
+        removeDangerous: true
+      })
+
+      // Security threat detection
+      const securityCheck = checkSecurityThreats(sanitizedValue)
+      if (!securityCheck.isSafe) {
+        showStatus(`Security threat detected in ${field}: ${securityCheck.threats.join(', ')}`, true)
+        return
+      }
+
+      // Validate string length
+      const lengthValidation = validateStringLength(sanitizedValue, {
+        max: field === 'caseManagerId' ? 50 : 100,
+        fieldName: field
+      })
+      if (!lengthValidation.isValid) {
+        showStatus(lengthValidation.error, true)
+        return
+      }
+    }
+
+    editingStudent.value[field] = sanitizedValue
   }
 }
 
 const saveStudent = async (studentId) => {
   try {
+    // Rate limiting for save operations
+    const rateCheck = checkRateLimit('saveStudent', 10, 60000) // 10 saves per minute
+    if (!rateCheck.allowed) {
+      showStatus('Too many save requests. Please wait before saving again.', true)
+      return
+    }
+
+    // Prepare the updates object
     const updates = {}
     Object.keys(editingStudent.value).forEach(key => {
       if (key !== 'id' && editingStudent.value[key] !== students.value.find(s => s.id === studentId)[key]) {
@@ -205,17 +281,33 @@ const saveStudent = async (studentId) => {
       }
     })
 
-    if (Object.keys(updates).length > 0) {
-      await updateStudent(studentId, updates)
-      
-      // Update local state
-      const index = students.value.findIndex(s => s.id === studentId)
-      if (index !== -1) {
-        students.value[index] = { ...students.value[index], ...updates }
-      }
-      
-      showStatus('✅ Student updated.')
+    if (Object.keys(updates).length === 0) {
+      cancelEdit()
+      return
     }
+
+    // Sanitize the updates
+    const sanitizedUpdates = sanitizeStudentFormData(updates)
+
+    // Validate the updates
+    const validation = validateStudentData(sanitizedUpdates, { isNew: false })
+    if (!validation.isValid) {
+      showStatus(`Validation failed: ${validation.errors.join(', ')}`, true)
+      return
+    }
+
+    // Apply sanitized updates back to editing state
+    Object.assign(editingStudent.value, sanitizedUpdates)
+
+    await updateStudent(studentId, sanitizedUpdates)
+    
+    // Update local state
+    const index = students.value.findIndex(s => s.id === studentId)
+    if (index !== -1) {
+      students.value[index] = { ...students.value[index], ...sanitizedUpdates }
+    }
+    
+    showStatus('✅ Student updated.')
   } catch (error) {
     showStatus('❌ Update failed.', true)
     console.error('Update error:', error)
@@ -225,47 +317,104 @@ const saveStudent = async (studentId) => {
 }
 
 const deleteStudentRecord = async (studentId) => {
-  if (!confirm('Delete this student?')) return
-  
+  // Rate limiting for delete operations
+  const rateCheck = checkRateLimit('deleteStudent', 5, 300000) // 5 deletes per 5 minutes
+  if (!rateCheck.allowed) {
+    showStatus('Too many delete requests. Please wait before deleting again.', true)
+    return
+  }
+
+  if (!confirm('Are you sure you want to delete this student? This action cannot be undone.')) {
+    return
+  }
+
   try {
     await deleteStudent(studentId)
+    showStatus('✅ Student deleted.')
     
     // Remove from local state
-    students.value = students.value.filter(s => s.id !== studentId)
-    filteredStudents.value = filteredStudents.value.filter(s => s.id !== studentId)
+    const index = students.value.findIndex(s => s.id === studentId)
+    if (index !== -1) {
+      students.value.splice(index, 1)
+    }
     
-    showStatus('✅ Student deleted.')
+    // Update filtered results
+    handleSearch()
   } catch (error) {
     showStatus('❌ Delete failed.', true)
     console.error('Delete error:', error)
-  } finally {
-    cancelEdit()
   }
 }
 
 const deleteAllStudents = async () => {
-  const confirmation = prompt('Type DELETE ALL STUDENTS to confirm:')
-  if (confirmation !== 'DELETE ALL STUDENTS') return
+  // Enhanced rate limiting for delete all operations
+  const rateCheck = checkRateLimit('deleteAllStudents', 1, 3600000) // 1 delete all per hour
+  if (!rateCheck.allowed) {
+    showStatus('Delete all operation rate limited. Please wait before trying again.', true)
+    return
+  }
+
+  const confirmMessage = `Are you sure you want to delete ALL ${students.value.length} students? 
+
+This action cannot be undone and will permanently remove all student data.
+
+Type "DELETE ALL STUDENTS" to confirm:`
+
+  const userInput = prompt(confirmMessage)
   
+  if (userInput !== 'DELETE ALL STUDENTS') {
+    showStatus('Delete all operation cancelled.', false)
+    return
+  }
+
   try {
-    // This would need to be implemented in the composable
-    // For now, we'll delete them one by one
-    for (const student of [...students.value]) {
-      await deleteStudent(student.id)
+    showStatus('Deleting all students...')
+    
+    // Delete in batches to avoid Firestore limits
+    const batch = writeBatch(db)
+    let batchCount = 0
+    
+    for (const student of students.value) {
+      batch.delete(doc(db, 'students', student.id))
+      batchCount++
+      
+      // Firestore batch limit is 500 operations
+      if (batchCount >= 500) {
+        await batch.commit()
+        batchCount = 0
+      }
     }
     
+    // Commit remaining operations
+    if (batchCount > 0) {
+      await batch.commit()
+    }
+    
+    // Clear local state
     students.value = []
     filteredStudents.value = []
+    
     showStatus('✅ All students deleted.')
   } catch (error) {
-    showStatus('❌ Delete all failed.', true)
+    showStatus('❌ Failed to delete all students.', true)
     console.error('Delete all error:', error)
   }
 }
 
-const prevPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
+const formatDate = (dateValue) => {
+  if (!dateValue) return 'N/A'
+  
+  try {
+    // Handle Firestore timestamp
+    if (dateValue && typeof dateValue.toDate === 'function') {
+      return dateValue.toDate().toLocaleDateString()
+    }
+    
+    // Handle ISO string or regular date
+    const date = new Date(dateValue)
+    return isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString()
+  } catch (error) {
+    return 'Invalid Date'
   }
 }
 
@@ -275,35 +424,27 @@ const nextPage = () => {
   }
 }
 
-const formatDate = (timestamp) => {
-  if (!timestamp) return '—'
-  
-  try {
-    if (timestamp.toDate) {
-      return timestamp.toDate().toLocaleDateString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric'
-      })
-    }
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    })
-  } catch {
-    return '—'
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
   }
 }
 
-// Load data on mount
+// Initialize data on mount
 onMounted(async () => {
   try {
-    students.value = await fetchAllStudents()
+    await fetchStudents()
     filteredStudents.value = students.value
   } catch (error) {
-    showStatus('❌ Failed to load students.', true)
-    console.error('Load error:', error)
+    showStatus('Failed to load students.', true)
+    console.error('Load students error:', error)
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
   }
 })
 </script>

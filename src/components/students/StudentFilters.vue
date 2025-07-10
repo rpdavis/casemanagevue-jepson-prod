@@ -185,7 +185,8 @@ function printPage() {
 .radio-group {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 10px;
+  flex-direction: row;
 }
 
 .radio-label {

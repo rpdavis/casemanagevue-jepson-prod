@@ -55,6 +55,55 @@ function requireRole(request, allowedRoles) {
   }
 }
 
+// Input validation and sanitization
+function sanitizeString(input, maxLength = 255) {
+  if (typeof input !== 'string') {
+    return '';
+  }
+  
+  return input
+    .trim()
+    .replace(/\0/g, '') // Remove null bytes
+    .replace(/[<>'"&]/g, '') // Remove potentially dangerous characters
+    .substring(0, maxLength);
+}
+
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateRequired(value, fieldName) {
+  if (!value || (typeof value === 'string' && value.trim() === '')) {
+    throw new HttpsError("invalid-argument", `${fieldName} is required`);
+  }
+}
+
+function checkSecurityThreats(input) {
+  if (typeof input !== 'string') return;
+  
+  const threats = [];
+  
+  // Check for script injection
+  if (/<script|javascript:|vbscript:|onload=|onerror=/i.test(input)) {
+    threats.push('Script injection attempt');
+  }
+  
+  // Check for SQL injection patterns
+  if (/(\bunion\b|\bselect\b|\binsert\b|\bupdate\b|\bdelete\b|\bdrop\b).*(\bfrom\b|\binto\b|\bwhere\b)/i.test(input)) {
+    threats.push('SQL injection pattern');
+  }
+  
+  // Check for path traversal
+  if (/\.\.\/|\.\.\\|%2e%2e%2f|%2e%2e%5c/i.test(input)) {
+    threats.push('Path traversal attempt');
+  }
+  
+  if (threats.length > 0) {
+    throw new HttpsError("invalid-argument", `Security threat detected: ${threats.join(', ')}`);
+  }
+}
+
 // Google Auth Helper
 const getGoogleAuth = () => {
   const credentials = process.env.GOOGLE_KEY ? 
@@ -115,43 +164,64 @@ exports.addUserWithRole = onCall(async (request) => {
 
   const { name, email, role, provider, aeriesId } = request.data;
   
-  if (!name || !email || !role) {
-    throw new HttpsError("invalid-argument", "Name, email, and role are required");
+  // Comprehensive input validation
+  validateRequired(name, "Name");
+  validateRequired(email, "Email");
+  validateRequired(role, "Role");
+  
+  // Sanitize inputs
+  const sanitizedName = sanitizeString(name, 100);
+  const sanitizedEmail = sanitizeString(email.toLowerCase(), 255);
+  const sanitizedRole = sanitizeString(role, 50);
+  const sanitizedProvider = provider ? sanitizeString(provider, 10) : null;
+  const sanitizedAeriesId = aeriesId ? sanitizeString(aeriesId, 20) : null;
+  
+  // Security threat detection
+  checkSecurityThreats(sanitizedName);
+  checkSecurityThreats(sanitizedEmail);
+  checkSecurityThreats(sanitizedRole);
+  if (sanitizedProvider) checkSecurityThreats(sanitizedProvider);
+  if (sanitizedAeriesId) checkSecurityThreats(sanitizedAeriesId);
+  
+  // Validate email format
+  if (!validateEmail(sanitizedEmail)) {
+    throw new HttpsError("invalid-argument", "Invalid email format");
   }
-
-  if (!VALID_ROLES.includes(role)) {
+  
+  // Validate role
+  if (!VALID_ROLES.includes(sanitizedRole)) {
     throw new HttpsError("invalid-argument", `Invalid role. Valid roles: ${VALID_ROLES.join(", ")}`);
   }
 
   try {
     const userRecord = await adminAuth.createUser({
-      email,
+      email: sanitizedEmail,
       password: Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8),
-      displayName: name,
+      displayName: sanitizedName,
     });
 
-    await adminAuth.setCustomUserClaims(userRecord.uid, { role });
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role: sanitizedRole });
 
     const userData = {
-      name,
-      email,
-      role,
+      name: sanitizedName,
+      email: sanitizedEmail,
+      role: sanitizedRole,
       createdAt: new Date().toISOString(),
-      ...(provider && { provider }),
-      ...(aeriesId && { aeriesId })
+      ...(sanitizedProvider && { provider: sanitizedProvider }),
+      ...(sanitizedAeriesId && { aeriesId: sanitizedAeriesId })
     };
 
     await db.collection("users").doc(userRecord.uid).set(userData);
 
     return { 
       success: true,
-      message: `User "${name}" created successfully`,
+      message: `User "${sanitizedName}" created successfully`,
       uid: userRecord.uid
     };
 
   } catch (error) {
     if (error.code === "auth/email-already-exists") {
-      throw new HttpsError("already-exists", `Email "${email}" already in use`);
+      throw new HttpsError("already-exists", `Email "${sanitizedEmail}" already in use`);
     }
     throw new HttpsError("internal", `User creation failed: ${error.message}`);
   }

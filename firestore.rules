@@ -1,93 +1,162 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can only access their own data, or admins can access any
+    
+    // ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.role in ["admin", "administrator", "administrator_504_CM", "sped_chair"];
+    }
+    
+    function isCaseManager() {
+      return request.auth.token.role == "case_manager";
+    }
+    
+    function isTeacher() {
+      return request.auth.token.role == "teacher";
+    }
+    
+    function isServiceProvider() {
+      return request.auth.token.role == "service_provider";
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function hasValidRole() {
+      return request.auth.token.role in [
+        "admin", "administrator", "administrator_504_CM", "sped_chair",
+        "case_manager", "teacher", "service_provider", "paraeducator"
+      ];
+    }
+    
+    function isValidEmail(email) {
+      return email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+    
+    function isValidStringLength(value, maxLength) {
+      return value is string && value.size() <= maxLength;
+    }
+    
+    function hasNoScriptTags(value) {
+      return !(value.matches('.*<script.*') || value.matches('.*javascript:.*'));
+    }
+    
+    function isValidStudentData(data) {
+      return data.keys().hasAll(['app']) &&
+             data.app.keys().hasAll(['studentData']) &&
+             data.app.studentData.keys().hasAll(['firstName', 'lastName', 'grade']) &&
+             isValidStringLength(data.app.studentData.firstName, 50) &&
+             isValidStringLength(data.app.studentData.lastName, 50) &&
+             hasNoScriptTags(data.app.studentData.firstName) &&
+             hasNoScriptTags(data.app.studentData.lastName) &&
+             data.app.studentData.grade in ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'TK', 'Pre-K', 'Ungraded'];
+    }
+    
+    function isValidUserData(data) {
+      return data.keys().hasAll(['name', 'email', 'role']) &&
+             isValidStringLength(data.name, 100) &&
+             isValidStringLength(data.email, 255) &&
+             isValidEmail(data.email) &&
+             hasNoScriptTags(data.name) &&
+             hasNoScriptTags(data.email) &&
+             data.role in ["admin", "administrator", "administrator_504_CM", "sped_chair", "case_manager", "teacher", "service_provider", "paraeducator"];
+    }
+    
+    // ─── SECURITY RULES ───────────────────────────────────────────────────────
+    
+    // Users collection - Enhanced validation
     match /users/{userId} {
-      allow read, write: if request.auth != null && (
-        request.auth.uid == userId ||
-        (request.auth.token.role == "admin" || request.auth.token.role == "administrator" || request.auth.token.role == "administrator_504_CM" || request.auth.token.role == "sped_chair")
-      );
+      allow read: if isAuthenticated() && hasValidRole() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isAdmin() && isValidUserData(resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUserData(resource.data);
+      allow delete: if isAuthenticated() && isAdmin();
       
       // Aeries configuration - users can only access their own encrypted config
       match /aeries_config/{configId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isAuthenticated() && isOwner(userId);
       }
     }
     
-    // App Settings collection - allow admin users to read/write
+    // App Settings collection - Admin only with validation
     match /appSettings/{document} {
-      allow read, write: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair"
-      );
+      allow read: if isAuthenticated() && hasValidRole();
+      allow write: if isAuthenticated() && isAdmin();
     }
     
-    // Config collection - for permissions matrix and other config
+    // Config collection - Read for all, write for admins
     match /config/{configId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair"
-      );
+      allow read: if isAuthenticated() && hasValidRole();
+      allow write: if isAuthenticated() && isAdmin();
     }
     
-    // Students collection - allow read/write for authenticated users
+    // Students collection - Enhanced validation and role-based access
     match /students/{studentId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAuthenticated() && hasValidRole();
+      allow create: if isAuthenticated() && 
+                     (isAdmin() || isCaseManager()) && 
+                     isValidStudentData(resource.data);
+      allow update: if isAuthenticated() && 
+                     (isAdmin() || isCaseManager() || 
+                      (isTeacher() && request.auth.uid in resource.data.app.schedule.periods.values()) ||
+                      (isServiceProvider() && request.auth.uid in resource.data.app.providers.values())) &&
+                     isValidStudentData(resource.data);
+      allow delete: if isAuthenticated() && isAdmin();
     }
     
-    // Aide Schedules collection - allow read/write for admins
+    // Aide Schedules collection - Admin only
     match /aideSchedules/{aideId} {
-      allow read, write: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair"
-      );
+      allow read, write: if isAuthenticated() && isAdmin();
     }
     
-    // Teacher Feedback Forms - allow case managers and admins to manage
+    // Teacher Feedback Forms - Case managers and admins
     match /feedbackForms/{formId} {
-      allow read, write: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair" ||
-        request.auth.token.role == "case_manager"
-      );
+      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow create, update: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow delete: if isAuthenticated() && isAdmin();
     }
     
-    // Teacher Feedback Responses - read-only for case managers, write-only for functions
+    // Teacher Feedback Responses - Read-only for authorized users, write-only for functions
     match /feedbackResponses/{responseId} {
-      allow read: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair" ||
-        request.auth.token.role == "case_manager"
-      );
+      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
       allow write: if false; // Only Cloud Functions can write responses
     }
     
-    // Teacher Feedback Send Log - read-only for case managers, write-only for functions
+    // Teacher Feedback Send Log - Read-only for authorized users, write-only for functions
     match /feedbackSendLog/{logId} {
-      allow read: if request.auth != null && (
-        request.auth.token.role == "admin" || 
-        request.auth.token.role == "administrator" || 
-        request.auth.token.role == "administrator_504_CM" || 
-        request.auth.token.role == "sped_chair" ||
-        request.auth.token.role == "case_manager"
-      );
+      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
       allow write: if false; // Only Cloud Functions can write send logs
     }
     
-    // Default rule - allow all reads and writes for authenticated users
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Time Tables - Admin only
+    match /timeTables/{tableId} {
+      allow read: if isAuthenticated() && hasValidRole();
+      allow write: if isAuthenticated() && isAdmin();
     }
+    
+    // Backup and restore data - Admin only
+    match /backups/{backupId} {
+      allow read, write: if isAuthenticated() && isAdmin();
+    }
+    
+    // System logs - Admin read-only
+    match /systemLogs/{logId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if false; // Only system can write logs
+    }
+    
+    // Rate limiting collection - Internal use only
+    match /rateLimits/{limitId} {
+      allow read, write: if false; // Only used internally by functions
+    }
+    
+    // Default deny-all rule - Remove the overly permissive default
+    // match /{document=**} {
+    //   allow read, write: if false;
+    // }
   }
 }

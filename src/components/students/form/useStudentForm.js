@@ -4,6 +4,12 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'fi
 import { db, storage } from '@/firebase'
 import { getDisplayValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { 
+  validateStudentData, 
+  sanitizeStudentFormData, 
+  checkSecurityThreats,
+  validateFile 
+} from '@/utils/validation.js'
 
 export function useStudentForm(props, emit) {
   // Load app settings
@@ -162,9 +168,34 @@ export function useStudentForm(props, emit) {
     }
   }, { immediate: true, deep: true })
 
-  // File handling functions
+  // File handling functions with validation
   const onFileChange = (event, key) => {
-    form[key] = event.target.files[0] || null
+    const file = event.target.files[0] || null
+    
+    if (file) {
+      // Validate file
+      const fileValidation = validateFile(file, {
+        allowedTypes: ['pdf'],
+        maxSize: 10 * 1024 * 1024, // 10MB
+        fieldName: key === 'bipFile' ? 'BIP Document' : 'At-A-Glance Document'
+      })
+      
+      if (!fileValidation.isValid) {
+        alert(fileValidation.error)
+        event.target.value = '' // Clear the file input
+        return
+      }
+      
+      // Check for security threats in filename
+      const securityCheck = checkSecurityThreats(file.name)
+      if (!securityCheck.isSafe) {
+        alert(`File name contains potentially dangerous content: ${securityCheck.threats.join(', ')}`)
+        event.target.value = '' // Clear the file input
+        return
+      }
+    }
+    
+    form[key] = file
   }
 
   const removeBipFile = (event) => {
@@ -280,15 +311,36 @@ export function useStudentForm(props, emit) {
     return userRoles.value[userRoleKey] || []
   }
 
-  // Form validation
+  // Enhanced form validation with security checks
   const validateForm = () => {
-    // Validate SSID for new students
-    if (props.mode === 'new' && (!form.ssid || form.ssid.trim() === '')) {
-      alert('SSID is required. Please enter the student\'s State Student ID from your SIS (Aeries, SEIS, etc.).')
+    // Sanitize form data first
+    const sanitizedData = sanitizeStudentFormData(form)
+    
+    // Comprehensive validation
+    const validation = validateStudentData(sanitizedData, { 
+      isNew: props.mode === 'new' 
+    })
+    
+    if (!validation.isValid) {
+      alert(`Please fix the following errors:\n\n${validation.errors.join('\n')}`)
       return false
     }
     
-    // Add more validation rules as needed
+    // Security threat detection for text fields
+    const textFields = ['firstName', 'lastName', 'instruction', 'assessment']
+    for (const field of textFields) {
+      if (form[field]) {
+        const securityCheck = checkSecurityThreats(form[field])
+        if (!securityCheck.isSafe) {
+          alert(`Security threat detected in ${field}: ${securityCheck.threats.join(', ')}`)
+          return false
+        }
+      }
+    }
+    
+    // Apply sanitized data back to form
+    Object.assign(form, sanitizedData)
+    
     return true
   }
 

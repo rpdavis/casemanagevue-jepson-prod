@@ -208,6 +208,13 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/firebase'
 import { useAppSettings } from '@/composables/useAppSettings.js'
 import * as XLSX from 'xlsx'
+import { 
+  sanitizeString, 
+  checkSecurityThreats, 
+  validateFile,
+  validateStringLength,
+  checkRateLimit
+} from '@/utils/validation.js'
 
 const { saveAppSettings } = useAppSettings()
 
@@ -248,6 +255,97 @@ const canConfirmImport = computed(() => {
   }
 })
 
+// Enhanced validation functions
+const validateTimeTableForm = () => {
+  // Sanitize time table name
+  const sanitizedName = sanitizeString(editingTimeTable.value.name, {
+    trim: true,
+    maxLength: 100,
+    removeDangerous: true
+  })
+
+  // Security threat detection
+  const securityCheck = checkSecurityThreats(sanitizedName)
+  if (!securityCheck.isSafe) {
+    alert(`Security threat detected in time table name: ${securityCheck.threats.join(', ')}`)
+    return false
+  }
+
+  // Apply sanitized name
+  editingTimeTable.value.name = sanitizedName
+
+  // Validate required fields
+  if (!editingTimeTable.value.name.trim()) {
+    alert('Please enter a time table name')
+    return false
+  }
+
+  if (editingTimeTable.value.days.length === 0) {
+    alert('Please select at least one day')
+    return false
+  }
+
+  if (editingTimeTable.value.schedule.length === 0) {
+    alert('Please add at least one schedule item')
+    return false
+  }
+
+  // Validate schedule items
+  for (let i = 0; i < editingTimeTable.value.schedule.length; i++) {
+    const item = editingTimeTable.value.schedule[i]
+    
+    // Sanitize schedule item name
+    const sanitizedItemName = sanitizeString(item.name, {
+      trim: true,
+      maxLength: 50,
+      removeDangerous: true
+    })
+
+    // Security check for schedule item name
+    const itemSecurityCheck = checkSecurityThreats(sanitizedItemName)
+    if (!itemSecurityCheck.isSafe) {
+      alert(`Security threat detected in schedule item ${i + 1}: ${itemSecurityCheck.threats.join(', ')}`)
+      return false
+    }
+
+    // Apply sanitized name
+    item.name = sanitizedItemName
+
+    if (!item.name.trim()) {
+      alert(`Please enter a name for schedule item ${i + 1}`)
+      return false
+    }
+    if (!item.startTime || !item.endTime) {
+      alert(`Please enter start and end times for ${item.name}`)
+      return false
+    }
+    if (item.startTime >= item.endTime) {
+      alert(`${item.name}: Start time must be before end time`)
+      return false
+    }
+  }
+
+  return true
+}
+
+const validateImportName = (name) => {
+  // Sanitize import name
+  const sanitizedName = sanitizeString(name, {
+    trim: true,
+    maxLength: 100,
+    removeDangerous: true
+  })
+
+  // Security threat detection
+  const securityCheck = checkSecurityThreats(sanitizedName)
+  if (!securityCheck.isSafe) {
+    alert(`Security threat detected in import name: ${securityCheck.threats.join(', ')}`)
+    return null
+  }
+
+  return sanitizedName
+}
+
 async function loadData() {
   try {
     console.log('Loading time tables...')
@@ -276,14 +374,7 @@ function addTimeTable() {
   editingTimeTable.value = {
     name: '',
     days: [],
-    schedule: [
-      {
-        name: 'Period 1',
-        type: 'period',
-        startTime: '08:00',
-        endTime: '08:55'
-      }
-    ]
+    schedule: []
   }
   showEditDialog.value = true
 }
@@ -304,8 +395,8 @@ function addScheduleItem() {
   editingTimeTable.value.schedule.push({
     name: '',
     type: 'period',
-    startTime: '09:00',
-    endTime: '09:55'
+    startTime: '',
+    endTime: ''
   })
 }
 
@@ -314,39 +405,18 @@ function removeScheduleItem(index) {
 }
 
 function saveTimeTable() {
-  // Validate the time table
-  if (!editingTimeTable.value.name.trim()) {
-    alert('Please enter a time table name')
+  // Enhanced validation with security checks
+  if (!validateTimeTableForm()) {
     return
   }
-  
-  if (editingTimeTable.value.days.length === 0) {
-    alert('Please select at least one day')
+
+  // Rate limiting for save operations
+  const rateCheck = checkRateLimit('saveTimeTable', 10, 60000) // 10 saves per minute
+  if (!rateCheck.allowed) {
+    alert('Too many save requests. Please wait before saving again.')
     return
   }
-  
-  if (editingTimeTable.value.schedule.length === 0) {
-    alert('Please add at least one schedule item')
-    return
-  }
-  
-  // Validate schedule items
-  for (let i = 0; i < editingTimeTable.value.schedule.length; i++) {
-    const item = editingTimeTable.value.schedule[i]
-    if (!item.name.trim()) {
-      alert(`Please enter a name for schedule item ${i + 1}`)
-      return
-    }
-    if (!item.startTime || !item.endTime) {
-      alert(`Please enter start and end times for ${item.name}`)
-      return
-    }
-    if (item.startTime >= item.endTime) {
-      alert(`${item.name}: Start time must be before end time`)
-      return
-    }
-  }
-  
+
   // Save the time table
   if (editingIndex.value === -1) {
     // Add new time table
@@ -355,7 +425,7 @@ function saveTimeTable() {
     // Update existing time table
     timeTables.value[editingIndex.value] = JSON.parse(JSON.stringify(editingTimeTable.value))
   }
-  
+
   closeEditDialog()
 }
 
@@ -371,6 +441,13 @@ function closeEditDialog() {
 
 async function saveTimeTables() {
   try {
+    // Rate limiting for save all operations
+    const rateCheck = checkRateLimit('saveAllTimeTables', 5, 300000) // 5 saves per 5 minutes
+    if (!rateCheck.allowed) {
+      alert('Too many save all requests. Please wait before saving again.')
+      return
+    }
+
     saving.value = true
     console.log('Saving time tables:', timeTables.value)
     
@@ -420,28 +497,74 @@ function triggerFileInput() {
 function handleFileChange(e) {
   const file = e.target.files[0]
   if (!file) return
+
+  // Validate file with security checks
+  const fileValidation = validateFile(file, {
+    allowedTypes: ['csv', 'excel'],
+    maxSize: 5 * 1024 * 1024, // 5MB
+    fieldName: 'Time Table Import File'
+  })
+
+  if (!fileValidation.isValid) {
+    alert(fileValidation.error)
+    e.target.value = '' // Clear the file input
+    return
+  }
+
+  // Check filename for security threats
+  const securityCheck = checkSecurityThreats(file.name)
+  if (!securityCheck.isSafe) {
+    alert(`File name contains potentially dangerous content: ${securityCheck.threats.join(', ')}`)
+    e.target.value = '' // Clear the file input
+    return
+  }
+
   const reader = new FileReader()
   reader.onload = (evt) => {
-    let data = evt.target.result
-    let workbook
-    if (file.name.endsWith('.csv')) {
-      // Parse CSV
-      workbook = XLSX.read(data, { type: 'binary' })
-    } else {
-      // Parse Excel
-      workbook = XLSX.read(data, { type: 'binary' })
+    try {
+      let data = evt.target.result
+      let workbook
+      if (file.name.endsWith('.csv')) {
+        // Parse CSV
+        workbook = XLSX.read(data, { type: 'binary' })
+      } else {
+        // Parse Excel
+        workbook = XLSX.read(data, { type: 'binary' })
+      }
+      const sheetName = workbook.SheetNames[0]
+      const sheet = workbook.Sheets[sheetName]
+      const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
+      
+      // Sanitize imported data
+      const sanitizedJson = json.map(row => {
+        const sanitizedRow = {}
+        Object.entries(row).forEach(([key, value]) => {
+          const sanitizedKey = sanitizeString(key, { trim: true, maxLength: 50, removeDangerous: true })
+          const sanitizedValue = sanitizeString(String(value), { trim: true, maxLength: 100, removeDangerous: true })
+          sanitizedRow[sanitizedKey] = sanitizedValue
+        })
+        return sanitizedRow
+      })
+      
+      importPreview.value = sanitizedJson
+      previewColumns.value = sanitizedJson.length ? Object.keys(sanitizedJson[0]) : []
+    } catch (error) {
+      alert('Error parsing file. Please check the file format and try again.')
+      console.error('File parsing error:', error)
     }
-    const sheetName = workbook.SheetNames[0]
-    const sheet = workbook.Sheets[sheetName]
-    const json = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    importPreview.value = json
-    previewColumns.value = json.length ? Object.keys(json[0]) : []
   }
   reader.readAsBinaryString(file)
 }
 
 function confirmImport() {
   try {
+    // Rate limiting for import operations
+    const rateCheck = checkRateLimit('importTimeTable', 3, 300000) // 3 imports per 5 minutes
+    if (!rateCheck.allowed) {
+      alert('Too many import requests. Please wait before importing again.')
+      return
+    }
+
     // Map the imported data to time table format
     const mappedSchedule = importPreview.value.map(row => {
       // Try to map common column names to time table fields
@@ -449,10 +572,20 @@ function confirmImport() {
       const startTime = row.startTime || row['Start Time'] || row.start || row.Start || '08:00'
       const endTime = row.endTime || row['End Time'] || row.end || row.End || '08:55'
       
+      // Sanitize mapped values
+      const sanitizedName = sanitizeString(name, { trim: true, maxLength: 50, removeDangerous: true })
+      
+      // Security check for mapped name
+      const securityCheck = checkSecurityThreats(sanitizedName)
+      if (!securityCheck.isSafe) {
+        console.warn(`Security threat detected in imported item: ${securityCheck.threats.join(', ')}`)
+        return null // Skip this item
+      }
+      
       // Determine type based on name or type column
       let type = 'period'
       const typeValue = row.type || row.Type || ''
-      const nameLower = name.toLowerCase()
+      const nameLower = sanitizedName.toLowerCase()
       
       if (typeValue.toLowerCase().includes('lunch') || nameLower.includes('lunch')) {
         type = 'lunch'
@@ -463,12 +596,12 @@ function confirmImport() {
       }
       
       return {
-        name: name.trim(),
+        name: sanitizedName,
         type: type,
         startTime: startTime,
         endTime: endTime
       }
-    }).filter(item => item.name && item.name !== 'Unknown')
+    }).filter(item => item && item.name && item.name !== 'Unknown')
     
     if (mappedSchedule.length === 0) {
       alert('No valid schedule items found in the imported data. Please check your file format.')
@@ -488,14 +621,14 @@ function confirmImport() {
         schedule: mappedSchedule
       }
     } else {
-      if (!newTimeTableName.value.trim()) {
-        alert('Please enter a name for the new time table')
+      const validatedName = validateImportName(newTimeTableName.value)
+      if (!validatedName) {
         return
       }
       
       // Create new time table
       const newTimeTable = {
-        name: newTimeTableName.value.trim(),
+        name: validatedName,
         days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'], // Default to weekdays
         schedule: mappedSchedule
       }

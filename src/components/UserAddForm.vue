@@ -100,6 +100,13 @@ import { functions } from '../firebase.js'
 import { getFirestore, collection, addDoc } from 'firebase/firestore'
 import { VALID_ROLES, isApprovedRole } from '../config/roles.js'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { 
+  validateUserData, 
+  sanitizeUserFormData, 
+  checkSecurityThreats,
+  validateFile,
+  checkRateLimit
+} from '@/utils/validation.js'
 
 export default {
   name: 'UserAddForm',
@@ -191,14 +198,38 @@ export default {
     }
 
     const addSingleUser = async () => {
-      if (!singleUser.name || !singleUser.email || !singleUser.role) {
-        showStatus('Please fill in all fields', true)
+      // Rate limiting check
+      const rateCheck = checkRateLimit('addUser', 5, 60000) // 5 requests per minute
+      if (!rateCheck.allowed) {
+        showStatus('Too many requests. Please wait before adding another user.', true)
         return
       }
-      if (!isApprovedRole(singleUser.role)) {
-        showStatus('Invalid role selected', true)
+      
+      // Sanitize input data
+      const sanitizedData = sanitizeUserFormData(singleUser)
+      
+      // Comprehensive validation
+      const validation = validateUserData(sanitizedData)
+      if (!validation.isValid) {
+        showStatus(`Please fix the following errors:\n${validation.errors.join('\n')}`, true)
         return
       }
+      
+      // Security threat detection
+      const textFields = ['name', 'email', 'aeriesId']
+      for (const field of textFields) {
+        if (sanitizedData[field]) {
+          const securityCheck = checkSecurityThreats(sanitizedData[field])
+          if (!securityCheck.isSafe) {
+            showStatus(`Security threat detected in ${field}: ${securityCheck.threats.join(', ')}`, true)
+            return
+          }
+        }
+      }
+      
+      // Apply sanitized data
+      Object.assign(singleUser, sanitizedData)
+      
       const result = await addUserToFirestore(
         singleUser.name,
         singleUser.email,
@@ -221,6 +252,27 @@ export default {
     const handleFileSelect = (event) => {
       const file = event.target.files[0]
       if (file) {
+        // Validate file
+        const fileValidation = validateFile(file, {
+          allowedTypes: ['csv', 'excel'],
+          maxSize: 5 * 1024 * 1024, // 5MB for CSV/Excel files
+          fieldName: 'User Import File'
+        })
+        
+        if (!fileValidation.isValid) {
+          showStatus(fileValidation.error, true)
+          event.target.value = '' // Clear the file input
+          return
+        }
+        
+        // Check for security threats in filename
+        const securityCheck = checkSecurityThreats(file.name)
+        if (!securityCheck.isSafe) {
+          showStatus(`File name contains potentially dangerous content: ${securityCheck.threats.join(', ')}`, true)
+          event.target.value = '' // Clear the file input
+          return
+        }
+        
         selectedFile.value = file
       }
     }

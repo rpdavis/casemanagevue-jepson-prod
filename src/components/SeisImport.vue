@@ -40,6 +40,12 @@
 <script>
 import { ref, computed } from 'vue'
 import { parseSeisCSVAndPreview, importFilteredSeisRecords } from '../composables/useImporters.js'
+import { 
+  validateFile, 
+  checkSecurityThreats, 
+  sanitizeString,
+  checkRateLimit
+} from '@/utils/validation.js'
 
 export default {
   name: 'SeisImport',
@@ -67,7 +73,32 @@ export default {
     }
 
     const handleFileSelect = (event) => {
-      selectedFile.value = event.target.files[0]
+      const file = event.target.files[0]
+      
+      if (file) {
+        // Validate file with security checks
+        const fileValidation = validateFile(file, {
+          allowedTypes: ['csv'],
+          maxSize: 10 * 1024 * 1024, // 10MB
+          fieldName: 'SEIS Import File'
+        })
+
+        if (!fileValidation.isValid) {
+          showStatus(fileValidation.error, true)
+          event.target.value = '' // Clear the file input
+          return
+        }
+
+        // Check filename for security threats
+        const securityCheck = checkSecurityThreats(file.name)
+        if (!securityCheck.isSafe) {
+          showStatus(`File name contains potentially dangerous content: ${securityCheck.threats.join(', ')}`, true)
+          event.target.value = '' // Clear the file input
+          return
+        }
+
+        selectedFile.value = file
+      }
     }
 
     const previewFile = async () => {
@@ -77,17 +108,58 @@ export default {
         return
       }
 
+      // Rate limiting for preview operations
+      const rateCheck = checkRateLimit('seisPreview', 5, 300000) // 5 previews per 5 minutes
+      if (!rateCheck.allowed) {
+        showStatus('Too many preview requests. Please wait before previewing again.', true)
+        return
+      }
+
       showStatus('Parsing file...')
       previewData.value = []
       fieldOptions.value = []
       selectedFields.value = []
 
       try {
-        parsedData.value = await parseSeisCSVAndPreview(file)
+        const rawData = await parseSeisCSVAndPreview(file)
+        
+        // Sanitize the parsed data
+        const sanitizedData = rawData.map(row => {
+          const sanitizedRow = {}
+          Object.entries(row).forEach(([key, value]) => {
+            // Sanitize field names and values
+            const sanitizedKey = sanitizeString(key, {
+              trim: true,
+              maxLength: 100,
+              removeDangerous: true
+            })
+            
+            let sanitizedValue = value
+            if (typeof value === 'string') {
+              sanitizedValue = sanitizeString(value, {
+                trim: true,
+                maxLength: 500,
+                removeDangerous: true
+              })
+              
+              // Security check for values
+              const valueSecurityCheck = checkSecurityThreats(sanitizedValue)
+              if (!valueSecurityCheck.isSafe) {
+                console.warn(`Security threat detected in SEIS data: ${valueSecurityCheck.threats.join(', ')}`)
+                sanitizedValue = '' // Clear potentially dangerous values
+              }
+            }
+            
+            sanitizedRow[sanitizedKey] = sanitizedValue
+          })
+          return sanitizedRow
+        })
+
+        parsedData.value = sanitizedData
         showStatus(`✅ Loaded ${parsedData.value.length} rows.`)
 
-        // Field selector
-        const fields = Object.keys(parsedData.value[0])
+        // Field selector with sanitized field names
+        const fields = Object.keys(parsedData.value[0] || {}).filter(field => field.length > 0)
         fieldOptions.value = fields
         selectedFields.value = [...fields] // Select all by default
 
@@ -100,31 +172,68 @@ export default {
     }
 
     const importData = async () => {
-      if (!parsedData.value.length) {
-        showStatus('❌ No parsed data available.', true)
+      if (!canImport.value) {
+        showStatus('❌ Cannot import: No data or fields selected.', true)
         return
       }
 
-      if (selectedFields.value.length === 0) {
-        showStatus('❌ Please select at least one field to import.', true)
+      // Rate limiting for import operations
+      const rateCheck = checkRateLimit('seisImport', 2, 600000) // 2 imports per 10 minutes
+      if (!rateCheck.allowed) {
+        showStatus('Too many import requests. Please wait before importing again.', true)
         return
       }
 
-      showStatus('Importing...')
+      if (!confirm(`Import ${parsedData.value.length} SEIS records? This will update existing students with matching SSIDs.`)) {
+        return
+      }
+
+      showStatus('Importing data...')
 
       try {
-        const count = await importFilteredSeisRecords(parsedData.value, selectedFields.value)
-        showStatus(`✅ Imported ${count} records with selected fields.`)
-        
-        // Reset file input
-        if (fileInput.value) {
-          fileInput.value.value = ''
+        // Filter data to only include selected fields
+        const filteredData = parsedData.value.map(row => {
+          const filtered = {}
+          selectedFields.value.forEach(field => {
+            if (row[field] !== undefined) {
+              filtered[field] = row[field]
+            }
+          })
+          return filtered
+        })
+
+        // Additional validation before import
+        const validRecords = filteredData.filter(record => {
+          // Basic validation - ensure we have some essential data
+          const hasEssentialData = Object.values(record).some(value => 
+            value && typeof value === 'string' && value.trim().length > 0
+          )
+          return hasEssentialData
+        })
+
+        if (validRecords.length === 0) {
+          showStatus('❌ No valid records found to import.', true)
+          return
         }
+
+        if (validRecords.length !== filteredData.length) {
+          const skipped = filteredData.length - validRecords.length
+          showStatus(`⚠️ Skipping ${skipped} invalid records. Importing ${validRecords.length} valid records.`)
+        }
+
+        await importFilteredSeisRecords(validRecords, selectedFields.value)
+        showStatus(`✅ Successfully imported ${validRecords.length} SEIS records.`)
+
+        // Clear the form
         selectedFile.value = null
         parsedData.value = []
         fieldOptions.value = []
         selectedFields.value = []
         previewData.value = []
+        if (fileInput.value) {
+          fileInput.value.value = ''
+        }
+
       } catch (err) {
         showStatus(`❌ Import failed: ${err.message}`, true)
         console.error('SEIS Import Error:', err)
