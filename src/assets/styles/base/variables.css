@@ -1,0 +1,166 @@
+:root {
+  /* === COLORS === */
+  
+  /* Primary Colors */
+  --primary-color: #1976d2;
+  --primary-hover: #1565c0;
+  --primary-light: #e3f2fd;
+  --primary-dark: #0d47a1;
+  
+  /* Secondary Colors */
+  --secondary-color: #6c757d;
+  --secondary-hover: #545b62;
+  --secondary-light: #f8f9fa;
+  --secondary-dark: #495057;
+  
+  /* Status Colors */
+  --success-color: #28a745;
+  --success-hover: #218838;
+  --success-light: #d4edda;
+  --warning-color: #ffc107;
+  --warning-hover: #e0a800;
+  --warning-light: #fff3cd;
+  --error-color: #dc3545;
+  --error-hover: #c82333;
+  --error-light: #f8d7da;
+  --info-color: #17a2b8;
+  --info-hover: #138496;
+  --info-light: #d1ecf1;
+  
+  /* Background Colors */
+  --bg-primary: #f4f6f9;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f8f9fa;
+  --bg-muted: #e9ecef;
+  
+  /* Text Colors */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #ffffff;
+  
+  /* Border Colors */
+  --border-color: #dee2e6;
+  --border-light: #e9ecef;
+  --border-dark: #adb5bd;
+  --border-focus: #1976d2;
+  
+  /* Admin Panel Colors */
+  --admin-tab-bg: #f8f9fa;
+  --admin-tab-active: #2a79c9;
+  --admin-tab-hover: #e3eaf6;
+  
+  /* Table Colors */
+  --table-header-bg: #dfe7f3;
+  --table-stripe-bg: #f8fafd;
+  --table-border: #d1d1d1;
+  --table-hover: #f0f0f0;
+  
+  /* Badge Colors */
+  --badge-critical: #ffebee;
+  --badge-critical-text: #d32f2f;
+  --badge-critical-border: #f44336;
+  --badge-high: #fff3e0;
+  --badge-high-text: #f57c00;
+  --badge-high-border: #ff9800;
+  --badge-medium: #fff8e1;
+  --badge-medium-text: #fbc02d;
+  --badge-medium-border: #fdd835;
+  --badge-low: #e8f5e8;
+  --badge-low-text: #388e3c;
+  --badge-low-border: #4caf50;
+  
+  /* Service Pill Colors */
+  --service-pill-bg: #e3f2fd;
+  --service-pill-text: #1976d2;
+  --service-pill-border: #bfc7d1;
+  
+  /* === SPACING === */
+  --spacing-xs: 0.25rem;    /* 4px */
+  --spacing-sm: 0.5rem;     /* 8px */
+  --spacing-md: 1rem;       /* 16px */
+  --spacing-lg: 1.5rem;     /* 24px */
+  --spacing-xl: 2rem;       /* 32px */
+  --spacing-xxl: 3rem;      /* 48px */
+  
+  /* === TYPOGRAPHY === */
+  --font-family-base: 'Inter', 'Segoe UI', 'Arial', sans-serif;
+  --font-family-mono: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-base: 1rem;    /* 16px */
+  --font-size-lg: 1.125rem;  /* 18px */
+  --font-size-xl: 1.25rem;   /* 20px */
+  --font-size-xxl: 1.5rem;   /* 24px */
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  --line-height-tight: 1.2;
+  --line-height-base: 1.4;
+  --line-height-relaxed: 1.6;
+  
+  /* === SHADOWS === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 4px 20px rgba(0, 0, 0, 0.3);
+  
+  /* === BORDERS === */
+  --border-width: 1px;
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  --border-radius-xl: 12px;
+  --border-radius-pill: 50px;
+  
+  /* === TRANSITIONS === */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  
+  /* === Z-INDEX === */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  
+  /* === BREAKPOINTS === */
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+  
+  /* === COMPONENT SPECIFIC === */
+  
+  /* Buttons */
+  --btn-padding-sm: 0.25rem 0.5rem;
+  --btn-padding-md: 0.5rem 1rem;
+  --btn-padding-lg: 0.75rem 1.5rem;
+  
+  /* Form Elements */
+  --form-element-height: 2.5rem;
+  --form-element-padding: 0.5rem 0.75rem;
+  --form-element-border: var(--border-width) solid var(--border-color);
+  --form-element-focus-border: var(--border-width) solid var(--border-focus);
+  --form-element-focus-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  
+  /* Tables */
+  --table-cell-padding: 0.75rem 0.5rem;
+  --table-header-padding: 0.75rem 0.6rem;
+  
+  /* Dialogs */
+  --dialog-backdrop: rgba(0, 0, 0, 0.5);
+  --dialog-max-width: 800px;
+  --dialog-max-height: 90vh;
+  
+  /* Navigation */
+  --nav-height: 60px;
+  --nav-padding: 0 2rem;
+} 

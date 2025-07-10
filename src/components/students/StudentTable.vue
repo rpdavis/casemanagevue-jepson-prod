@@ -140,7 +140,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { formatListFromText, getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
-import './table/StudentTable.css'
+// Table styles now included in main.css
 import StudentDocsCell from './table/StudentDocsCell.vue'
 import StudentActionsCell from './table/StudentActionsCell.vue'
 import StudentScheduleCell from './table/StudentScheduleCell.vue'
@@ -580,7 +580,7 @@ watch(() => props.student, (newStudent) => {
 .students-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .students-table th,

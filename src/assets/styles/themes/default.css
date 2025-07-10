@@ -1,0 +1,192 @@
+/* Default Theme */
+
+/* This file contains theme-specific styles and overrides */
+/* The default theme uses the variables defined in base/variables.css */
+
+/* Theme-specific component styles can be added here */
+/* For example, if you want different button styles for this theme */
+
+/* Admin Tab Bar Theme Styling */
+.admin-tab-bar {
+  display: flex;
+  flex-direction: row;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 2px solid var(--border-color);
+  background: var(--admin-tab-bg);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.admin-tab-bar button {
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-color);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+}
+
+.admin-tab-bar button.active {
+  background: var(--admin-tab-active);
+  border-color: var(--admin-tab-active);
+  color: var(--text-inverse);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 4px rgba(42, 121, 201, 0.3);
+}
+
+.admin-tab-bar button:hover:not(.active) {
+  background: var(--admin-tab-hover);
+  border-color: var(--admin-tab-active);
+  color: var(--admin-tab-active);
+  box-shadow: var(--shadow-md);
+}
+
+/* Navigation Menu Theme */
+.nav-panel {
+  background: var(--bg-secondary);
+  border-left: var(--border-width) solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+.nav-btn {
+  transition: all var(--transition-base);
+}
+
+.nav-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-dark);
+}
+
+.nav-btn.primary {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+  border-color: var(--primary-color);
+}
+
+.nav-btn.primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+/* Radio Button Theme */
+.radio-btn {
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all var(--transition-base);
+}
+
+.radio-btn:hover {
+  background: var(--admin-tab-hover);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.radio-btn.active {
+  background: var(--primary-color);
+  color: var(--text-inverse);
+  border-color: var(--primary-color);
+}
+
+/* Status Messages Theme */
+.admin-status-msg {
+  color: #2d5c38;
+  font-size: var(--font-size-base);
+  min-height: 1.2em;
+  margin: var(--spacing-sm) 0;
+}
+
+.admin-status-msg.error {
+  color: var(--error-color);
+}
+
+/* Pagination Theme */
+.admin-pagination {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  margin-top: var(--spacing-md);
+}
+
+.admin-pagination button {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--admin-tab-hover);
+  color: var(--primary-color);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.admin-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-pagination button:not(:disabled):hover {
+  background: #d6e3fa;
+}
+
+/* Testing Links Theme */
+.testing-view {
+  /* Theme-specific styles for testing view */
+}
+
+/* User Role Switcher Theme */
+.debug-menu {
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Form Theme Overrides */
+.form-grid label {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Card Theme */
+.card {
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.card-header {
+  border-bottom: var(--border-width) solid var(--border-color);
+  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.card-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Theme-specific responsive adjustments */
+@media (max-width: 768px) {
+  .admin-tab-bar {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+  
+  .admin-tab-bar button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+  }
+} 

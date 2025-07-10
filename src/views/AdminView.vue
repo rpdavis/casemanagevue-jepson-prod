@@ -135,7 +135,7 @@
 </template>
 
 <script>
-import '../assets/bass/admin-panel.css'
+// Admin panel styles now included in main.css
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import useStudents from '@/composables/useStudents.js'

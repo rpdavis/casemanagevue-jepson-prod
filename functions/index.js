@@ -3,11 +3,10 @@
 
 // ─── IMPORTS ──────────────────────────────────────────────────────────────────
 // Firebase Functions v2
-const { onCall } = require("firebase-functions/v2/https");
-const { HttpsError } = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
-const functions = require("firebase-functions");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const functions = require("firebase-functions"); // Keep for v1 compatibility if needed
 
 // Firebase Admin
 const { initializeApp } = require("firebase-admin/app");
