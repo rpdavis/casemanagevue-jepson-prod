@@ -346,8 +346,11 @@ export function validateStudentData(studentData, options = {}) {
   const gradeResult = validateGrade(studentData.grade)
   if (!gradeResult.isValid) errors.push(gradeResult.error)
 
-  const planResult = validatePlanType(studentData.plan)
-  if (!planResult.isValid) errors.push(planResult.error)
+  // Plan validation - only if plan is provided
+  if (studentData.plan) {
+    const planResult = validatePlanType(studentData.plan)
+    if (!planResult.isValid) errors.push(planResult.error)
+  }
 
   // Optional fields with validation
   if (studentData.reviewDate) {
@@ -584,6 +587,38 @@ export function checkRateLimit(key, limit = 10, windowMs = 60000) {
   localStorage.setItem(windowKey, JSON.stringify(requests))
   
   return { allowed: true, remaining: limit - requests.length }
+}
+
+/**
+ * Performs a rate-limited batch operation on Firestore documents
+ * @param {Array} items - Array of items to process
+ * @param {Function} operationFn - Function to perform on each batch
+ * @param {number} batchSize - Size of each batch (default: 100)
+ * @param {number} delayMs - Delay between batches in milliseconds (default: 1000)
+ */
+export const performRateLimitedBatchOperation = async (items, operationFn, batchSize = 100, delayMs = 1000) => {
+  const batches = []
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize))
+  }
+
+  const results = []
+  for (let i = 0; i < batches.length; i++) {
+    try {
+      const result = await operationFn(batches[i])
+      results.push(result)
+      
+      // Add delay between batches, except for the last batch
+      if (i < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+    } catch (error) {
+      console.error(`Error in batch ${i + 1}:`, error)
+      throw error
+    }
+  }
+
+  return results
 }
 
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
