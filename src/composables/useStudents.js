@@ -1,8 +1,9 @@
 // /Users/rd/CaseManageVue/src/composables/useStudents.js
 
 import { ref } from 'vue'
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../firebase'
+import { performRateLimitedBatchOperation } from '../utils/validation'
 
 // Helper function to convert Firestore Maps to plain objects
 function convertFirestoreMaps(obj) {
@@ -121,19 +122,28 @@ export default function useStudents() {
     }
   }
 
-  async function deleteAllStudents() {
-    const studentSnap = await getDocs(collection(db, 'students'))
-    await Promise.all(studentSnap.docs.map(d => deleteDoc(doc(db, 'students', d.id))))
-    
-    // Clear Google Sheets if linked
+  const deleteAllStudents = async () => {
     try {
-      const sync = await getGoogleSheetsSync()
-      if (sync && sync.linkedSheetId.value) {
-        students.value = []
-        await sync.updateSheetData([])
-      }
+      const studentSnap = await getDocs(collection(db, 'students'))
+      const students = studentSnap.docs
+
+      await performRateLimitedBatchOperation(
+        students,
+        async (batch) => {
+          const batchOps = writeBatch(db)
+          batch.forEach(doc => {
+            batchOps.delete(doc.ref)
+          })
+          await batchOps.commit()
+        },
+        50,  // Process 50 documents per batch
+        2000 // Wait 2 seconds between batches
+      )
+
+      return { success: true }
     } catch (error) {
-      console.error('Failed to sync to Google Sheets:', error)
+      console.error('Error deleting all students:', error)
+      throw error
     }
   }
 

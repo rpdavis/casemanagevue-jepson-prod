@@ -129,8 +129,8 @@ export function useStudentForm(props, emit) {
       assessment: getDisplayValue(student, 'assessment') || '',
       flag1: student.app?.flags?.flag1 || student.flag1 || false,
       flag2: student.app?.flags?.flag2 || student.flag2 || false,
-      ataglancePdfUrl: student.app?.documents?.ataglancePdfUrl || student.ataglancePdfUrl || '',
-      bipPdfUrl: student.app?.documents?.bipPdfUrl || student.bipPdfUrl || '',
+      ataglancePdfUrl: student.app?.documents?.ataglancePdfUrl || student.ataglancePdfUrl || student.ataglance_pdf_url || '',
+      bipPdfUrl: student.app?.documents?.bipPdfUrl || student.bipPdfUrl || student.bip_pdf_url || '',
       bipFile: null,
       ataglanceFile: null,
       removeBipFile: false,
@@ -368,14 +368,16 @@ export function useStudentForm(props, emit) {
       console.log('Composed data:', { classServices, schedule })
       
       // Handle file uploads and removals
-      let bipPdfUrl = props.student.bipPdfUrl || null
-      let ataglancePdfUrl = props.student.ataglancePdfUrl || null
+      let bipPdfUrl = form.bipPdfUrl || null
+      let ataglancePdfUrl = form.ataglancePdfUrl || null
       
       // Handle BIP file
-      if (form.removeBipFile && props.student.bipPdfUrl) {
+      if (form.removeBipFile) {
         console.log('Removing BIP file...')
-        await deleteFile(props.student.bipPdfUrl)
-        bipPdfUrl = null
+        if (bipPdfUrl) {
+          await deleteFile(bipPdfUrl)
+          bipPdfUrl = null
+        }
       } else if (form.bipFile) {
         console.log('Uploading BIP file...')
         const studentId = props.mode === 'edit' && props.student.id ? props.student.id : 'temp'
@@ -384,10 +386,12 @@ export function useStudentForm(props, emit) {
       }
       
       // Handle At-A-Glance file
-      if (form.removeAtaglanceFile && props.student.ataglancePdfUrl) {
+      if (form.removeAtaglanceFile) {
         console.log('Removing At-A-Glance file...')
-        await deleteFile(props.student.ataglancePdfUrl)
-        ataglancePdfUrl = null
+        if (ataglancePdfUrl) {
+          await deleteFile(ataglancePdfUrl)
+          ataglancePdfUrl = null
+        }
       } else if (form.ataglanceFile) {
         console.log('Uploading At-A-Glance file...')
         const studentId = props.mode === 'edit' && props.student.id ? props.student.id : 'temp'
@@ -449,10 +453,10 @@ export function useStudentForm(props, emit) {
           flag2: form.flag2
         },
         
-        // Documents
+        // Documents - preserve URLs unless explicitly removed
         documents: {
-          ataglancePdfUrl: ataglancePdfUrl,
-          bipPdfUrl: bipPdfUrl
+          ataglancePdfUrl,
+          bipPdfUrl
         }
       }
       

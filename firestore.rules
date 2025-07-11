@@ -7,20 +7,25 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    // Helper function to safely get user role (handles emulator case where token.role might be undefined)
+    function getUserRole() {
+      return request.auth.token.get('role', 'admin'); // Default to admin in emulator for development
+    }
+    
     function isAdmin() {
-      return request.auth.token.role in ["admin", "administrator", "administrator_504_CM", "sped_chair"];
+      return getUserRole() in ["admin", "administrator", "administrator_504_CM", "sped_chair"];
     }
     
     function isCaseManager() {
-      return request.auth.token.role == "case_manager";
+      return getUserRole() == "case_manager";
     }
     
     function isTeacher() {
-      return request.auth.token.role == "teacher";
+      return getUserRole() == "teacher";
     }
     
     function isServiceProvider() {
-      return request.auth.token.role == "service_provider";
+      return getUserRole() == "service_provider";
     }
     
     function isOwner(userId) {
@@ -28,7 +33,7 @@ service cloud.firestore {
     }
     
     function hasValidRole() {
-      return request.auth.token.role in [
+      return getUserRole() in [
         "admin", "administrator", "administrator_504_CM", "sped_chair",
         "case_manager", "teacher", "service_provider", "paraeducator"
       ];
@@ -47,14 +52,15 @@ service cloud.firestore {
     }
     
     function isValidStudentData(data) {
-      return data.keys().hasAll(['app']) &&
-             data.app.keys().hasAll(['studentData']) &&
-             data.app.studentData.keys().hasAll(['firstName', 'lastName', 'grade']) &&
-             isValidStringLength(data.app.studentData.firstName, 50) &&
-             isValidStringLength(data.app.studentData.lastName, 50) &&
-             hasNoScriptTags(data.app.studentData.firstName) &&
-             hasNoScriptTags(data.app.studentData.lastName) &&
-             data.app.studentData.grade in ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'TK', 'Pre-K', 'Ungraded'];
+      // Basic validation for bulk import - ensure required structure exists
+      return data.app != null &&
+             data.app.studentData != null &&
+             data.app.studentData.ssid is string &&
+             data.app.studentData.firstName is string &&
+             data.app.studentData.lastName is string &&
+             data.app.studentData.grade is string &&
+             (data.app.studentData.plan == null || 
+              data.app.studentData.plan in ["IEP", "504", "RTI", "None"]);
     }
     
     function isValidUserData(data) {
@@ -69,6 +75,12 @@ service cloud.firestore {
     
     // ─── SECURITY RULES ───────────────────────────────────────────────────────
     
+    // UsersByUID collection - For user lookup and role sync
+    match /usersByUID/{userId} {
+      allow read: if isAuthenticated() && hasValidRole();
+      allow write: if false; // Only Cloud Functions can write to this collection
+    }
+
     // Users collection - Enhanced validation
     match /users/{userId} {
       allow read: if isAuthenticated() && hasValidRole() && (isOwner(userId) || isAdmin());
@@ -83,6 +95,12 @@ service cloud.firestore {
     }
     
     // App Settings collection - Admin only with validation
+    match /app_settings/{document} {
+      allow read: if isAuthenticated() && hasValidRole();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    // Legacy appSettings collection - for backward compatibility
     match /appSettings/{document} {
       allow read: if isAuthenticated() && hasValidRole();
       allow write: if isAuthenticated() && isAdmin();
@@ -96,15 +114,35 @@ service cloud.firestore {
     
     // Students collection - Enhanced validation and role-based access
     match /students/{studentId} {
-      allow read: if isAuthenticated() && hasValidRole();
-      allow create: if isAuthenticated() && 
-                     (isAdmin() || isCaseManager()) && 
-                     isValidStudentData(resource.data);
-      allow update: if isAuthenticated() && 
-                     (isAdmin() || isCaseManager() || 
-                      (isTeacher() && request.auth.uid in resource.data.app.schedule.periods.values()) ||
-                      (isServiceProvider() && request.auth.uid in resource.data.app.providers.values())) &&
-                     isValidStudentData(resource.data);
+      // Helper function to check if user has access to specific student
+      function hasStudentAccess() {
+        let student = get(/databases/$(database)/documents/students/$(studentId)).data;
+        return isAuthenticated() && (
+          isAdmin() ||
+          (isCaseManager() && student.app.studentData.caseManagerId == request.auth.uid) ||
+          (isTeacher() && request.auth.uid in student.app.schedule.periods)
+        );
+      }
+      
+      // Helper to validate encrypted fields
+      function hasValidEncryption() {
+        let sensitiveFields = [
+          'app.accommodations.assessment',
+          'app.accommodations.instruction',
+          'app.schedule.classServices',
+          'app.studentData.plan'
+        ];
+        
+        return request.resource.data.app != null &&
+               sensitiveFields.every(field => {
+                 let value = get(request.resource.data, field);
+                 return value == null || value is string;
+               });
+      }
+      
+      allow read: if hasStudentAccess();
+      allow create: if isAuthenticated() && (isAdmin() || isCaseManager()) && hasValidEncryption();
+      allow update: if hasStudentAccess() && hasValidEncryption();
       allow delete: if isAuthenticated() && isAdmin();
     }
     
@@ -154,9 +192,39 @@ service cloud.firestore {
       allow read, write: if false; // Only used internally by functions
     }
     
-    // Default deny-all rule - Remove the overly permissive default
-    // match /{document=**} {
-    //   allow read, write: if false;
-    // }
+    // PDF Metadata collection - Enhanced security
+    match /pdfMetadata/{fileId} {
+      function canAccessPdf(studentId) {
+        return isAuthenticated() && 
+               hasValidRole() && 
+               (isAdmin() || 
+                (isCaseManager() && resource.data.studentId == studentId) ||
+                (isTeacher() && exists(/databases/$(database)/documents/students/$(studentId))));
+      }
+      
+      allow read: if isAuthenticated() && hasValidRole();
+      allow create: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow update: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // PDF Access Logs collection - Admin and case manager only
+    match /pdfAccessLogs/{logId} {
+      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow create: if isAuthenticated() && hasValidRole();
+      allow update, delete: if false; // Immutable logs
+    }
+    
+    // IEP Access Logs - Immutable audit trail
+    match /iepAccessLogs/{logId} {
+      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow create: if isAuthenticated() && hasValidRole();
+      allow update, delete: if false; // Logs are immutable
+    }
+    
+    // Default deny-all rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

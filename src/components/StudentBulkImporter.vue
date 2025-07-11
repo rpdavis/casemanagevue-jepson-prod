@@ -683,14 +683,24 @@ const mapRowToStudentData = (row) => {
     // Handle teacher IDs in schedule
     if (appField.startsWith('app.schedule.periods.')) {
       const period = appField.split('.').pop()
-      studentData.app.schedule.periods[period] = mapTeacherToUserId(value)
+      const teacherId = value.trim()
+      if (teacherId) {
+        const mappedId = mapTeacherToUserId(teacherId)
+        console.log(`Mapping Period ${period} teacher:`, teacherId, '→', mappedId)
+        studentData.app.schedule.periods[period] = mappedId
+      }
       return
     }
 
     // Handle provider IDs
     if (appField.startsWith('app.providers.')) {
       const providerType = appField.split('.').pop()
-      studentData.app.providers[providerType] = mapProviderToUserId(value)
+      const providerId = value.trim()
+      if (providerId) {
+        const mappedId = mapProviderToUserId(providerId)
+        console.log(`Mapping ${providerType} provider:`, providerId, '→', mappedId)
+        studentData.app.providers[providerType] = mappedId
+      }
       return
     }
 
@@ -808,6 +818,19 @@ const isValidDate = (dateString) => {
   return !isNaN(date.getTime()) && dateString.match(/^\d{4}-\d{2}-\d{2}$/)
 }
 
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ''
+    
+    return date.toISOString().split('T')[0] // YYYY-MM-DD format
+  } catch (error) {
+    return ''
+  }
+}
+
 const getFullName = (studentData) => {
   const firstName = studentData.app?.studentData?.firstName || ''
   const lastName = studentData.app?.studentData?.lastName || ''
@@ -884,29 +907,89 @@ const importStudents = async () => {
 
 // Helper functions
 const mapTeacherToUserId = (teacherId) => {
-  // First try to find by exact ID match
+  if (!teacherId) return ""
+  
+  console.log('🔍 Mapping teacher ID:', teacherId)
+  console.log('📚 Available users:', Object.values(userMap.value).map(u => ({
+    name: u.name,
+    aeriesId: u.aeriesId,
+    id: u.id
+  })))
+  
+  // Try to find by Aeries ID
+  const userByAeriesId = Object.values(userMap.value).find(u => {
+    const match = String(u.aeriesId) === String(teacherId)
+    if (match) {
+      console.log('✅ Found exact Aeries ID match:', {
+        teacherId,
+        user: {
+          name: u.name,
+          aeriesId: u.aeriesId,
+          id: u.id
+        }
+      })
+    }
+    return match
+  })
+  
+  if (userByAeriesId) {
+    console.log('✅ Using Aeries ID match:', teacherId, '→', userByAeriesId.id, '(', userByAeriesId.name, ')')
+    return userByAeriesId.id
+  }
+
+  // Then try by exact Firebase ID match
   const userById = Object.values(userMap.value).find(u => u.id === teacherId)
-  if (userById) return userById.id
+  if (userById) {
+    console.log('✅ Using Firebase ID match:', teacherId, '→', userById.id, '(', userById.name, ')')
+    return userById.id
+  }
 
-  // Then try by Aeries ID
-  const userByAeriesId = Object.values(userMap.value).find(u => u.aeriesId === teacherId)
-  if (userByAeriesId) return userByAeriesId.id
-
-  // Return original ID if no match found
-  return teacherId || ""
+  // If no match found, log warning and return original ID
+  console.warn('❌ No user found for teacher ID:', teacherId)
+  return teacherId
 }
 
 const mapProviderToUserId = (providerId) => {
-  // First try to find by exact ID match
+  if (!providerId) return ""
+  
+  console.log('🔍 Mapping provider ID:', providerId)
+  console.log('📚 Available users:', Object.values(userMap.value).map(u => ({
+    name: u.name,
+    aeriesId: u.aeriesId,
+    id: u.id
+  })))
+  
+  // Try to find by Aeries ID
+  const userByAeriesId = Object.values(userMap.value).find(u => {
+    const match = String(u.aeriesId) === String(providerId)
+    if (match) {
+      console.log('✅ Found exact Aeries ID match:', {
+        providerId,
+        user: {
+          name: u.name,
+          aeriesId: u.aeriesId,
+          id: u.id
+        }
+      })
+    }
+    return match
+  })
+  
+  if (userByAeriesId) {
+    console.log('✅ Using Aeries ID match:', providerId, '→', userByAeriesId.id, '(', userByAeriesId.name, ')')
+    return userByAeriesId.id
+  }
+
+  // Then try by exact Firebase ID match
   const userById = Object.values(userMap.value).find(u => u.id === providerId)
-  if (userById) return userById.id
+  if (userById) {
+    console.log('✅ Using Firebase ID match:', providerId, '→', userById.id, '(', userById.name, ')')
+    return userById.id
+  }
 
-  // Then try by Aeries ID
-  const userByAeriesId = Object.values(userMap.value).find(u => u.aeriesId === providerId)
-  if (userByAeriesId) return userByAeriesId.id
-
-  // Return original ID if no match found
-  return providerId || ""
+  // If no match found, log warning and return original ID
+  console.warn('❌ No user found for provider ID:', providerId)
+  return providerId
 }
 
 // Helper function to validate student data structure
@@ -951,7 +1034,7 @@ const importSingleStudent = async (studentData) => {
           lastName: studentData.app.studentData.lastName || "",
           grade: studentData.app.studentData.grade || "",
           plan: studentData.app.studentData.plan || "",
-          caseManagerId: studentData.app.studentData.caseManagerId || "",
+          caseManagerId: mapCaseManagerToUserId(studentData.app.studentData.caseManagerId) || "",
           ssid: ssid
         },
         
@@ -962,34 +1045,34 @@ const importSingleStudent = async (studentData) => {
         },
         
         schedule: {
-          periods: {
-            1: studentData.app.schedule.periods[1] || "",
-            2: studentData.app.schedule.periods[2] || "",
-            3: studentData.app.schedule.periods[3] || "",
-            4: studentData.app.schedule.periods[4] || "",
-            5: studentData.app.schedule.periods[5] || "",
-            6: studentData.app.schedule.periods[6] || "",
-            SH: studentData.app.schedule.periods.SH || ""
+          periods: studentData.app.schedule.periods || {
+            1: "",
+            2: "",
+            3: "",
+            4: "",
+            5: "",
+            6: "",
+            SH: ""
           },
           classServices: Array.isArray(studentData.app.schedule.classServices) ? 
             studentData.app.schedule.classServices : []
         },
         
-        providers: {
-          speechId: studentData.app.providers.speechId || "",
-          otId: studentData.app.providers.otId || "",
-          ptId: studentData.app.providers.ptId || "",
-          atId: studentData.app.providers.atId || "",
-          audId: studentData.app.providers.audId || "",
-          bisId: studentData.app.providers.bisId || "",
-          dhhId: studentData.app.providers.dhhId || "",
-          hnId: studentData.app.providers.hnId || "",
-          mhId: studentData.app.providers.mhId || "",
-          omId: studentData.app.providers.omId || "",
-          scId: studentData.app.providers.scId || "",
-          swId: studentData.app.providers.swId || "",
-          trId: studentData.app.providers.trId || "",
-          viId: studentData.app.providers.viId || ""
+        providers: studentData.app.providers || {
+          speechId: "",
+          otId: "",
+          ptId: "",
+          atId: "",
+          audId: "",
+          bisId: "",
+          dhhId: "",
+          hnId: "",
+          mhId: "",
+          omId: "",
+          scId: "",
+          swId: "",
+          trId: "",
+          viId: ""
         },
         
         accommodations: {
@@ -1008,6 +1091,13 @@ const importSingleStudent = async (studentData) => {
         }
       }
     }
+
+    // Log the final data for debugging
+    console.log('Saving student data:', {
+      ssid: finalData.app.studentData.ssid,
+      schedule: finalData.app.schedule.periods,
+      providers: finalData.app.providers
+    })
 
     // Validate data structure before saving
     if (!isValidStudentData(finalData)) {

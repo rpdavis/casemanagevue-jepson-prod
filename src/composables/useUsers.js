@@ -14,11 +14,25 @@ export default function useUsers() {
     const allUsers = []
     userSnap.forEach(doc => {
       const data = doc.data()
-      userMap[doc.id] = data
+      userMap[doc.id] = { id: doc.id, ...data }  // Add id to the user data
       allUsers.push({ id: doc.id, ...data })
+      
+      // Debug log each user's Aeries ID
+      if (data.aeriesId) {
+        console.log('🔍 Loaded user with Aeries ID:', {
+          name: data.name,
+          email: data.email,
+          aeriesId: data.aeriesId,
+          id: doc.id
+        })
+      }
     })
     users.value = userMap
     userList.value = allUsers
+    
+    // Debug log all loaded users
+    console.log('📚 Total users loaded:', allUsers.length)
+    console.log('🔑 Users with Aeries IDs:', allUsers.filter(u => u.aeriesId).length)
   }
 
   const userRoles = computed(() => {

@@ -100,7 +100,7 @@ const routes = [
       requiresAuth: true,
       allowedRoles: ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'],
     },
-  },
+  }
   // ... add other routes here with their own meta fields
 ];
 

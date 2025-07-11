@@ -115,12 +115,15 @@
             </label>
           </div>
           <div class="service-providers-custom">
-            <label>Add Custom Service Provider (max 18 chars):</label>
-            <input type="text" v-model="customServiceProvider" maxlength="18" @keyup.enter="addCustomServiceProvider" />
-            <button type="button" @click="addCustomServiceProvider">Add</button>
+            <label>Add Custom Service Provider:</label>
+            <div class="custom-provider-inputs">
+              <input type="text" v-model="customServiceProviderName" placeholder="Full Name" maxlength="100" />
+              <input type="text" v-model="customServiceProviderAbbr" placeholder="Abbreviation" maxlength="10" />
+              <button type="button" @click="addCustomServiceProvider">Add</button>
+            </div>
             <div class="custom-chips">
-              <span v-for="(svc, idx) in settings.customServiceProviders" :key="svc" class="chip">
-                {{ svc }} <button type="button" @click="removeCustomServiceProvider(idx)">×</button>
+              <span v-for="(svc, idx) in settings.customServiceProviders" :key="idx" class="chip">
+                {{ svc.name }} ({{ svc.abbreviation }}) <button type="button" @click="removeCustomServiceProvider(idx)">×</button>
               </span>
             </div>
           </div>
@@ -243,6 +246,8 @@ const loading = ref(false)
 const saveLoading = ref(false)
 const status = ref('')
 const statusError = ref(false)
+const customServiceProviderName = ref('')
+const customServiceProviderAbbr = ref('')
 
 // Initialize default settings structure
 const settings = ref({
@@ -353,6 +358,10 @@ const validateSettings = () => {
 }
 
 // Computed properties
+const serviceProviders = computed(() => {
+  return DEFAULT_SERVICE_PROVIDERS
+})
+
 const allGradesSelected = computed(() => {
   return gradeOptions.every(grade => settings.value.grades.includes(grade.value))
 })
@@ -367,10 +376,31 @@ const toggleAllGrades = (event) => {
 
 // Service provider management
 const addCustomServiceProvider = () => {
+  if (!customServiceProviderName.value.trim() || !customServiceProviderAbbr.value.trim()) {
+    showStatus('Both name and abbreviation are required for custom service providers', true)
+    return
+  }
+  
+  // Check for duplicates
+  const isDuplicate = settings.value.customServiceProviders.some(provider => 
+    provider.abbreviation.toLowerCase() === customServiceProviderAbbr.value.toLowerCase()
+  )
+  
+  if (isDuplicate) {
+    showStatus('A service provider with this abbreviation already exists', true)
+    return
+  }
+  
   settings.value.customServiceProviders.push({
-    name: '',
-    abbreviation: ''
+    name: customServiceProviderName.value.trim(),
+    abbreviation: customServiceProviderAbbr.value.trim()
   })
+  
+  // Clear input fields
+  customServiceProviderName.value = ''
+  customServiceProviderAbbr.value = ''
+  
+  showStatus('Custom service provider added successfully')
 }
 
 const removeCustomServiceProvider = (index) => {
@@ -524,6 +554,21 @@ onMounted(() => {
 .class-services-custom, .related-services-custom {
   margin-top: 1rem;
 }
+.custom-provider-inputs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.custom-provider-inputs input {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
 .custom-chips {
   margin-top: 0.5rem;
   display: flex;

@@ -189,6 +189,15 @@ export default {
           await addUserWithRoleCallable({ name, email, role, provider, aeriesId })
           return { success: true, method: 'cloud-function' }
         } catch (cloudError) {
+          // Check if the error is because user already exists
+          if (cloudError.code === 'functions/already-exists' || 
+              cloudError.message?.includes('409') || 
+              cloudError.message?.includes('already exists')) {
+            console.log(`User ${email} already exists in Firebase Auth, skipping...`)
+            return { success: true, method: 'already-exists', message: 'User already exists' }
+          }
+          
+          // For other errors, try creating in Firestore only
           await createUserInFirestore(name, email, role, provider, aeriesId)
           return { success: true, method: 'firestore' }
         }
@@ -385,11 +394,14 @@ export default {
                 continue
               }
 
-              const errMsg = await addUserToFirestore(cleanName, cleanEmail, cleanRole, cleanProvider, cleanAeriesId)
-              if (errMsg.success) {
+              const result = await addUserToFirestore(cleanName, cleanEmail, cleanRole, cleanProvider, cleanAeriesId)
+              if (result.success) {
                 successCount++
+                if (result.method === 'already-exists') {
+                  console.log(`Line ${i + 1}: User ${cleanEmail} already exists, skipped`)
+                }
               } else {
-                errorMessages.push(`Line ${i + 1}: ${errMsg.error}`)
+                errorMessages.push(`Line ${i + 1}: ${result.error}`)
               }
             }
 
@@ -468,11 +480,14 @@ export default {
                 continue
               }
 
-              const errMsg = await addUserToFirestore(name, email, role, provider, aeriesId)
-              if (errMsg.success) {
+              const result = await addUserToFirestore(name, email, role, provider, aeriesId)
+              if (result.success) {
                 successCount++
+                if (result.method === 'already-exists') {
+                  console.log(`Row ${index + 1}: User ${email} already exists, skipped`)
+                }
               } else {
-                errorMessages.push(`Row ${index + 1}: ${errMsg.error}`)
+                errorMessages.push(`Row ${index + 1}: ${result.error}`)
               }
             }
 
@@ -543,5 +558,117 @@ export default {
 
 .example-format strong {
   color: #495057;
+}
+
+/* Button Styles - Force visibility */
+.add-user-wrapper button {
+  padding: 12px 24px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  min-width: 120px !important;
+  text-align: center !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  margin: 10px 5px !important;
+}
+
+.add-user-wrapper button[type="submit"] {
+  background: #007bff !important;
+  color: white !important;
+}
+
+.add-user-wrapper button[type="submit"]:hover:not(:disabled) {
+  background: #0056b3 !important;
+}
+
+.add-user-wrapper button:not([type="submit"]) {
+  background: #28a745 !important;
+  color: white !important;
+}
+
+.add-user-wrapper button:not([type="submit"]):hover:not(:disabled) {
+  background: #1e7e34 !important;
+}
+
+.add-user-wrapper button:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  background: #6c757d !important;
+}
+
+/* Form layout */
+.add-user-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.add-single, .add-bulk {
+  background: white;
+  border-radius: 8px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.form-grid input, .form-grid select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* File upload section */
+.add-bulk > div {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.add-bulk input[type="file"] {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  flex: 1;
+}
+
+/* Status messages */
+.status-msg {
+  padding: 15px;
+  border-radius: 6px;
+  margin-top: 20px;
+  text-align: center;
+}
+
+.status-msg:not(.error) {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-msg.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 </style>

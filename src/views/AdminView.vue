@@ -79,6 +79,11 @@
         <AdminStudents />
       </div>
 
+      <!-- Add Students Tab -->
+      <div v-if="activeTab === 'addStudents'" class="admin-section">
+        <StudentBulkImporter @close="handleBulkImporterClose" @imported="handleStudentsImported" />
+      </div>
+
       <!-- Permissions Tab -->
       <div v-if="activeTab === 'permissions'" class="admin-section">
         <AdminPermissions />
@@ -145,6 +150,7 @@ import UserAddForm from '../components/UserAddForm.vue'
 import UserTable from '../components/UserTable.vue'
 import PermissionsMatrix from '../components/PermissionsMatrix.vue'
 import AdminStudents from './AdminStudents.vue'
+import StudentBulkImporter from '../components/StudentBulkImporter.vue'
 
 import AdminPermissions from './AdminPermissions.vue'
 import SeisImport from '../components/SeisImport.vue'
@@ -168,6 +174,7 @@ export default {
     UserTable,
     PermissionsMatrix,
     AdminStudents,
+    StudentBulkImporter,
 
     AdminPermissions,
     SeisImport,
@@ -212,6 +219,7 @@ export default {
       { key: 'usersAdd', label: 'Add Users', category: 'users-students' },
       { key: 'usersEdit', label: 'Manage Users', category: 'users-students' },
       { key: 'students', label: 'Students', category: 'users-students' },
+      { key: 'addStudents', label: 'Add Students', category: 'users-students' },
       { key: 'aide-assignment', label: 'Aide Assignment', category: 'aide-management' },
       { key: 'aide-schedule', label: 'Aide Schedule', category: 'aide-management' },
       { key: 'time-table', label: 'Time Table', category: 'aide-management' },
@@ -253,19 +261,36 @@ export default {
       setActiveCategory(categoryKey)
     }
 
-          return {
-        activeTab,
-        activeCategory,
-        tabs,
-        students,
-        userMap,
-        getTabsForCategory,
-        setActiveCategory,
-        handleTabChange,
-        goToStudents,
-        goToDashboard,
-        handleGoToCategory
+    const handleBulkImporterClose = () => {
+      // Switch back to students tab
+      activeTab.value = 'students'
+    }
+
+    const handleStudentsImported = async (result) => {
+      console.log('Students imported:', result)
+      // Refresh students data
+      try {
+        await fetchStudents()
+      } catch (error) {
+        console.error('Failed to refresh students after import:', error)
       }
+    }
+
+    return {
+      activeTab,
+      activeCategory,
+      tabs,
+      students,
+      userMap,
+      getTabsForCategory,
+      setActiveCategory,
+      handleTabChange,
+      goToStudents,
+      goToDashboard,
+      handleGoToCategory,
+      handleBulkImporterClose,
+      handleStudentsImported
+    }
   }
 }
 </script>

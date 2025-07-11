@@ -340,10 +340,9 @@ export default {
 
     const getProviderLabel = (abbr) => {
       if (!abbr) return ''
-      const allProviders = [
-        ...(appSettings.value?.serviceProviders || []),
-        ...(appSettings.value?.customServiceProviders || [])
-      ]
+      const serviceProviders = appSettings.value?.serviceProviders || []
+      const customServiceProviders = appSettings.value?.customServiceProviders || []
+      const allProviders = [...serviceProviders, ...customServiceProviders]
       const defaultList = [
         { name: 'Speech-Language Therapy', abbreviation: 'SLP' },
         { name: 'Occupational Therapy', abbreviation: 'OT' },

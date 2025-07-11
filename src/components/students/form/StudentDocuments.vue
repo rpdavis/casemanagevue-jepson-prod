@@ -12,11 +12,11 @@
           @change="onFileChange($event, 'bipFile')" 
         />
         <span 
-          v-if="mode === 'edit' && student.bipPdfUrl && !form.removeBipFile"
+          v-if="form.bipPdfUrl && !form.removeBipFile"
           class="current-file"
         >
           Current: 
-          <a :href="student.bipPdfUrl" target="_blank">View BIP</a>
+          <a :href="form.bipPdfUrl" target="_blank">View BIP</a>
           <button 
             type="button" 
             @click="removeBipFile" 
@@ -30,6 +30,13 @@
           class="removed-file"
         >
           BIP file will be removed
+          <button 
+            type="button" 
+            @click="form.removeBipFile = false" 
+            class="btn-undo"
+          >
+            ↩️ Undo
+          </button>
         </span>
       </label>
     </div>
@@ -44,11 +51,11 @@
           @change="onFileChange($event, 'ataglanceFile')" 
         />
         <span 
-          v-if="mode === 'edit' && student.ataglancePdfUrl && !form.removeAtaglanceFile"
+          v-if="form.ataglancePdfUrl && !form.removeAtaglanceFile"
           class="current-file"
         >
           Current: 
-          <a :href="student.ataglancePdfUrl" target="_blank">View At-A-Glance</a>
+          <a :href="form.ataglancePdfUrl" target="_blank">View At-A-Glance</a>
           <button 
             type="button" 
             @click="removeAtaglanceFile" 
@@ -62,6 +69,13 @@
           class="removed-file"
         >
           At-A-Glance file will be removed
+          <button 
+            type="button" 
+            @click="form.removeAtaglanceFile = false" 
+            class="btn-undo"
+          >
+            ↩️ Undo
+          </button>
         </span>
       </label>
     </div>
@@ -78,44 +92,87 @@ const props = defineProps({
   removeBipFile: { type: Function, required: true },
   removeAtaglanceFile: { type: Function, required: true }
 })
-
-// No local state needed - all functions passed as props
 </script>
 
 <style scoped>
 .document-section {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .document-section label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .current-file {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+}
+
+.current-file a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.current-file a:hover {
+  text-decoration: underline;
 }
 
 .btn-remove {
-  background: #f44336;
-  color: white;
+  background: var(--error-color);
+  color: var(--text-inverse);
   border: none;
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-base);
 }
 
 .btn-remove:hover {
-  background: #d32f2f;
+  background: var(--error-hover);
 }
 
 .removed-file {
-  color: #f44336;
+  color: var(--error-color);
   font-style: italic;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.btn-undo {
+  background: var(--bg-tertiary);
+  border: var(--border-width) solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-base);
+}
+
+.btn-undo:hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+input[type="file"] {
+  padding: var(--spacing-sm);
+  border: var(--border-width) dashed var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+}
+
+input[type="file"]:hover {
+  border-color: var(--border-dark);
+  background: var(--bg-muted);
 }
 </style> 

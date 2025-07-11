@@ -1,19 +1,33 @@
 {
   "name": "CaseManageVue",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "vite --mode development",
+    "dev": "vite --port 5173 --mode development",
     "build": "vite build --mode production",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "emulators": "firebase emulators:start",
+    "emulators:functions": "firebase emulators:start --only functions",
+    "dev:emulators": "firebase emulators:start --only auth,firestore,storage,functions",
+    "deploy:dev": "firebase use development && npm run build:dev && firebase deploy",
+    "deploy:prod": "firebase use production && npm run build && firebase deploy",
+    "deploy:functions:dev": "firebase use development && firebase deploy --only functions",
+    "deploy:functions:prod": "firebase use production && firebase deploy --only functions",
+    "deploy:hosting:dev": "firebase use development && npm run build:dev && firebase deploy --only hosting",
+    "deploy:hosting:prod": "firebase use production && npm run build && firebase deploy --only hosting",
+    "generate:bulk-data": "node generate_bulk_data.js",
+    "generate:bulk-csv": "node generate_bulk_csv.js"
   },
   "dependencies": {
     "@vueuse/core": "^10.9.0",
+    "crypto-js": "^4.2.0",
     "firebase": "^10.14.1",
     "googleapis": "^150.0.1",
     "papaparse": "^5.5.3",
     "pinia": "^2.1.0",
+    "uuid": "^9.0.1",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0",
     "vuedraggable": "^4.1.0",
@@ -22,6 +36,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
+    "firebase-admin": "^13.4.0",
     "vite": "^5.0.0"
   }
 }

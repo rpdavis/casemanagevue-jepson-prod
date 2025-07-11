@@ -121,15 +121,27 @@ const getGoogleAuth = () => {
 };
 
 // ─── USER MANAGEMENT FUNCTIONS ────────────────────────────────────────────────
-exports.syncUserClaims = onDocumentWritten("users/{uid}", async (event) => {
+exports.syncUserClaims = onDocumentWritten({
+  document: "users/{uid}",
+  region: "us-central1"
+}, async (event) => {
   const uid = event.params.uid;
   const afterData = event.data?.after?.data();
 
   try {
+    // If document was deleted, only remove claims (don't delete the user)
     if (!event.data?.after?.exists) {
-      const userRec = await adminAuth.getUser(uid);
-      await adminAuth.setCustomUserClaims(userRec.uid, null);
-      console.log(`✅ Removed claims for UID: ${uid}`);
+      try {
+        const userRec = await adminAuth.getUser(uid);
+        await adminAuth.setCustomUserClaims(userRec.uid, null);
+        console.log(`✅ Removed claims for UID: ${uid}`);
+      } catch (error) {
+        if (error.code === 'auth/user-not-found') {
+          console.log(`User ${uid} not found in Auth`);
+        } else {
+          console.error(`❌ Error removing claims: ${uid}`, error);
+        }
+      }
       return;
     }
 
@@ -159,7 +171,10 @@ exports.syncUserClaims = onDocumentWritten("users/{uid}", async (event) => {
   }
 });
 
-exports.addUserWithRole = onCall(async (request) => {
+exports.addUserWithRole = onCall({
+  region: "us-central1",
+  maxInstances: 10
+}, async (request) => {
   requireRole(request, ["admin"]);
 
   const { name, email, role, provider, aeriesId } = request.data;
@@ -227,8 +242,121 @@ exports.addUserWithRole = onCall(async (request) => {
   }
 });
 
+// Add after syncUserClaims function
+exports.deleteUserAuth = onCall({
+  region: "us-central1"
+}, async (request) => {
+  requireRole(request, ["admin"]);
+
+  const { uid } = request.data;
+  validateRequired(uid, "User ID");
+
+  try {
+    // Delete from Firebase Auth
+    await adminAuth.deleteUser(uid);
+    console.log(`✅ Deleted user from Firebase Auth: ${uid}`);
+    
+    // Also delete from usersByUID collection if it exists
+    try {
+      await db.collection("usersByUID").doc(uid).delete();
+    } catch (error) {
+      console.log(`Failed to delete from usersByUID: ${error.message}`);
+    }
+    
+    return { 
+      success: true,
+      message: `User ${uid} deleted from Firebase Auth`
+    };
+  } catch (error) {
+    if (error.code === 'auth/user-not-found') {
+      return {
+        success: true,
+        message: `User ${uid} not found in Firebase Auth`
+      };
+    }
+    throw new HttpsError("internal", `Failed to delete user: ${error.message}`);
+  }
+});
+
+// Add after deleteUserAuth function
+exports.deleteAllUsers = onCall({
+  region: "us-central1"
+}, async (request) => {
+  requireRole(request, ["admin"]);
+
+  try {
+    // Get all users from Firebase Auth
+    const listUsersResult = await adminAuth.listUsers();
+    
+    // Delete each user from Auth and usersByUID
+    const deletePromises = listUsersResult.users.map(async userRecord => {
+      try {
+        await adminAuth.deleteUser(userRecord.uid);
+        console.log(`✅ Deleted user from Auth: ${userRecord.uid}`);
+        
+        // Also delete from usersByUID if it exists
+        try {
+          await db.collection("usersByUID").doc(userRecord.uid).delete();
+        } catch (error) {
+          console.log(`Failed to delete from usersByUID: ${userRecord.uid} - ${error.message}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to delete user ${userRecord.uid}:`, error);
+      }
+    });
+    
+    await Promise.all(deletePromises);
+    
+    return { 
+      success: true,
+      message: `Deleted ${listUsersResult.users.length} users from Firebase Auth`
+    };
+  } catch (error) {
+    throw new HttpsError("internal", `Failed to delete users: ${error.message}`);
+  }
+});
+
+// Add Firestore trigger to delete Auth user when Firestore user is deleted
+exports.cleanupDeletedUser = onDocumentWritten({
+  document: "users/{userId}",
+  region: "us-central1"
+}, async (event) => {
+  // Only run on delete
+  if (event.data.after?.exists) return;
+
+  const userId = event.params.userId;
+  console.log(`🗑️ User document deleted from Firestore, cleaning up: ${userId}`);
+  
+  try {
+    // Delete from Auth
+    await adminAuth.deleteUser(userId);
+    console.log(`✅ Deleted user from Auth after Firestore delete: ${userId}`);
+    
+    // Delete from usersByUID if it exists
+    try {
+      await db.collection("usersByUID").doc(userId).delete();
+      console.log(`✅ Deleted user from usersByUID: ${userId}`);
+    } catch (error) {
+      if (error.code === 'not-found') {
+        console.log(`User ${userId} not found in usersByUID`);
+      } else {
+        console.error(`❌ Failed to delete from usersByUID: ${error.message}`);
+      }
+    }
+  } catch (error) {
+    if (error.code === 'auth/user-not-found') {
+      console.log(`User ${userId} not found in Auth - already deleted`);
+    } else {
+      console.error(`❌ Failed to delete user from Auth: ${userId}`, error);
+    }
+  }
+});
+
 // ─── AERIES API FUNCTIONS ────────────────────────────────────────────────────
-exports.getAeriesToken = onCall(async (request) => {
+exports.getAeriesToken = onCall({
+  region: "us-central1",
+  maxInstances: 10
+}, async (request) => {
   requireRole(request, ADMIN_ROLES);
 
   const { baseUrl, clientId, clientSecret } = request.data;
@@ -260,7 +388,10 @@ exports.getAeriesToken = onCall(async (request) => {
 });
 
 // ─── TEACHER FEEDBACK FUNCTIONS ──────────────────────────────────────────────
-exports.sendTeacherFeedbackForm = onCall(async (request) => {
+exports.sendTeacherFeedbackForm = onCall({
+  region: "us-central1",
+  maxInstances: 10
+}, async (request) => {
   requireRole(request, ["case_manager"]);
 
   const { formUrl, studentId, teacherEmails, formTitle, customMessage } = request.data;
@@ -346,7 +477,10 @@ Case Manager`.trim();
 });
 
 // ─── MANUAL SYNC FUNCTION ────────────────────────────────────────────────────
-exports.syncFormResponses = onCall(async (request) => {
+exports.syncFormResponses = onCall({
+  region: "us-central1",
+  maxInstances: 10
+}, async (request) => {
   requireRole(request, ["case_manager", "admin", "sped_chair"]);
   
   const { spreadsheetId, sheetName = "Form Responses 1" } = request.data;
@@ -406,7 +540,10 @@ exports.syncFormResponses = onCall(async (request) => {
 });
 
 // ─── SCHEDULED FUNCTIONS ─────────────────────────────────────────────────────
-exports.autoSyncFormResponses = onSchedule("every 30 minutes", async (event) => {
+exports.autoSyncFormResponses = onSchedule({
+  schedule: "every 30 minutes",
+  region: "us-central1"
+}, async (event) => {
   try {
     const formsSnapshot = await db.collection("feedbackForms")
       .where("active", "==", true)
@@ -464,7 +601,10 @@ exports.autoSyncFormResponses = onSchedule("every 30 minutes", async (event) => 
 });
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
-exports.getStudentFeedback = onCall(async (request) => {
+exports.getStudentFeedback = onCall({
+  region: "us-central1",
+  maxInstances: 10
+}, async (request) => {
   requireAuth(request);
   
   const { studentId } = request.data;

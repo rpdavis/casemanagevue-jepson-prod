@@ -28,7 +28,6 @@ const handleGoogleLogin = async () => {
 
     if (!snap.exists()) {
       // First-time sign-in, create a new user document with 'admin' role
-      // as per the original login.html script.
       await setDoc(userRef, {
         name: user.displayName || '',
         email: user.email,
@@ -41,7 +40,6 @@ const handleGoogleLogin = async () => {
 
   } catch (err) {
     console.error('Login failed:', err);
-    // You could show a user-friendly error message here
     alert('Login failed: ' + err.message);
   }
 };

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaseManageVue - Environment Launcher</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .environments {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .env-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .env-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .env-card.dev {
+            border-color: #28a745;
+        }
+        
+        .env-card.prod {
+            border-color: #dc3545;
+        }
+        
+        .env-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .env-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .env-description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .firebase-project {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        
+        .port-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .port-link {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+        
+        .port-link:hover {
+            background: #0056b3;
+        }
+        
+        .port-link.prod {
+            background: #dc3545;
+        }
+        
+        .port-link.prod:hover {
+            background: #c82333;
+        }
+        
+        .status {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .commands {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .commands h3 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .command-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .command {
+            background: #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        
+        .command-title {
+            color: #28a745;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .refresh-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 20px auto;
+            display: block;
+            transition: background 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6268;
+        }
+        
+        .status-checker {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .status-checker a {
+            color: #856404;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .status-checker a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .environments {
+                grid-template-columns: 1fr;
+            }
+            
+            .command-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CaseManageVue</h1>
+        <p class="subtitle">Environment Launcher & Quick Access</p>
+        
+        <div class="environments">
+            <div class="env-card dev">
+                <div class="env-icon">🔧</div>
+                <div class="env-title">Development</div>
+                <div class="firebase-project">📊 Firebase: casemanagevue-dev</div>
+                <div class="env-description">
+                    Debug features enabled<br>
+                    Firebase emulators<br>
+                    Console logging<br>
+                    Separate development data
+                </div>
+                <div class="port-links">
+                    <a href="http://localhost:5173" class="port-link" target="_blank">:5173</a>
+                    <a href="http://localhost:5174" class="port-link" target="_blank">:5174</a>
+                    <a href="http://localhost:5175" class="port-link" target="_blank">:5175</a>
+                    <a href="http://localhost:5176" class="port-link" target="_blank">:5176</a>
+                    <a href="http://localhost:5177" class="port-link" target="_blank">:5177</a>
+                    <a href="http://localhost:5178" class="port-link" target="_blank">:5178</a>
+                    <a href="http://localhost:5179" class="port-link" target="_blank">:5179</a>
+                </div>
+                <div class="status">Check multiple ports - Vite auto-selects available ones</div>
+            </div>
+            
+            <div class="env-card prod">
+                <div class="env-icon">🏭</div>
+                <div class="env-title">Production</div>
+                <div class="firebase-project">🔥 Firebase: casemangervue</div>
+                <div class="env-description">
+                    Optimized build<br>
+                    No debug features<br>
+                    Production Firebase<br>
+                    Live user data
+                </div>
+                <div class="port-links">
+                    <a href="http://localhost:4173" class="port-link prod" target="_blank">:4173</a>
+                </div>
+                <div class="status">Production preview server</div>
+            </div>
+        </div>
+        
+        <div class="status-checker">
+            <p>🔍 <strong>Environment Status Checker</strong></p>
+            <p>Need to verify which Firebase project each environment is connecting to?</p>
+            <a href="environment-status.html" target="_blank">Open Environment Status Checker</a>
+        </div>
+        
+        <div class="commands">
+            <h3>🛠️ Quick Commands</h3>
+            <div class="command-grid">
+                <div class="command">
+                    <div class="command-title"># Start Development</div>
+                    firebase use development && npm run dev
+                </div>
+                <div class="command">
+                    <div class="command-title"># Start Production</div>
+                    firebase use production && npm run build && npm run preview
+                </div>
+                <div class="command">
+                    <div class="command-title"># Deploy to Development</div>
+                    npm run deploy:dev
+                </div>
+                <div class="command">
+                    <div class="command-title"># Deploy to Production</div>
+                    npm run deploy:prod
+                </div>
+                <div class="command">
+                    <div class="command-title"># Check Firebase Project</div>
+                    firebase use
+                </div>
+                <div class="command">
+                    <div class="command-title"># Environment Status</div>
+                    ./start-environments.sh status
+                </div>
+            </div>
+        </div>
+        
+        <button class="refresh-btn" onclick="window.location.reload()">
+            🔄 Refresh Page
+        </button>
+    </div>
+    
+    <script>
+        // Auto-refresh every 30 seconds to check for new ports
+        setTimeout(() => {
+            window.location.reload();
+        }, 30000);
+        
+        // Check if links are working
+        document.querySelectorAll('.port-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const port = this.textContent;
+                console.log(`Attempting to open ${port}`);
+            });
+        });
+    </script>
+</body>
+</html> 

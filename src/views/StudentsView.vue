@@ -406,6 +406,7 @@ const {
   border-radius: 6px;
   overflow: hidden;
   background: #f8f9fa;
+  flex-direction: row;
 }
 
 .radio-btn {

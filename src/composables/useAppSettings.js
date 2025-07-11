@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS = {
   serviceProviders: ['SLP', 'OT', 'PT', 'SC', 'MH', 'TR', 'AUD', 'VI', 'AT', 'DHH', 'O&M', 'BIS', 'HN', 'SW'],
   customServiceProviders: [],
   numPeriods: 7,
-  periodLabels: ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
+  periodLabels: ['1', '2', '3', '4', '5', '6', 'sh']
 }
 
 // Global singleton state
