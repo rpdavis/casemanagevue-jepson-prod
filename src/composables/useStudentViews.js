@@ -25,14 +25,16 @@ export function useStudentViews(studentData, filterData) {
     }
   )
 
+  // Get students for testing view (only those with separate setting)
+  const testingViewStudents = computed(() => {
+    return filteredStudents.value.filter(student => {
+      // Check both nested and legacy structures for flag2 (separate setting)
+      return student.app?.flags?.flag2 || student.flag2 || false
+    })
+  })
+
   // Group students by class (period)
   const studentsByClass = computed(() => {
-    console.log('Computing studentsByClass from filteredStudents:', filteredStudents.value.length)
-    console.log('Filtered students:', filteredStudents.value.map(s => ({ 
-      id: s.id, 
-      name: getDisplayValue(s, 'firstName') + ' ' + getDisplayValue(s, 'lastName') 
-    })))
-    
     const groups = {}
     
     // Check if we're filtering by paraeducator
@@ -81,13 +83,6 @@ export function useStudentViews(studentData, filterData) {
       if (groups[period].length === 0) {
         delete groups[period]
       }
-    })
-    
-    console.log('studentsByClass result:', Object.keys(groups).map(period => `${period}: ${groups[period].length} students`))
-    Object.entries(groups).forEach(([period, students]) => {
-      console.log(`Period ${period} students:`, students.map(s => 
-        getDisplayValue(s, 'firstName') + ' ' + getDisplayValue(s, 'lastName')
-      ))
     })
     
     return groups
@@ -143,6 +138,7 @@ export function useStudentViews(studentData, filterData) {
     studentsByClass,
     directAssignmentStudents,
     studentsByCaseManager,
+    testingViewStudents,
     
     // Methods
     setViewMode

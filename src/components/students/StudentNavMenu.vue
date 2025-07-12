@@ -40,7 +40,7 @@
             <button @click="handleAction('export')" class="nav-btn">
               <span>📊</span> Export
             </button>
-            <button @click="handleAction('print')" class="nav-btn">
+            <button @click="handleAction('print')" class="nav-btn print-btn">
               <span>🖨️</span> Print
             </button>
           </div>
@@ -334,6 +334,15 @@ function handleAction(action) {
   border-color: #c82333;
 }
 
+.print-btn {
+  background: #28a745 !important;
+  color: white !important;
+  border-color: #28a745 !important;
+}
+
+.print-btn:hover {
+  background: #218838 !important;
+}
 
 
 /* User Info */

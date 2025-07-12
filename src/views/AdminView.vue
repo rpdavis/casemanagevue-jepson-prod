@@ -40,9 +40,14 @@
           System Configuration
         </button>
       </div>
-      <button @click="goToStudents" class="return-btn">
-        <span>←</span> Return to Students
-      </button>
+      <div class="admin-actions">
+        <button v-if="canShowDebugMenu" @click="toggleDebugMenu" class="debug-btn">
+          🔧 {{ isDebugMenuVisible ? 'Hide' : 'Show' }} Debug
+        </button>
+        <button @click="goToStudents" class="return-btn">
+          <span>←</span> Return to Students
+        </button>
+      </div>
     </div>
     
     <!-- Sub Tab Bar - Only show when a category is selected -->
@@ -135,6 +140,22 @@
       <div v-if="activeTab === 'backup-restore'" class="admin-section">
         <AdminBackupRestore />
       </div>
+
+      <!-- IEP Data Security Tab -->
+      <div v-if="activeTab === 'iep-security'" class="admin-section">
+        <h2>IEP Data Security</h2>
+        <DebugEncryption :selected-student="currentStudent" />
+      </div>
+
+      <!-- Security Controls Tab -->
+      <div v-if="activeTab === 'security'" class="admin-section">
+        <SecurityControlCenter :selected-student="currentStudent" />
+      </div>
+
+      <!-- System Health Tab -->
+      <div v-if="activeTab === 'system-health'" class="admin-section">
+        <SystemHealthCheck />
+      </div>
     </div>
   </div>
 </template>
@@ -165,6 +186,10 @@ import AdminBackupRestore from './AdminBackupRestore.vue'
 import AdminTeacherFeedback from './AdminTeacherFeedback.vue'
 import TestingLinks from '../components/TestingLinks.vue'
 import AdminDashboard from '../components/AdminDashboard.vue'
+import { useDebugMenu } from '@/composables/useDebugMenu'
+import DebugEncryption from '@/components/DebugEncryption.vue'
+import SecurityControlCenter from '@/components/SecurityControlCenter.vue'
+import SystemHealthCheck from '@/components/SystemHealthCheck.vue'
 
 export default {
   name: 'AdminView',
@@ -187,7 +212,10 @@ export default {
     AdminBackupRestore,
     AdminTeacherFeedback,
     TestingLinks,
-    AdminDashboard
+    AdminDashboard,
+    DebugEncryption,
+    SecurityControlCenter,
+    SystemHealthCheck
   },
   setup() {
     const router = useRouter()
@@ -229,7 +257,10 @@ export default {
       { key: 'teacher-feedback', label: 'Teacher Feedback Forms', category: 'data-integration' },
       { key: 'backup-restore', label: 'Backup & Restore', category: 'data-integration' },
       { key: 'permissions', label: 'Permissions', category: 'system-config' },
-      { key: 'settings', label: 'App Settings', category: 'system-config' }
+      { key: 'settings', label: 'App Settings', category: 'system-config' },
+      { key: 'iep-security', label: 'IEP Security', category: 'system-config' },
+      { key: 'security', label: 'Security Controls', category: 'system-config' },
+      { key: 'system-health', label: 'System Health', category: 'monitoring' }
     ]
 
     const getTabsForCategory = (categoryKey) => {
@@ -276,6 +307,8 @@ export default {
       }
     }
 
+    const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu } = useDebugMenu()
+
     return {
       activeTab,
       activeCategory,
@@ -289,7 +322,10 @@ export default {
       goToDashboard,
       handleGoToCategory,
       handleBulkImporterClose,
-      handleStudentsImported
+      handleStudentsImported,
+      isDebugMenuVisible,
+      canShowDebugMenu,
+      toggleDebugMenu
     }
   }
 }
@@ -394,5 +430,43 @@ export default {
 .placeholder-content li {
   margin-bottom: 0.5rem;
   color: #6c757d;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.debug-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-base);
+}
+
+.debug-btn:hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+.admin-section {
+  margin: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.admin-section h2 {
+  margin-bottom: 20px;
+  color: #2c3e50;
 }
 </style>

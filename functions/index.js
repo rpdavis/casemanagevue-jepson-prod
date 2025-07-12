@@ -627,3 +627,17 @@ exports.getStudentFeedback = onCall({
     throw new HttpsError("internal", "Failed to retrieve feedback");
   }
 });
+
+exports.healthCheck = functions.https.onCall(async (data, context) => {
+  try {
+    // Simple response to verify function is working
+    return {
+      status: 'ok',
+      timestamp: admin.firestore.Timestamp.now(),
+      message: 'Cloud Functions are operational'
+    };
+  } catch (error) {
+    console.error('Health check failed:', error);
+    throw new functions.https.HttpsError('internal', 'Health check failed');
+  }
+});

@@ -109,59 +109,88 @@
 }
 
 /* List Components in Tables */
-.schedule-list {
-  /* Container for schedule items */
-}
-
 .bullet-list {
-  list-style: disc !important;
-  background: linear-gradient(to top, #f4f6f9 100%, transparent);
-}
-
-.bullet-list ul {
-  list-style: disc !important;
-  padding-left: 1.2rem;
+  list-style: none !important;
+  padding: var(--spacing-xs) !important;
   margin: 0;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-md);
 }
 
 .bullet-list li {
-  line-height: 1.3;
-  margin-bottom: 0.2rem;
+  position: relative;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--primary-color);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  transition: all var(--transition-base);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Remove bullets from services and schedule lists in table */
-.students-table td .bullet-list ul,
-.students-table td .schedule-list ul {
-  list-style: none;
-  padding-left: 0;
+.bullet-list li:last-child {
+  margin-bottom: 0;
+}
+
+.bullet-list li:hover {
+  background: var(--bg-secondary);
+  transform: translateX(2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Schedule List - Clean Style */
+.schedule-list,
+.schedule-list ul {
+  list-style: none !important;
+  padding: 0 !important;
   margin: 0;
 }
 
-.students-table td .bullet-list li,
+.schedule-list li {
+  font-size: var(--font-size-sm);
+  padding: calc(var(--spacing-xs) / 2) 0;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* Remove any inherited bullet points or padding */
+.students-table td .schedule-list,
+.students-table td .schedule-list ul {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+  margin: 0;
+}
+
 .students-table td .schedule-list li {
-  position: relative;
   padding-left: 0;
   margin-left: 0;
 }
 
 /* Service Pills */
 .service-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   background-color: var(--service-pill-bg);
   color: var(--service-pill-text);
-  padding: 0.1rem 0.3rem;
-  margin: 0.1rem 0.3rem 0.1rem 0;
-  border-radius: var(--border-radius-xl);
-  font-size: 0.8rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin: var(--spacing-xs) var(--spacing-xs) var(--spacing-xs) 0;
+  border-radius: var(--border-radius-pill);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   border: var(--border-width) solid var(--service-pill-border);
   transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .service-pill:hover {
-  background-color: #d0e3fa;
-  color: #1251a3;
+  background-color: var(--primary-light);
+  color: var(--primary-color);
   border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
 /* Badges */
@@ -171,36 +200,59 @@
   font-size: 0.85rem;
   padding: 0.2rem 0.6rem;
   border-radius: var(--border-radius-sm);
-  background: #f5f5f5;
   color: var(--text-primary);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-  border-left-width: 8px;
+  transition: var(--transition-base);
+}
+
+/* Only apply background and border styling to urgent dates */
+.badge.flag-critical,
+.badge.flag-high,
+.badge.flag-medium {
+  background: var(--bg-tertiary);
+  border-left-width: 4px;
   border-left-style: solid;
-  margin: 0.1rem;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* Badge Types */
-.badge-meeting {
-  border-left-color: #43a047;
-  background-color: #e2efff;
-}
-
-.badge-meeting.date-set {
-  background: #eef7ee;
-}
-
-.badge-direct {
-  background-color: var(--badge-critical);
+/* Critical dates (overdue or very soon) */
+.badge.flag-critical {
+  background: var(--badge-critical);
   color: var(--badge-critical-text);
   border-left-color: var(--badge-critical-border);
 }
 
-.badge-reeval {
-  border-left-color: #35d2e5;
+/* High urgency dates (within a week) */
+.badge.flag-high {
+  background: var(--badge-high);
+  color: var(--badge-high-text);
+  border-left-color: var(--badge-high-border);
 }
 
-.badge-review {
-  border-left-color: #fb8c00;
+/* Medium urgency dates (within two weeks) */
+.badge.flag-medium {
+  background: var(--badge-medium);
+  color: var(--badge-medium-text);
+  border-left-color: var(--badge-medium-border);
+}
+
+/* Less urgent dates - more subtle styling */
+.badge.flag-mid,
+.badge.flag-low,
+.badge.flag-prep,
+.badge.flag-prep-reeval {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+/* Meeting badge specific styles */
+.badge-meeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.badge-meeting.date-set {
+  color: var(--text-primary);
 }
 
 /* Flag Classes */
@@ -248,16 +300,19 @@
 
 /* Flag Overlays */
 .flag-overlay {
-  margin-top: 0.5rem;
-}
-
-.flag-overlay > div {
-  display: inline-block;
-  padding: 0.2rem 0.5rem;
-  margin: 0.1rem;
-  border-radius: var(--border-radius-sm);
-  font-size: 0.8rem;
-  font-weight: var(--font-weight-semibold);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--warning-light);
+  color: var(--text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-top-left-radius: var(--border-radius-sm);
+  border-top-right-radius: var(--border-radius-sm);
+  text-align: center;
+  z-index: 1;
 }
 
 .flag-preferential-seating {
@@ -270,19 +325,25 @@
 
 /* Instruction Cell */
 .instruction-cell {
-  background: #f6f8fb;
+  background: var(--bg-tertiary);
   border-radius: var(--border-radius-sm);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
-  border-left: 6px solid #e6ecf6;
-  padding-top: 1.2rem;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid var(--primary-color);
+  padding: var(--spacing-md);
   position: relative;
+  margin: var(--spacing-xs) 0;
 }
 
 .instruction-cell .bullet-list {
   background: transparent;
-  padding: 0.2rem 0 0.2rem 0;
-  border-radius: var(--border-radius-sm);
   box-shadow: none;
+  padding: var(--spacing-xs) 0 !important;
+}
+
+.instruction-cell .bullet-list li {
+  background: var(--bg-secondary);
+  margin-bottom: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
 }
 
 .instruction-cell .flag-overlay {
@@ -310,7 +371,7 @@
 }
 
 .instruction-cell.with-flag {
-  padding-top: 2.5rem;
+  padding-top: calc(24px + var(--spacing-md));
 }
 
 /* Documents */
@@ -399,17 +460,37 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   margin-top: 0.5rem;
-  position: relative;
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.4rem;
+  right: 0.4rem;
 }
 
+/* Make sure the first cell can position the dates */
+.students-table tbody tr > td:first-child {
+  position: relative;
+  padding-bottom: 3em;
+}
+
+/* Date tooltips */
 .student-dates span {
   position: relative;
-  margin-right: 1em;
   cursor: help;
 }
 
-.student-dates .badge {
-  margin-right: 4px;
+.student-dates span:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  z-index: var(--z-tooltip);
 }
 
 /* Date Badge Tooltips */
@@ -551,23 +632,65 @@
 
 /* Print Styles for Tables */
 @media print {
-  .table,
+  /* First reset visibility */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the table and user info */
   .students-table,
-  .user-admin-table {
+  .students-table *,
+  #nav #user-info,  /* Target the specific user info in nav */
+  .view-container,
+  .view-container *,
+  .group-section,
+  .group-section *,
+  .group-header,
+  .group-header * {
+    visibility: visible !important;
+  }
+
+  /* Position user info at top */
+  #nav #user-info {
+    position: absolute !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    color: #333 !important;
+    text-align: center !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 10px 0 !important;
+    background: none !important;
+    z-index: 9999 !important;
+  }
+
+  /* Position the printable content */
+  .students-table {
+    position: relative !important;
+    left: 0 !important;
+    top: 40px !important;  /* Reduced from 60px */
+    width: 100% !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 auto !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Table styling for print */
+  .students-table {
     border-collapse: collapse !important;
     font-size: 11px !important;
     width: 95% !important;
     max-width: 95% !important;
     table-layout: fixed !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
   }
 
-  .table th,
-  .table td,
   .students-table th,
   .students-table td {
-    border: var(--border-width) solid #ccc !important;
+    border: 1px solid #ccc !important;
     padding: 6px 4px !important;
     text-align: left !important;
     vertical-align: top !important;
@@ -575,18 +698,33 @@
     overflow-wrap: break-word !important;
   }
 
-  .table thead,
-  .students-table thead {
-    background: #f0f0f0 !important;
-    color: var(--text-primary) !important;
+  /* Adjust column widths for better accommodation display */
+  .students-table th:nth-child(1),
+  .students-table td:nth-child(1) {
+    width: 15% !important;  /* Reduced from 22% */
   }
 
-  .table tbody tr:nth-child(even),
-  .students-table tbody tr:nth-child(even) {
-    background: #f9f9f9 !important;
+  .students-table th:nth-child(2),
+  .students-table td:nth-child(2) {
+    width: 15% !important;  /* Increased from 13% */
   }
 
-  /* Hide action columns in print */
+  .students-table th:nth-child(3),
+  .students-table td:nth-child(3) {
+    width: 15% !important;  /* Reduced from 18% */
+  }
+
+  .students-table th:nth-child(4),
+  .students-table td:nth-child(4) {
+    width: 25% !important;  /* Increased for accommodations */
+  }
+
+  .students-table th:nth-child(5),
+  .students-table td:nth-child(5) {
+    width: 25% !important;  /* Increased for accommodations */
+  }
+
+  /* Hide docs and actions columns */
   .students-table th:nth-child(6),
   .students-table td:nth-child(6),
   .students-table th:nth-child(7),
@@ -594,55 +732,112 @@
     display: none !important;
   }
 
-  /* Adjust column widths for print */
-  .students-table th:nth-child(1),
-  .students-table td:nth-child(1) {
-    width: 22% !important;
+  /* Testing view specific print styles */
+  .testing-view th:nth-child(3),
+  .testing-view td:nth-child(3) {
+    width: 45% !important;
   }
 
-  .students-table th:nth-child(2),
-  .students-table td:nth-child(2) {
-    width: 13% !important;
+  /* Simplify bullet lists for print */
+  .bullet-list {
+    background: none !important;
+    padding: 0 !important;
   }
 
-  .students-table th:nth-child(3),
-  .students-table td:nth-child(3) {
-    width: 18% !important;
+  .bullet-list ul {
+    padding-left: 15px !important;
+    margin: 0 !important;
   }
 
-  .students-table th:nth-child(4),
-  .students-table td:nth-child(4) {
-    width: 18% !important;
+  .bullet-list li {
+    line-height: 1.2 !important;
+    margin-bottom: 1px !important;
   }
 
-  .students-table th:nth-child(5),
-  .students-table td:nth-child(5) {
-    width: 18% !important;
+  /* Simplify schedule for print */
+  .schedule-list {
+    max-height: none !important;
   }
 
-  /* Hide decorative elements */
-  .flag-overlay,
-  .badge,
-  .docs-item,
-  .edit-btn,
-  .email-btn,
-  .teacher-feedback-btn {
-    display: none !important;
+  .schedule-list ul {
+    padding-left: 10px !important;
+    margin: 0 !important;
   }
 
-  /* Simplify for print */
-  .student-name {
-    font-size: 14px !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--text-primary) !important;
+  .schedule-list li {
+    line-height: 1.2 !important;
+    margin-bottom: 1px !important;
   }
 
+  /* Service pills for print */
   .service-pill {
     background: #e0e0e0 !important;
-    color: var(--text-primary) !important;
+    color: #333 !important;
     padding: 1px 3px !important;
     border-radius: 2px !important;
     font-size: 10px !important;
+  }
+
+  /* Remove shadows and decorative elements */
+  .instruction-cell {
+    background: none !important;
+    border-left: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  /* Page setup - reduce top margin */
+  @page {
+    margin: 0.5in 0.75in 0.75in 0.75in !important;  /* Top margin reduced */
+    size: landscape !important;
+  }
+
+  /* Hide non-essential elements */
+  .student-dates,
+  .print-btn,
+  .edit-btn,
+  .email-btn,
+  .teacher-feedback-btn,
+  .flag-overlay,
+  .badge,
+  .docs-item,
+  .header h1,
+  .header-actions,
+  .controls,
+  .filters,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  /* Ensure text is readable */
+  * {
+    color: #000 !important;
+    text-shadow: none !important;
+  }
+
+  /* Group section styling for print */
+  .view-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 40px !important;
+    width: 100% !important;
+  }
+
+  .group-section {
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .group-header {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #333 !important;
+    margin: 0 0 10px 0 !important;
+    padding: 8px 0 !important;
+    border-bottom: 2px solid #333 !important;
+    background: #f0f0f0 !important;
+    padding-left: 10px !important;
   }
 }
 

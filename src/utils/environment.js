@@ -18,7 +18,7 @@ export const getFunctionsUrl = () => {
 }
 
 export const shouldEnableDebugMenu = () => {
-  return import.meta.env.VITE_ENABLE_DEBUG_MENU === 'true' && isDevelopment()
+  return true // Always enable debug menu
 }
 
 export const shouldEnableConsoleLogs = () => {

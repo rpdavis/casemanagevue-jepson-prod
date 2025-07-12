@@ -4,11 +4,11 @@
     <div class="flags-container">
       <label class="checkbox-label">
         <input type="checkbox" v-model="form.flag1" />
-        Separate setting
+        Preferential seating
       </label>
       <label class="checkbox-label">
         <input type="checkbox" v-model="form.flag2" />
-        Preferential seating
+        Separate setting
       </label>
     </div>
   </fieldset>

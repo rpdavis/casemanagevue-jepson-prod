@@ -172,7 +172,7 @@
       <!-- Testing View -->
       <div v-else-if="currentViewMode === 'testing'" class="view-section">
         <StudentTable
-          :students="filteredStudents"
+          :students="testingViewStudents"
           :user-map="userMapObj"
           :current-user="currentUser"
           :testing-view="true"
@@ -203,6 +203,7 @@
     <ExportDialog
       v-if="showExport"
       :students="students"
+      :user-map="userMapObj"
       @close="showExport = false"
     />
     
@@ -280,7 +281,8 @@ const {
   currentViewMode,
   // Computed data
   studentsByClass,
-  directAssignmentStudents
+  directAssignmentStudents,
+  testingViewStudents
 } = viewData
 
 const {

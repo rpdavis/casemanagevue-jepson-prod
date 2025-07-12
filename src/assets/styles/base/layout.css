@@ -211,7 +211,30 @@
   .print-hidden { display: none !important; }
   .print-block { display: block !important; }
   
-  #nav {
+  #nav,
+  .nav-left,
+  .nav-right,
+  .filters,
+  .ex-button,
+  .header-actions,
+  .controls {
     display: none !important;
+  }
+
+  #main-content {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .printable,
+  .printable * {
+    visibility: visible !important;
+  }
+
+  .printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
   }
 } 

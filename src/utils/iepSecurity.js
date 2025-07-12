@@ -5,11 +5,34 @@ import CryptoJS from 'crypto-js'
 class IEPSecurityHandler {
   constructor() {
     // This key should come from environment variables in production
-    this.encryptionKey = process.env.VUE_APP_ENCRYPTION_KEY || 'default-dev-key-replace-in-production';
+    this.encryptionKey = process.env.VUE_APP_PDF_ENCRYPTION_KEY || 'default-dev-key-replace-in-production';
+    
+    // Read encryption toggle from environment
+    this.encryptionEnabled = process.env.VUE_APP_ENABLE_ENCRYPTION !== 'false';
+    
+    // Log encryption status in any environment
+    console.log('🔒 IEP Encryption:', this.encryptionEnabled ? 'Enabled' : 'Disabled');
+  }
+
+  // Toggle encryption - now allowed in any environment
+  setEncryptionEnabled(enabled) {
+    this.encryptionEnabled = enabled;
+    console.log('🔒 IEP Encryption:', this.encryptionEnabled ? 'Enabled' : 'Disabled');
+    
+    // Add warning if disabling in production
+    if (process.env.NODE_ENV === 'production' && !enabled) {
+      console.warn('⚠️ Warning: Encryption disabled in production environment');
+    }
   }
 
   // Encrypt sensitive IEP fields
   encryptSensitiveFields(studentData) {
+    // If encryption is disabled, return data as-is
+    if (!this.encryptionEnabled) {
+      console.log('🔓 Encryption disabled, returning raw data');
+      return studentData;
+    }
+
     const sensitiveFields = [
       'app.accommodations.assessment',
       'app.accommodations.instruction',
@@ -32,6 +55,12 @@ class IEPSecurityHandler {
 
   // Decrypt sensitive IEP fields
   decryptSensitiveFields(studentData) {
+    // If encryption is disabled, return data as-is
+    if (!this.encryptionEnabled) {
+      console.log('🔓 Encryption disabled, returning raw data');
+      return studentData;
+    }
+
     const sensitiveFields = [
       'app.accommodations.assessment',
       'app.accommodations.instruction',
@@ -54,6 +83,8 @@ class IEPSecurityHandler {
 
   // Helper to encrypt a single field
   encryptField(value) {
+    if (!this.encryptionEnabled) return value;
+
     try {
       const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
       return CryptoJS.AES.encrypt(stringValue, this.encryptionKey).toString();
@@ -65,6 +96,8 @@ class IEPSecurityHandler {
 
   // Helper to decrypt a single field
   decryptField(encryptedValue) {
+    if (!this.encryptionEnabled) return encryptedValue;
+
     try {
       const bytes = CryptoJS.AES.decrypt(encryptedValue, this.encryptionKey);
       const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
@@ -106,7 +139,8 @@ class IEPSecurityHandler {
         action,
         fields,
         timestamp: serverTimestamp(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        encryptionEnabled: this.encryptionEnabled // Log encryption status
       });
     } catch (error) {
       console.error('Failed to log access:', error);
@@ -200,6 +234,33 @@ class IEPSecurityHandler {
     }
     
     return masked;
+  }
+
+  // Development helper to check encryption status
+  isEncryptionEnabled() {
+    return this.encryptionEnabled;
+  }
+
+  // Helper to check if a value is encrypted
+  isValueEncrypted(value) {
+    try {
+      if (typeof value !== 'string') return false;
+      // Try to decrypt - if it works, it was encrypted
+      CryptoJS.AES.decrypt(value, this.encryptionKey).toString(CryptoJS.enc.Utf8);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Get encryption status details
+  getEncryptionStatus() {
+    return {
+      enabled: this.encryptionEnabled,
+      environment: process.env.NODE_ENV,
+      keyAvailable: Boolean(this.encryptionKey),
+      environmentVariable: process.env.VUE_APP_ENABLE_ENCRYPTION
+    };
   }
 }
 

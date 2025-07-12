@@ -8,6 +8,7 @@
 │   ├── .gitignore
 │   ├── all-users.json
 │   ├── firestore-debug.log
+│   ├── fix_missing_user.js
 │   ├── index.js
 │   ├── package-lock.json
 │   └── package.json
@@ -31,15 +32,20 @@
 │   ├── index.html
 │   ├── login.html
 │   └── testing.html
+├── scripts
+│   └── update_user_aeries_ids.js
 ├── seed
-│   └── firestore_seed_data.json
+│   ├── aeries_seed_data.csv
+│   ├── convert_to_csv.js
+│   ├── firestore_seed_data.json
+│   ├── generate_seed_data.js
+│   ├── seis_seed_data.csv
+│   └── student_seed_data.csv
 ├── src
 │   ├── api
 │   │   └── students.js
 │   ├── assets
 │   │   ├── bass
-│   │   │   ├── OLD- style.css
-│   │   │   ├── OLD-table.css
 │   │   │   ├── admin-panel.css
 │   │   │   ├── style.css
 │   │   │   └── table.css
@@ -58,31 +64,93 @@
 │   │   │   ├── notes-notepad-svgrepo-com.svg
 │   │   │   ├── notes-outlined-pen-and-paper-svgrepo-com.svg
 │   │   │   └── user-check-svgrepo-com.svg
+│   │   ├── styles
+│   │   │   ├── base
+│   │   │   │   ├── layout.css
+│   │   │   │   ├── reset.css
+│   │   │   │   ├── typography.css
+│   │   │   │   └── variables.css
+│   │   │   ├── components
+│   │   │   │   ├── buttons.css
+│   │   │   │   ├── dialogs.css
+│   │   │   │   ├── forms.css
+│   │   │   │   └── tables.css
+│   │   │   ├── themes
+│   │   │   │   └── default.css
+│   │   │   ├── utilities
+│   │   │   │   ├── colors.css
+│   │   │   │   └── spacing.css
+│   │   │   └── main.css
 │   │   ├── .DS_Store
 │   │   └── aide-schedule.css
 │   ├── components
 │   │   ├── students
+│   │   │   ├── form
+│   │   │   │   ├── StudentAccommodations.vue
+│   │   │   │   ├── StudentBasicInfo.vue
+│   │   │   │   ├── StudentClassServices.vue
+│   │   │   │   ├── StudentDocuments.vue
+│   │   │   │   ├── StudentFlags.vue
+│   │   │   │   ├── StudentForm.md
+│   │   │   │   ├── StudentProviders.vue
+│   │   │   │   ├── StudentSchedule.vue
+│   │   │   │   └── useStudentForm.js
+│   │   │   ├── table
+│   │   │   │   ├── AccommodationsCell.vue
+│   │   │   │   ├── ActionsCell.vue
+│   │   │   │   ├── DocumentsCell.vue
+│   │   │   │   ├── README.md
+│   │   │   │   ├── ScheduleCell.vue
+│   │   │   │   ├── ServicesCell.vue
+│   │   │   │   ├── StudentActionsCell.vue
+│   │   │   │   ├── StudentAssessmentAccomCell.vue
+│   │   │   │   ├── StudentDocsCell.vue
+│   │   │   │   ├── StudentFeedbackCell.vue
+│   │   │   │   ├── StudentInfoCell.vue
+│   │   │   │   ├── StudentInstructionAccomCell.vue
+│   │   │   │   ├── StudentScheduleCell.vue
+│   │   │   │   ├── StudentServicesCell.vue
+│   │   │   │   ├── StudentTable.css
+│   │   │   │   ├── index.js
+│   │   │   │   └── useStudentTable.js
+│   │   │   ├── .DS_Store
 │   │   │   ├── ServiceCheckboxGroup.vue
 │   │   │   ├── ServiceSelect.vue
 │   │   │   ├── StudentEditDialog.vue
 │   │   │   ├── StudentFilters.vue
 │   │   │   ├── StudentForm.vue
+│   │   │   ├── StudentNavMenu.vue
+│   │   │   ├── StudentTable.md
 │   │   │   ├── StudentTable.vue
-│   │   │   └── StudentsEmailDialog.vue
+│   │   │   ├── StudentsEmailDialog.vue
+│   │   │   └── TeacherFeedbackDialog.vue
+│   │   ├── testing
+│   │   │   ├── CustomTabManager.vue
+│   │   │   ├── GoogleSheetsConnector.vue
+│   │   │   ├── StudentPreview.vue
+│   │   │   └── TestingExportOptions.vue
 │   │   ├── .DS_Store
+│   │   ├── AdminDashboard.vue
 │   │   ├── AeriesAPIConnector.vue
 │   │   ├── AeriesImport.vue
 │   │   ├── AideScheduleEditDialog.vue
 │   │   ├── AideScheduleMasterTable.vue
 │   │   ├── AssignmentDialog.vue
+│   │   ├── DebugEncryption.vue
 │   │   ├── ExportDialog.vue
 │   │   ├── FileUploader.vue
 │   │   ├── NavBar.vue
 │   │   ├── PermissionsMatrix.vue
 │   │   ├── SearchBar.vue
+│   │   ├── SecurityControlCenter.vue
 │   │   ├── SeisImport.vue
+│   │   ├── StudentBulkImporter.vue
+│   │   ├── SystemHealthCheck.vue
 │   │   ├── TabBar.vue
+│   │   ├── TestingLinks.md
+│   │   ├── TestingLinks.vue
 │   │   ├── UserAddForm.vue
+│   │   ├── UserRoleSwitcher.vue
 │   │   ├── UserRoleSync.vue
 │   │   ├── UserTable.vue
 │   │   └── VerticalTimeGrid.vue
@@ -93,13 +161,29 @@
 │   │   ├── useAideSchedule.js
 │   │   ├── useAppSettings.js
 │   │   ├── useAuth.js
+│   │   ├── useCustomTabs.js
+│   │   ├── useDebugMenu.js
+│   │   ├── useGoogleForms.js.backup
+│   │   ├── useGoogleSheets.js
+│   │   ├── useGoogleSheetsClient.js
+│   │   ├── useGoogleSheetsIntegration.js
+│   │   ├── useGoogleSheetsRealtime.js
+│   │   ├── useIEPSecurity.js
 │   │   ├── useImporters.js
+│   │   ├── usePdfHandler.js
 │   │   ├── usePermissions.js
 │   │   ├── useStorage.js
+│   │   ├── useStudentData.js
+│   │   ├── useStudentFilters.js
+│   │   ├── useStudentNavActions.js
+│   │   ├── useStudentViews.js
 │   │   ├── useStudents.js
+│   │   ├── useTeacherFeedback.js
+│   │   ├── useTestingData.js
 │   │   ├── useTimeTable.js
 │   │   └── useUsers.js
 │   ├── config
+│   │   ├── googleApi.js
 │   │   └── roles.js
 │   ├── router
 │   │   ├── .DS_Store
@@ -111,13 +195,21 @@
 │   │   ├── studentStore.js
 │   │   └── userStore.js
 │   ├── utils
-│   │   └── studentUtils.js
+│   │   ├── environment.js
+│   │   ├── iepSecurity.js
+│   │   ├── migrateStudentIds.js
+│   │   ├── pdfSecurity.js
+│   │   ├── studentUtils.js
+│   │   └── validation.js
 │   ├── views
 │   │   ├── AddStudentView.vue
 │   │   ├── AdminAideAssignment.vue
 │   │   ├── AdminAideSchedule.vue
+│   │   ├── AdminBackupRestore.vue
+│   │   ├── AdminLandingView.vue
 │   │   ├── AdminPermissions.vue
 │   │   ├── AdminStudents.vue
+│   │   ├── AdminTeacherFeedback.vue
 │   │   ├── AdminTimeTable.vue
 │   │   ├── AdminUsers.vue
 │   │   ├── AdminView.vue
@@ -244,22 +336,92 @@
 │   ├── n-login.html
 │   └── testing.html
 ├── .DS_Store
+├── .env.development
+├── .env.local
+├── .env.production
 ├── .firebaserc
 ├── .gitignore
+├── ADMIN_LANDING_PAGE.md
+├── CLOUD_FUNCTIONS_SETUP.md
+├── DATABASE_FIELDS.md
+├── DEBUG_MENU_GUIDE.md
+├── DEBUG_ROLE_SWITCHER.md
+├── DEPLOYMENT_GUIDE.md
+├── DEVELOPMENT_PROJECT_SETUP.md
+├── ENVIRONMENT_CONFIGURATION.md
+├── ENVIRONMENT_FIXES.md
+├── ENVIRONMENT_SETUP_COMPLETE.md
+├── FIREBASE_PROJECTS_SETUP.md
+├── GOOGLE_SHEETS_SETUP_GUIDE.md
+├── IMPORTER_FIELD_MAPPINGS.md
+├── IMPORT_SYSTEM_ANALYSIS.md
 ├── LICENSE
 ├── README.md
+├── SECURITY_IMPLEMENTATION.md
+├── SECURITY_IMPROVEMENTS.md
+├── STUDENT_BULK_IMPORT_GUIDE.md
 ├── STUDENT_FIELD_REFERENCE.md
+├── STYLE_GUIDE.md
+├── TEACHER_FEEDBACK_USAGE.md
+├── TESTING_LINKS_REFACTORING.md
+├── USER_VIEW_TESTING_GUIDE.md
+├── User_seed_data_100_users.csv
+├── aeries_seed_data_clean.csv
+├── aeries_seed_data_correct.csv
+├── aeries_seed_data_final.csv
+├── aeries_seed_data_realistic.csv
+├── aeries_seed_data_with_correct_teachers.csv
+├── auth_users_dev.json
+├── auth_users_prod.json
+├── bulk_students.csv
+├── bulk_students_template.csv
+├── bulk_users.csv
+├── correct_aeries_seed.csv
+├── correct_seed_data_backup.json
+├── correct_seis_seed.csv
+├── correct_users_seed.csv
+├── create_database_seed_data.js
+├── create_proper_backup_format.js
+├── database_backup_seed_data.json
+├── database_seed_data.json
+├── database_seed_sample.json
+├── database_students_seed.csv
+├── database_users_seed.csv
+├── demo_backup_data.json
+├── demo_sample_backup.json
+├── environment-launcher.html
+├── environment-status.html
 ├── filemap.txt
 ├── filetree.txt
 ├── firebase.json
+├── firestore-debug.log
 ├── firestore.indexes.json
 ├── firestore.rules
+├── generate_aeries_seed_no_dates.js
+├── generate_aeries_seed_realistic_names.js
+├── generate_aeries_seed_with_correct_teachers.js
+├── generate_bulk_csv.js
+├── generate_bulk_data.js
+├── generate_clean_aeries_seed.js
+├── generate_realistic_user_seed_data.js
+├── generate_seis_seed_matching.js
 ├── index.html
 ├── package-lock.json
 ├── package.json
+├── proper_seed_data_backup.json
+├── realistic_user_seed_data.csv
 ├── sample_students_aeries.csv
+├── sample_students_aeries_with_schedules.csv
 ├── sample_users_bulk.csv
+├── seed_data_backup.json
+├── seed_data_backup_fixed.json
+├── seed_emulator_data.js
+├── seis_seed_data_100_students.csv
+├── seis_seed_data_matching.csv
 ├── setUserRole.js
+├── start-environments.sh
+├── storage.rules
+├── user_seed_data_76_users.csv
 └── vite.config.js
 
-47 directories, 216 files
+56 directories, 369 files
