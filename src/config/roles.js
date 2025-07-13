@@ -38,15 +38,16 @@ export const PERMISSION_ACTIONS = {
   VIEW_STUDENTS: "view_students",
   EDIT_STUDENT_CM: "edit_student_CM",      // Case Manager: edit students on their caseload
   EDIT_STUDENT_ALL: "edit_student_All",    // Sped Chair/Admin: edit any student
-  TESTING: "testing"
+  TESTING: "testing",                      // Legacy - kept for backward compatibility
+  TESTING_ALL: "testing_all",              // Full testing access to all students
+  TESTING_PARTIAL: "testing_partial"       // Testing access to assigned students only
 };
 
 // --- Permissions Matrix ---
+// This matrix matches the Firebase security rules exactly
 export const PERMISSIONS_MATRIX = {
   admin: [
-    ...Object.values(PERMISSION_ACTIONS)
-  ],
-  administrator: [
+    // Admin has all permissions (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.EDIT_USER,
     PERMISSION_ACTIONS.DELETE_USER,
@@ -54,9 +55,21 @@ export const PERMISSIONS_MATRIX = {
     PERMISSION_ACTIONS.MANAGE_ROLES,
     PERMISSION_ACTIONS.VIEW_STUDENTS,
     PERMISSION_ACTIONS.EDIT_STUDENT_ALL,
-    PERMISSION_ACTIONS.TESTING
+    PERMISSION_ACTIONS.TESTING_ALL
+  ],
+  administrator: [
+    // Administrator has most permissions (matches Firebase rules)
+    PERMISSION_ACTIONS.VIEW_USERS,
+    PERMISSION_ACTIONS.EDIT_USER,
+    PERMISSION_ACTIONS.DELETE_USER,
+    PERMISSION_ACTIONS.MANAGE_SUBJECTS,
+    PERMISSION_ACTIONS.MANAGE_ROLES,
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.EDIT_STUDENT_ALL,
+    PERMISSION_ACTIONS.TESTING_ALL
   ],
   administrator_504_CM: [
+    // 504 CM Admin has user management and student editing (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.EDIT_USER,
     PERMISSION_ACTIONS.DELETE_USER,
@@ -66,24 +79,32 @@ export const PERMISSIONS_MATRIX = {
     PERMISSION_ACTIONS.EDIT_STUDENT_ALL
   ],
   sped_chair: [
+    // SPED Chair has admin-level student access but limited user management (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.VIEW_STUDENTS,
     PERMISSION_ACTIONS.EDIT_STUDENT_ALL
   ],
   case_manager: [
+    // Case Manager can view users/students, edit own caseload (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.VIEW_STUDENTS,
-    PERMISSION_ACTIONS.EDIT_STUDENT_CM
+    PERMISSION_ACTIONS.EDIT_STUDENT_CM,
+    PERMISSION_ACTIONS.TESTING_PARTIAL
   ],
   teacher: [
+    // Teacher can view users/students only (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
-    PERMISSION_ACTIONS.VIEW_STUDENTS
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.TESTING_PARTIAL
   ],
   service_provider: [
+    // Service Provider can view users/students only (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
-    PERMISSION_ACTIONS.VIEW_STUDENTS
+    PERMISSION_ACTIONS.VIEW_STUDENTS,
+    PERMISSION_ACTIONS.TESTING_PARTIAL
   ],
   paraeducator: [
+    // Paraeducator can view users/students only (matches Firebase rules)
     PERMISSION_ACTIONS.VIEW_USERS,
     PERMISSION_ACTIONS.VIEW_STUDENTS
   ]

@@ -24,25 +24,44 @@
         </div>
       </div>
       <div class="header-controls">
-        <!-- Filter Toggle Button -->
-        <button @click="toggleFilters" class="filter-toggle-btn" :class="{ active: showFilters }">
+        <!-- Filter Toggle Button - Only for Admin Roles -->
+        <button 
+          v-if="canAccessFilters" 
+          @click="toggleFilters" 
+          class="filter-toggle-btn" 
+          :class="{ active: showFilters }"
+        >
           <span>🔍</span> Filters
         </button>
 
-        <!-- Provider View (for case managers) -->
+        <!-- Sort By Dropdown -->
+        <div class="filter-group">
+          <select v-model="currentFilters.sortBy" @change="applyFilters()" class="sort-select">
+            <option value="firstName">First Name</option>
+            <option value="lastName">Last Name</option>
+            <option value="grade">Grade</option>
+            <option value="reviewDate">Review Date</option>
+            <option value="reevalDate">Re-evaluation Date</option>
+            <option value="meetingDate">Meeting Date</option>
+          </select>
+        </div>
+
+        <!-- Provider View (for case managers and sped roles) -->
         <div v-if="showProviderView" class="filter-group">
           <div class="radio-group">
-            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'all' }">
-              <input type="radio" v-model="currentFilters.providerView" value="all" @change="applyFilters">
-              All
-            </label>
-            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'case_manager' }">
-              <input type="radio" v-model="currentFilters.providerView" value="case_manager" @change="applyFilters">
-              CM
-            </label>
-            <label class="radio-btn" :class="{ active: currentFilters.providerView === 'service_provider' }">
-              <input type="radio" v-model="currentFilters.providerView" value="service_provider" @change="applyFilters">
-              SP
+            <label 
+              v-for="option in defaultProviderViewOptions" 
+              :key="option.value"
+              class="radio-btn" 
+              :class="{ active: currentFilters.providerView === option.value }"
+            >
+              <input 
+                type="radio" 
+                v-model="currentFilters.providerView" 
+                :value="option.value" 
+                @change="applyFilters"
+              >
+              {{ option.label }}
             </label>
           </div>
         </div>
@@ -54,11 +73,17 @@
               <input type="radio" v-model="currentFilters.viewMode" value="list" @change="applyFilters()">
               List
             </label>
-            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'class' }">
-              <input type="radio" v-model="currentFilters.viewMode" value="class" @change="applyFilters()">
-              Class
+            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'class', disabled: isClassViewDisabled }">
+              <input 
+                type="radio" 
+                v-model="currentFilters.viewMode" 
+                value="class" 
+                @change="applyFilters()"
+                :disabled="isClassViewDisabled"
+              >
+              <span :class="{ 'strikethrough': isClassViewDisabled }">Class</span>
             </label>
-            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
+            <label v-if="canAccessTesting" class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
               <input type="radio" v-model="currentFilters.viewMode" value="testing" @change="applyFilters()">
               Test
             </label>
@@ -75,20 +100,6 @@
     <!-- Hidden Filters Panel -->
     <div v-if="showFilters" class="filters-panel">
       <div class="filters-content">
-        <!-- Sort By -->
-        <div class="filter-group">
-          <label>Sort By</label>
-          <select v-model="currentFilters.sortBy" @change="applyFilters()" class="filter-select">
-            <option value="firstName">First Name</option>
-            <option value="lastName">Last Name</option>
-            <option value="grade">Grade</option>
-            <option value="plan">Plan</option>
-            <option value="reviewDate">Review Date</option>
-            <option value="reevalDate">Re-evaluation Date</option>
-            <option value="meetingDate">Meeting Date</option>
-          </select>
-        </div>
-
         <!-- Case Manager Filter -->
         <div class="filter-group">
           <label>Case Manager</label>
@@ -121,6 +132,16 @@
             </option>
           </select>
         </div>
+
+        <!-- Plan Filter -->
+        <div class="filter-group">
+          <label>Plan Type</label>
+          <select v-model="currentFilters.plan" @change="applyFilters()" class="filter-select">
+            <option value="all">All Plans</option>
+            <option value="IEP">IEP</option>
+            <option value="504">504</option>
+          </select>
+        </div>
       </div>
     </div>
     
@@ -128,9 +149,14 @@
       <!-- List View -->
       <div v-if="currentViewMode === 'list'">
         <StudentTable
-          :students="filteredStudents"
+          :students="visibleStudents"
           :user-map="userMapObj"
           :current-user="currentUser"
+          :can-edit-all="canEditAllStudents"
+          :can-edit-own="canEditOwnStudents"
+          :can-view-all="canViewAllStudents"
+          :can-access-testing="canAccessTesting"
+          :can-access-testing-partial="canAccessTestingPartial"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
           @edit="editStudent"
           @email="emailStudent"
@@ -147,6 +173,11 @@
             :students="directAssignmentStudents"
             :user-map="userMapObj"
             :current-user="currentUser"
+            :can-edit-all="canEditAllStudents"
+            :can-edit-own="canEditOwnStudents"
+            :can-view-all="canViewAllStudents"
+            :can-access-testing="canAccessTesting"
+            :can-access-testing-partial="canAccessTestingPartial"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
             @edit="editStudent"
             @email="emailStudent"
@@ -161,6 +192,11 @@
             :students="students"
             :user-map="userMapObj"
             :current-user="currentUser"
+            :can-edit-all="canEditAllStudents"
+            :can-edit-own="canEditOwnStudents"
+            :can-view-all="canViewAllStudents"
+            :can-access-testing="canAccessTesting"
+            :can-access-testing-partial="canAccessTestingPartial"
             :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
             @edit="editStudent"
             @email="emailStudent"
@@ -175,6 +211,11 @@
           :students="testingViewStudents"
           :user-map="userMapObj"
           :current-user="currentUser"
+          :can-edit-all="canEditAllStudents"
+          :can-edit-own="canEditOwnStudents"
+          :can-view-all="canViewAllStudents"
+          :can-access-testing="canAccessTesting"
+          :can-access-testing-partial="canAccessTestingPartial"
           :testing-view="true"
           :aide-schedule="currentUser?.role === 'paraeducator' ? aideAssignment : {}"
           @edit="editStudent"
@@ -225,9 +266,13 @@
 </template>
 
 <script setup>
+// Vue imports
+import { computed } from 'vue'
+
 // Composables
 import { useStudentData } from '@/composables/useStudentData.js'
 import { useStudentFilters } from '@/composables/useStudentFilters.js'
+import { useRoleBasedView } from '@/composables/roles/useRoleBasedView.js'
 import { useStudentViews } from '@/composables/useStudentViews.js'
 import { useStudentNavActions } from '@/composables/useStudentNavActions.js'
 
@@ -243,7 +288,7 @@ import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.v
 // Initialize composables
 const studentData = useStudentData()
 const filterData = useStudentFilters(studentData)
-const viewData = useStudentViews(studentData, filterData)
+const roleView = useRoleBasedView(studentData, filterData)
 const navActions = useStudentNavActions(studentData)
 
 // Extract data from composables
@@ -277,6 +322,38 @@ const {
 } = filterData
 
 const {
+  // Role-based data
+  visibleStudents,
+  currentRole,
+  // Permissions
+  canEditAllStudents,
+  canEditOwnStudents,
+  canViewAllStudents,
+  canManageUsers,
+  canManageAides,
+  canAccessTesting,
+  canAccessTestingPartial,
+  hasAnyTestingAccess,
+  // UI Permissions (from base role view)
+  canAccessFilters,
+  isClassViewDisabled,
+  isAdminRole,
+  // Grouping functions (role-specific)
+  groupStudentsByGrade,
+  groupStudentsByPlan,
+  // View mode and filtering
+  setViewMode,
+  filterByName,
+  filterByCaseManager,
+  filterByTeacher,
+  // Provider view options (for sped roles)
+  providerViewOptions
+} = roleView
+
+// For backward compatibility, we'll get view-specific data from the existing useStudentViews
+// SECURITY: Pass role-based visibleStudents to ensure case managers only see authorized students
+const viewData = useStudentViews(studentData, filterData, computed(() => roleView.visibleStudents.value))
+const {
   // State
   currentViewMode,
   // Computed data
@@ -304,6 +381,29 @@ const {
   // Navigation
   handleNavAction
 } = navActions
+
+// Fallback provider view options for roles that don't have custom options
+const defaultProviderViewOptions = computed(() => {
+  if (providerViewOptions?.value) {
+    return providerViewOptions.value
+  }
+  
+  // Default options for case managers and other roles
+  const role = currentUser.value?.role
+  if (role === 'case_manager') {
+    return [
+      { value: 'all', label: 'All' },
+      { value: 'case_manager', label: 'CM' },
+      { value: 'service_provider', label: 'SP' }
+    ]
+  }
+  
+  return [
+    { value: 'all', label: 'All' },
+    { value: 'case_manager', label: 'CM' },
+    { value: 'service_provider', label: 'SP' }
+  ]
+})
 </script>
 
 <style scoped>
@@ -398,6 +498,7 @@ const {
 .filter-group {
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .radio-group {
@@ -443,6 +544,22 @@ const {
   color: white;
 }
 
+.radio-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.radio-btn.disabled:hover {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.strikethrough {
+  text-decoration: line-through;
+  text-decoration-color: #dc3545;
+  text-decoration-thickness: 2px;
+}
+
 .radio-btn input[type="radio"] {
   margin: 0;
   opacity: 0;
@@ -462,6 +579,23 @@ const {
 .reset-btn:hover {
   background: #f8f9fa;
   border-color: #adb5bd;
+}
+
+/* Sort Dropdown Styling */
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background: white;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 /* Filters Panel */
@@ -508,9 +642,8 @@ const {
 
 /* Responsive design for filters */
 @media (max-width: 1200px) {
-  .header-filters {
-    flex-direction: column;
-    align-items: stretch;
+  .header-controls {
+    flex-wrap: wrap;
     gap: 8px;
   }
   
@@ -522,8 +655,8 @@ const {
     min-width: 100%;
   }
   
-  .filter-select {
-    min-width: 100%;
+  .sort-select {
+    min-width: 120px;
   }
 }
 
@@ -534,13 +667,22 @@ const {
     gap: 15px;
   }
   
-  .header-filters {
+  .header-controls {
     flex-direction: column;
     gap: 8px;
   }
   
+  .filter-group {
+    align-items: flex-start;
+  }
+  
   .radio-group {
     justify-content: center;
+  }
+  
+  .sort-select {
+    width: 100%;
+    min-width: auto;
   }
 }
 

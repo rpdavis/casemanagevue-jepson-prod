@@ -21,6 +21,7 @@ export function useStudentFilters(studentData) {
     cm: 'all',
     teacher: 'all',
     paraeducator: 'all',
+    plan: 'all',
     search: '',
     providerView: 'all',
     viewMode: 'list'
@@ -45,6 +46,7 @@ export function useStudentFilters(studentData) {
     currentFilters.cm = 'all'
     currentFilters.teacher = 'all'
     currentFilters.paraeducator = 'all'
+    currentFilters.plan = 'all'
     currentFilters.search = ''
     currentFilters.providerView = 'all'
     currentFilters.viewMode = 'list'
@@ -85,9 +87,9 @@ export function useStudentFilters(studentData) {
     }
 
     // Apply role-based filtering
-    if (currentUser.value?.role === 'case_manager' && filters.providerView === 'all') {
-      result = result.filter(s => getCaseManagerId(s) === currentUser.value.uid)
-    } else if (currentUser.value?.role === 'paraeducator') {
+    // Note: For case managers, the role-based view (useCaseManagerView) handles provider view filtering
+    // so we skip the general filtering here to avoid conflicts
+    if (currentUser.value?.role === 'paraeducator') {
       // Filter students based on aide assignments
       result = result.filter(s => {
         try {
@@ -143,6 +145,14 @@ export function useStudentFilters(studentData) {
           console.error('Error filtering student for paraeducator:', error)
           return false
         }
+      })
+    }
+
+    // Apply plan filter
+    if (filters.plan && filters.plan !== 'all') {
+      result = result.filter(s => {
+        const studentPlan = getDisplayValue(s, 'plan')
+        return studentPlan === filters.plan
       })
     }
 

@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { getDisplayValue } from '@/utils/studentUtils'
 
-export function useStudentViews(studentData, filterData) {
+export function useStudentViews(studentData, filterData, roleBasedStudents = null) {
   const {
     aideAssignment,
     getCaseManagerId,
@@ -13,6 +13,9 @@ export function useStudentViews(studentData, filterData) {
     currentFilters,
     getCurrentFilters
   } = filterData
+
+  // Use role-based students if provided (for security), otherwise fall back to general filtered students
+  const studentsToUse = roleBasedStudents || filteredStudents
 
   // View mode state
   const currentViewMode = ref('list')
@@ -27,13 +30,13 @@ export function useStudentViews(studentData, filterData) {
 
   // Get students for testing view (only those with separate setting)
   const testingViewStudents = computed(() => {
-    return filteredStudents.value.filter(student => {
+    return studentsToUse.value.filter(student => {
       // Check both nested and legacy structures for flag2 (separate setting)
       return student.app?.flags?.flag2 || student.flag2 || false
     })
   })
 
-  // Group students by class (period)
+  // Group students by class (period) - SECURITY: Use role-based students
   const studentsByClass = computed(() => {
     const groups = {}
     
@@ -41,7 +44,7 @@ export function useStudentViews(studentData, filterData) {
     const currentFilters = getCurrentFilters()
     const isParaeducatorFilter = currentFilters.paraeducator && currentFilters.paraeducator !== 'all'
     
-    filteredStudents.value.forEach(student => {
+    studentsToUse.value.forEach(student => {
       const schedule = getSchedule(student)
       if (schedule) {
         Object.entries(schedule).forEach(([period, data]) => {
@@ -75,6 +78,15 @@ export function useStudentViews(studentData, filterData) {
             groups[period].push(student)
           }
         })
+      } else {
+        // Student has no schedule - add to special "No Schedule" group
+        // This is especially important for case managers who need to see all their students
+        if (!isParaeducatorFilter) {
+          if (!groups['No Schedule']) {
+            groups['No Schedule'] = []
+          }
+          groups['No Schedule'].push(student)
+        }
       }
     })
     
@@ -106,13 +118,13 @@ export function useStudentViews(studentData, filterData) {
       ? aideData.directAssignment 
       : [aideData.directAssignment]
     
-    return filteredStudents.value.filter(s => directStudentIds.includes(s.id))
+    return studentsToUse.value.filter(s => directStudentIds.includes(s.id))
   })
 
   // Group students by case manager
   const studentsByCaseManager = computed(() => {
     const groups = {}
-    filteredStudents.value.forEach(student => {
+    studentsToUse.value.forEach(student => {
       const cmId = getCaseManagerId(student)
       if (cmId) {
         if (!groups[cmId]) {

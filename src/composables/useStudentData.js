@@ -1,10 +1,12 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
 import useAideAssignment from '@/composables/useAideAssignment.js'
 import { useAuthStore } from '@/store/authStore'
 import { useTeacherFeedback } from '@/composables/useTeacherFeedback.js'
+import { useStudentQueries } from '@/composables/useStudentQueries.js'
+import { quickSecurityTest } from '@/utils/securityTest.js'
 
 export function useStudentData() {
   // External dependencies
@@ -12,7 +14,7 @@ export function useStudentData() {
   const authStore = useAuthStore()
   
   // Composables
-  const { students, fetchStudents } = useStudents()
+  const { students, setStudents } = useStudents()
   const { users: userMap, userList, fetchUsers, caseManagers, teacherList, userRoles } = useUsers()
   const { 
     loadAideAssignment,
@@ -25,6 +27,7 @@ export function useStudentData() {
     feedbackForms,
     formsLoading
   } = useTeacherFeedback()
+  const { getStudentsByRole } = useStudentQueries()
 
   // Loading state
   const isLoading = ref(false)
@@ -49,21 +52,40 @@ export function useStudentData() {
     return userList.value?.filter(user => user.role === 'paraeducator') || []
   })
 
-  // Data fetching
+  // Data fetching with role-based security
   const fetchData = async () => {
     isLoading.value = true
     error.value = null
     
     try {
-      const promises = [
-        fetchStudents(),
-        fetchUsers(),
-        loadAideAssignments()
-      ]
+      // First, fetch users (needed for role-based student queries)
+      await fetchUsers()
       
-      await Promise.all(promises)
-      console.log('StudentsView - loaded students:', students.value)
-      console.log('StudentsView - loaded users:', userMap.value)
+      // Then fetch students based on user role (SECURITY: Database-level filtering)
+      const user = currentUser.value
+      if (user) {
+        console.log('🔒 Security: Fetching students for user role:', user.role)
+        const roleBasedStudents = await getStudentsByRole(user)
+        setStudents(roleBasedStudents)
+        
+        // Run security test to verify access control
+        const securityTest = quickSecurityTest(roleBasedStudents, user)
+        if (!securityTest.isSecure) {
+          console.error('🚨 SECURITY VIOLATION DETECTED:', securityTest.violations)
+        }
+      } else {
+        console.log('🔒 Security: No user found - setting empty student array')
+        setStudents([])
+      }
+      
+      // Only load aide assignments for admin roles that have permission
+      const userRole = currentUser.value?.role
+      if (['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)) {
+        await loadAideAssignments()
+      }
+      
+      console.log('🔒 Security: Loaded', students.value.length, 'students for', currentUser.value?.role)
+      console.log('StudentsView - loaded users:', Object.keys(userMap.value || {}).length, 'users')
       
     } catch (err) {
       console.error('Error fetching data:', err)
@@ -123,6 +145,32 @@ export function useStudentData() {
 
   // Auto-load data on mount
   onMounted(fetchData)
+
+  // Watch for user role changes and reload data accordingly
+  watch(
+    () => currentUser.value?.role,
+    async (newRole, oldRole) => {
+      if (newRole && newRole !== oldRole) {
+        console.log('🔒 Security: User role changed from', oldRole, 'to', newRole, '- reloading students')
+        
+        // Reload students with new role
+        const user = currentUser.value
+        if (user) {
+          const roleBasedStudents = await getStudentsByRole(user)
+          setStudents(roleBasedStudents)
+          
+          // Run security test
+          const securityTest = quickSecurityTest(roleBasedStudents, user)
+          if (!securityTest.isSecure) {
+            console.error('🚨 SECURITY VIOLATION DETECTED:', securityTest.violations)
+          }
+          
+          console.log('🔒 Security: Reloaded', roleBasedStudents.length, 'students for role', newRole)
+        }
+      }
+    },
+    { immediate: false }
+  )
 
   return {
     // State

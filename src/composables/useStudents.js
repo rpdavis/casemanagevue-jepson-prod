@@ -73,6 +73,15 @@ export default function useStudents() {
     }
   }
 
+  // Function to set students from external source (for role-based loading)
+  function setStudents(studentArray) {
+    students.value = studentArray.map(student => {
+      // Convert any Firestore Maps to plain objects
+      const convertedData = convertFirestoreMaps(student)
+      return { id: student.id, ...convertedData }
+    })
+  }
+
   // Admin functions
   async function fetchAllStudents() {
     const studentSnap = await getDocs(collection(db, 'students'))
@@ -150,6 +159,7 @@ export default function useStudents() {
   return { 
     students, 
     fetchStudents,
+    setStudents,
     fetchAllStudents,
     updateStudent,
     deleteStudent,

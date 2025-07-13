@@ -28,16 +28,15 @@ service cloud.firestore {
       return getUserRole() == "service_provider";
     }
     
-    function isParaeducator() {
-      return getUserRole() == "paraeducator";
-    }
-    
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
     function hasValidRole() {
-      return getUserRole() in ["admin", "administrator", "administrator_504_CM", "sped_chair", "case_manager", "teacher", "service_provider", "paraeducator"];
+      return getUserRole() in [
+        "admin", "administrator", "administrator_504_CM", "sped_chair",
+        "case_manager", "teacher", "service_provider", "paraeducator"
+      ];
     }
     
     function isValidEmail(email) {
@@ -84,7 +83,7 @@ service cloud.firestore {
 
     // Users collection - Enhanced validation
     match /users/{userId} {
-      allow read: if isAuthenticated() && hasValidRole();
+      allow read: if isAuthenticated() && hasValidRole() && (isOwner(userId) || isAdmin());
       allow create: if isAuthenticated() && isAdmin() && isValidUserData(resource.data);
       allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUserData(resource.data);
       allow delete: if isAuthenticated() && isAdmin();
@@ -113,8 +112,18 @@ service cloud.firestore {
       allow write: if isAuthenticated() && isAdmin();
     }
     
-    // Students collection - Database-level security with required WHERE clauses
+    // Students collection - Enhanced validation and role-based access
     match /students/{studentId} {
+      // Helper function to check if user has access to specific student
+      function hasStudentAccess() {
+        let student = get(/databases/$(database)/documents/students/$(studentId)).data;
+        return isAuthenticated() && (
+          isAdmin() ||
+          (isCaseManager() && student.app.studentData.caseManagerId == request.auth.uid) ||
+          (isTeacher() && request.auth.uid in student.app.schedule.periods)
+        );
+      }
+      
       // Helper to validate encrypted fields
       function hasValidEncryption() {
         let sensitiveFields = [
@@ -125,51 +134,21 @@ service cloud.firestore {
         ];
         
         return request.resource.data.app != null &&
-               sensitiveFields.hasAll([]) &&
-               (get(request.resource.data, 'app.accommodations.assessment') == null || 
-                get(request.resource.data, 'app.accommodations.assessment') is string) &&
-               (get(request.resource.data, 'app.accommodations.instruction') == null || 
-                get(request.resource.data, 'app.accommodations.instruction') is string) &&
-               (get(request.resource.data, 'app.schedule.classServices') == null || 
-                get(request.resource.data, 'app.schedule.classServices') is list) &&
-               (get(request.resource.data, 'app.studentData.plan') == null || 
-                get(request.resource.data, 'app.studentData.plan') is string);
+               sensitiveFields.every(field => {
+                 let value = get(request.resource.data, field);
+                 return value == null || value is string;
+               });
       }
       
-      // Single document access (get)
-      allow get: if isAuthenticated() && (
-        isAdmin() ||
-        (isCaseManager() && resource.data.app.studentData.caseManagerId == request.auth.uid) ||
-        (isTeacher() && (
-          resource.data.app.schedule != null && 
-          resource.data.app.schedule.periods != null &&
-          request.auth.uid in resource.data.app.schedule.periods
-        )) ||
-        (isServiceProvider() && (
-          (resource.data.app.providers != null && request.auth.uid in resource.data.app.providers) ||
-          (resource.data.app.schedule != null && 
-           resource.data.app.schedule.periods != null &&
-           request.auth.uid in resource.data.app.schedule.periods)
-        )) ||
-        isParaeducator() // Paraeducators can read individual students (filtered by queries)
-      );
-      
-      // Collection queries (list) - TEMPORARY: Allow all authenticated users to test
-      // TODO: Add proper WHERE clause validation once we debug the issue
-      allow list: if isAuthenticated() && hasValidRole();
-      
+      allow read: if hasStudentAccess();
       allow create: if isAuthenticated() && (isAdmin() || isCaseManager()) && hasValidEncryption();
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (isCaseManager() && resource.data.app.studentData.caseManagerId == request.auth.uid)
-      ) && hasValidEncryption();
+      allow update: if hasStudentAccess() && hasValidEncryption();
       allow delete: if isAuthenticated() && isAdmin();
     }
     
     // Aide Schedules collection - Admin only
     match /aideSchedules/{aideId} {
-      allow read: if isAuthenticated() && (isAdmin() || (isParaeducator() && request.auth.uid == aideId));
-      allow write: if isAuthenticated() && isAdmin();
+      allow read, write: if isAuthenticated() && isAdmin();
     }
     
     // Teacher Feedback Forms - Case managers and admins
