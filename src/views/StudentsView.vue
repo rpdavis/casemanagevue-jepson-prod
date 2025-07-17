@@ -46,19 +46,19 @@
           </select>
         </div>
 
-        <!-- Provider View (for case managers and sped roles) -->
-        <div v-if="showProviderView" class="filter-group">
+        <!-- Provider View (based on role-specific options) -->
+        <div v-if="providerViewOptions && providerViewOptions.length" class="filter-group">
           <div class="radio-group">
-            <label 
-              v-for="option in defaultProviderViewOptions" 
+            <label
+              v-for="option in providerViewOptions"
               :key="option.value"
-              class="radio-btn" 
+              class="radio-btn"
               :class="{ active: currentFilters.providerView === option.value }"
             >
-              <input 
-                type="radio" 
-                v-model="currentFilters.providerView" 
-                :value="option.value" 
+              <input
+                type="radio"
+                v-model="currentFilters.providerView"
+                :value="option.value"
                 @change="applyFilters"
               >
               {{ option.label }}
@@ -70,21 +70,21 @@
         <div class="filter-group">
           <div class="radio-group">
             <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'list' }">
-              <input type="radio" v-model="currentFilters.viewMode" value="list" @change="applyFilters()">
+              <input type="radio" :value="'list'" :checked="currentFilters.viewMode === 'list'" @change="setViewMode('list')">
               List
             </label>
             <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'class', disabled: isClassViewDisabled }">
               <input 
                 type="radio" 
-                v-model="currentFilters.viewMode" 
-                value="class" 
-                @change="applyFilters()"
+                :value="'class'"
+                :checked="currentFilters.viewMode === 'class'"
+                @change="setViewMode('class')"
                 :disabled="isClassViewDisabled"
               >
               <span :class="{ 'strikethrough': isClassViewDisabled }">Class</span>
             </label>
             <label v-if="canAccessTesting" class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
-              <input type="radio" v-model="currentFilters.viewMode" value="testing" @change="applyFilters()">
+              <input type="radio" :value="'testing'" :checked="currentFilters.viewMode === 'testing'" @change="setViewMode('testing')">
               SS-Testing
             </label>
 
