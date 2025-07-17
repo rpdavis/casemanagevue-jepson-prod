@@ -1,12 +1,12 @@
 <template>
-  <div class="user-role-switcher" v-if="canShowDebugMenu && isDebugMenuVisible" :class="{ collapsed: !isExpanded }">
-    <div class="switcher-header" @click="toggleExpanded" :title="isExpanded ? 'Collapse Debug Panel' : 'Expand Debug Panel'">
+  <div class="user-role-switcher" v-if="canShowDebugMenu && isDebugMenuVisible" :class="{ collapsed: !isDebugMenuVisible }">
+    <div class="switcher-header" @click="toggleDebugMenu" :title="isDebugMenuVisible ? 'Collapse Debug Panel' : 'Expand Debug Panel'">
       <span class="debug-icon">🔧</span>
-      <span v-if="isExpanded" class="debug-label">Debug</span>
+      <span v-if="isDebugMenuVisible" class="debug-label">Debug</span>
       <button @click.stop="hideDebugMenu" class="close-debug-btn" title="Close Debug Menu">×</button>
     </div>
     
-    <div v-if="isExpanded" class="switcher-content">
+    <div v-if="isDebugMenuVisible" class="switcher-content">
       <div class="current-user-info">
         <strong>Current User:</strong> {{ currentUser?.name || currentUser?.email || 'Unknown' }}
         <br>
@@ -128,9 +128,10 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const { hasPermission } = usePermissions()
-    const { isDebugMenuVisible, canShowDebugMenu, hideDebugMenu } = useDebugMenu()
+    // Use debug menu state
+    const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu, hideDebugMenu } = useDebugMenu()
     
-    const isExpanded = ref(false)
+    // Header and content visibility now driven by isDebugMenuVisible
     const selectedRole = ref('')
     const permissionsMatrix = ref({})
     const loadingPermissions = ref(false)
@@ -273,10 +274,6 @@ export default {
       }))
     })
     
-    const toggleExpanded = () => {
-      isExpanded.value = !isExpanded.value
-    }
-    
     const switchRole = () => {
       if (!selectedRole.value) return
       
@@ -334,10 +331,9 @@ export default {
           event.preventDefault()
           if (canShowDebugMenu.value) {
             if (isDebugMenuVisible.value) {
-              toggleExpanded()
+              toggleDebugMenu()
             } else {
-              isDebugMenuVisible.value = true
-              isExpanded.value = true
+              toggleDebugMenu()
             }
           }
         }
@@ -355,14 +351,12 @@ export default {
       isDebugMenuVisible,
       canShowDebugMenu,
       hideDebugMenu,
-      isExpanded,
       selectedRole,
       currentUser,
       availableRoles,
       testUsers,
       currentPermissions,
       loadingPermissions,
-      toggleExpanded,
       switchRole,
       switchToUser,
       resetToRealUser,
