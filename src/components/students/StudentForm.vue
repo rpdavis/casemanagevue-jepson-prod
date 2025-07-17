@@ -20,6 +20,7 @@
           :form="form"
           :periods="periods"
           :user-roles="userRoles"
+          :app-settings="appSettings"
         />
 
         <!-- Class Services -->

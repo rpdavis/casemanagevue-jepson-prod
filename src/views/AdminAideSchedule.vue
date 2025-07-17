@@ -89,6 +89,7 @@ import { useAuthStore } from '@/store/authStore'
 import useUsers from '@/composables/useUsers'
 import useStudents from '@/composables/useStudents'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { usePeriodLabels } from '@/composables/usePeriodLabels'
 import useAideSchedule from '@/composables/useAideSchedule'
 import useAideAssignment from '@/composables/useAideAssignment'
 import { getDisplayValue } from '@/utils/studentUtils'
@@ -102,6 +103,7 @@ const authStore = useAuthStore()
 const { userList, fetchUsers } = useUsers()
 const { students, fetchStudents } = useStudents()
 const { appSettings, loadAppSettings, saveAppSettings } = useAppSettings()
+const { labels: periodLabels } = usePeriodLabels()
 const { aideSchedule, loadAideSchedules, saveAideSchedule, saveAllAideSchedules } = useAideSchedule()
 const { aideAssignment, loadAideAssignments, saveAideAssignment } = useAideAssignment()
 
@@ -194,13 +196,8 @@ const teachers = computed(() => {
 })
 
 const periods = computed(() => {
-  // Use app settings for periods
-  if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
-    return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
-  }
-  
-  // Fallback to default periods
-  return ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
+  // Use period labels from composable
+  return periodLabels.value
 })
 
 // Load time table data

@@ -13,6 +13,14 @@ service cloud.firestore {
     }
     
     function isAdmin() {
+      return getUserRole() == "admin";
+    }
+    
+    function isSpedChair() {
+      return getUserRole() == "sped_chair";
+    }
+    
+    function isAnyAdmin() {
       return getUserRole() in ["admin", "administrator", "administrator_504_CM", "sped_chair"];
     }
     
@@ -52,18 +60,6 @@ service cloud.firestore {
       return !(value.matches('.*<script.*') || value.matches('.*javascript:.*'));
     }
     
-    function isValidStudentData(data) {
-      // Basic validation for bulk import - ensure required structure exists
-      return data.app != null &&
-             data.app.studentData != null &&
-             data.app.studentData.ssid is string &&
-             data.app.studentData.firstName is string &&
-             data.app.studentData.lastName is string &&
-             data.app.studentData.grade is string &&
-             (data.app.studentData.plan == null || 
-              data.app.studentData.plan in ["IEP", "504", "RTI", "None"]);
-    }
-    
     function isValidUserData(data) {
       return data.keys().hasAll(['name', 'email', 'role']) &&
              isValidStringLength(data.name, 100) &&
@@ -85,9 +81,9 @@ service cloud.firestore {
     // Users collection - Enhanced validation
     match /users/{userId} {
       allow read: if isAuthenticated() && hasValidRole();
-      allow create: if isAuthenticated() && isAdmin() && isValidUserData(resource.data);
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidUserData(resource.data);
-      allow delete: if isAuthenticated() && isAdmin();
+      allow create: if isAuthenticated() && isAnyAdmin() && isValidUserData(request.resource.data);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAnyAdmin()) && isValidUserData(request.resource.data);
+      allow delete: if isAuthenticated() && isAnyAdmin();
       
       // Aeries configuration - users can only access their own encrypted config
       match /aeries_config/{configId} {
@@ -98,113 +94,131 @@ service cloud.firestore {
     // App Settings collection - Admin only with validation
     match /app_settings/{document} {
       allow read: if isAuthenticated() && hasValidRole();
-      allow write: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAnyAdmin();
     }
     
     // Legacy appSettings collection - for backward compatibility
     match /appSettings/{document} {
       allow read: if isAuthenticated() && hasValidRole();
-      allow write: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAnyAdmin();
     }
     
     // Config collection - Read for all, write for admins
     match /config/{configId} {
       allow read: if isAuthenticated() && hasValidRole();
-      allow write: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAnyAdmin();
     }
     
     // Students collection - Database-level security with required WHERE clauses
     match /students/{studentId} {
       // Helper to validate encrypted fields
       function hasValidEncryption() {
-        let sensitiveFields = [
-          'app.accommodations.assessment',
-          'app.accommodations.instruction',
-          'app.schedule.classServices',
-          'app.studentData.plan'
-        ];
-        
         return request.resource.data.app != null &&
-               sensitiveFields.hasAll([]) &&
-               (get(request.resource.data, 'app.accommodations.assessment') == null || 
-                get(request.resource.data, 'app.accommodations.assessment') is string) &&
-               (get(request.resource.data, 'app.accommodations.instruction') == null || 
-                get(request.resource.data, 'app.accommodations.instruction') is string) &&
-               (get(request.resource.data, 'app.schedule.classServices') == null || 
-                get(request.resource.data, 'app.schedule.classServices') is list) &&
-               (get(request.resource.data, 'app.studentData.plan') == null || 
-                get(request.resource.data, 'app.studentData.plan') is string);
+               (request.resource.data.app.accommodations == null || 
+                request.resource.data.app.accommodations.assessment == null || 
+                request.resource.data.app.accommodations.assessment is string) &&
+               (request.resource.data.app.accommodations == null || 
+                request.resource.data.app.accommodations.instruction == null || 
+                request.resource.data.app.accommodations.instruction is string) &&
+               (request.resource.data.app.schedule == null || 
+                request.resource.data.app.schedule.classServices == null || 
+                request.resource.data.app.schedule.classServices is list) &&
+               (request.resource.data.app.studentData == null || 
+                request.resource.data.app.studentData.plan == null || 
+                request.resource.data.app.studentData.plan is string);
       }
       
       // Single document access (get)
       allow get: if isAuthenticated() && (
-        isAdmin() ||
+        isAnyAdmin() ||
         (isCaseManager() && resource.data.app.studentData.caseManagerId == request.auth.uid) ||
         (isTeacher() && (
           resource.data.app.schedule != null && 
           resource.data.app.schedule.periods != null &&
-          request.auth.uid in resource.data.app.schedule.periods
+          (request.auth.uid in resource.data.app.schedule.periods || // Primary teacher
+           resource.data.app.schedule.periods.values().hasAny([{'teacherId': request.auth.uid}]) || // Object format primary
+           resource.data.app.schedule.periods.values().hasAny([{'coTeaching': {'caseManagerId': request.auth.uid}}]) // Co-teacher
+          )
         )) ||
         (isServiceProvider() && (
           (resource.data.app.providers != null && request.auth.uid in resource.data.app.providers) ||
           (resource.data.app.schedule != null && 
            resource.data.app.schedule.periods != null &&
-           request.auth.uid in resource.data.app.schedule.periods)
+           (request.auth.uid in resource.data.app.schedule.periods || // Primary teacher
+            resource.data.app.schedule.periods.values().hasAny([{'teacherId': request.auth.uid}]) || // Object format primary
+            resource.data.app.schedule.periods.values().hasAny([{'coTeaching': {'caseManagerId': request.auth.uid}}]) // Co-teacher
+           )
+          )
         )) ||
         isParaeducator() // Paraeducators can read individual students (filtered by queries)
       );
       
-      // Collection queries (list) - TEMPORARY: Allow all authenticated users to test
-      // TODO: Add proper WHERE clause validation once we debug the issue
-      allow list: if isAuthenticated() && hasValidRole();
-      
-      allow create: if isAuthenticated() && (isAdmin() || isCaseManager()) && hasValidEncryption();
+      // Allow update for primary CM only (remove co-teaching update)
       allow update: if isAuthenticated() && (
         isAdmin() ||
+        isSpedChair() ||
+        (isCaseManager() && resource.data.app.studentData.caseManagerId == request.auth.uid)
+      ) && hasValidEncryption();
+
+      // Allow list for admins, or for CM/Teachers who need to filter schedules client-side
+      allow list: if isAuthenticated() && hasValidRole() && (
+        isAnyAdmin() || isCaseManager() || isTeacher() || isServiceProvider() ||
+        // Testing queries
+        (request.query.where.size() > 0 &&
+         (request.query.where[0][0] == 'app.flags.flag2' ||
+          request.query.where[0][0] == 'app.flags.separateSetting') &&
+         request.query.where[0][2] == true)
+      );
+      
+      allow create: if isAuthenticated() && (isAdmin() || isSpedChair() || isCaseManager()) && hasValidEncryption();
+      // Allow update only for admin, sped_chair, or case_manager on their own caseload
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        isSpedChair() ||
         (isCaseManager() && resource.data.app.studentData.caseManagerId == request.auth.uid)
       ) && hasValidEncryption();
       allow delete: if isAuthenticated() && isAdmin();
     }
     
-    // Aide Schedules collection - Admin only
+    // Aide Schedules collection - Admin and paraeducator access
     match /aideSchedules/{aideId} {
-      allow read: if isAuthenticated() && (isAdmin() || (isParaeducator() && request.auth.uid == aideId));
-      allow write: if isAuthenticated() && isAdmin();
+      allow read: if isAuthenticated() && (isAnyAdmin() || (isParaeducator() && request.auth.uid == aideId));
+      allow write: if isAuthenticated() && isAnyAdmin();
     }
     
     // Teacher Feedback Forms - Case managers and admins
     match /feedbackForms/{formId} {
-      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
-      allow create, update: if isAuthenticated() && (isAdmin() || isCaseManager());
-      allow delete: if isAuthenticated() && isAdmin();
+      allow read: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
+      allow create, update: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
+      allow delete: if isAuthenticated() && isAnyAdmin();
     }
     
     // Teacher Feedback Responses - Read-only for authorized users, write-only for functions
     match /feedbackResponses/{responseId} {
-      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow read: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
       allow write: if false; // Only Cloud Functions can write responses
     }
     
     // Teacher Feedback Send Log - Read-only for authorized users, write-only for functions
     match /feedbackSendLog/{logId} {
-      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow read: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
       allow write: if false; // Only Cloud Functions can write send logs
     }
     
     // Time Tables - Admin only
     match /timeTables/{tableId} {
       allow read: if isAuthenticated() && hasValidRole();
-      allow write: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAnyAdmin();
     }
     
     // Backup and restore data - Admin only
     match /backups/{backupId} {
-      allow read, write: if isAuthenticated() && isAdmin();
+      allow read, write: if isAuthenticated() && isAnyAdmin();
     }
     
     // System logs - Admin read-only
     match /systemLogs/{logId} {
-      allow read: if isAuthenticated() && isAdmin();
+      allow read: if isAuthenticated() && isAnyAdmin();
       allow write: if false; // Only system can write logs
     }
     
@@ -215,30 +229,22 @@ service cloud.firestore {
     
     // PDF Metadata collection - Enhanced security
     match /pdfMetadata/{fileId} {
-      function canAccessPdf(studentId) {
-        return isAuthenticated() && 
-               hasValidRole() && 
-               (isAdmin() || 
-                (isCaseManager() && resource.data.studentId == studentId) ||
-                (isTeacher() && exists(/databases/$(database)/documents/students/$(studentId))));
-      }
-      
       allow read: if isAuthenticated() && hasValidRole();
-      allow create: if isAuthenticated() && (isAdmin() || isCaseManager());
-      allow update: if isAuthenticated() && (isAdmin() || isCaseManager());
-      allow delete: if isAuthenticated() && isAdmin();
+      allow create: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
+      allow update: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
+      allow delete: if isAuthenticated() && isAnyAdmin();
     }
     
     // PDF Access Logs collection - Admin and case manager only
     match /pdfAccessLogs/{logId} {
-      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow read: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
       allow create: if isAuthenticated() && hasValidRole();
       allow update, delete: if false; // Immutable logs
     }
     
     // IEP Access Logs - Immutable audit trail
     match /iepAccessLogs/{logId} {
-      allow read: if isAuthenticated() && (isAdmin() || isCaseManager());
+      allow read: if isAuthenticated() && (isAnyAdmin() || isCaseManager());
       allow create: if isAuthenticated() && hasValidRole();
       allow update, delete: if false; // Logs are immutable
     }

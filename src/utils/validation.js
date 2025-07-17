@@ -476,9 +476,23 @@ export function sanitizeStudentFormData(formData) {
   // Schedule object
   if (formData.schedule && typeof formData.schedule === 'object') {
     sanitized.schedule = {}
-    Object.entries(formData.schedule).forEach(([period, teacherId]) => {
-      if (teacherId && typeof teacherId === 'string') {
-        sanitized.schedule[period] = sanitizeString(teacherId, { trim: true, maxLength: 50 })
+    Object.entries(formData.schedule).forEach(([period, periodData]) => {
+      if (periodData) {
+        if (typeof periodData === 'string') {
+          // Simple teacher ID string
+          sanitized.schedule[period] = sanitizeString(periodData, { trim: true, maxLength: 50 })
+        } else if (typeof periodData === 'object' && periodData.teacherId) {
+          // Co-teaching object with teacherId and coTeaching data
+          sanitized.schedule[period] = {
+            teacherId: sanitizeString(periodData.teacherId, { trim: true, maxLength: 50 }),
+            coTeaching: {
+              caseManagerId: periodData.coTeaching?.caseManagerId ? 
+                sanitizeString(periodData.coTeaching.caseManagerId, { trim: true, maxLength: 50 }) : '',
+              subject: periodData.coTeaching?.subject ? 
+                sanitizeString(periodData.coTeaching.subject, { trim: true, maxLength: 100 }) : ''
+            }
+          }
+        }
       }
     })
   }

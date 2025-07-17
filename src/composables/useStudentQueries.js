@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, orderBy, getDoc, doc, documentId } from 'firebase/firestore'
 import { db } from '@/firebase'
+import { initDebugSummary, setDatabaseStudents } from '@/utils/debugSummary'
 
 /**
  * Role-based student queries for database-level security filtering
@@ -21,46 +22,91 @@ export function useStudentQueries() {
   }
 
   /**
-   * Get students for case manager - only their assigned students
+   * Get students for case manager - students they case manage AND/OR teach
    */
   const getCaseManagerStudents = async (userId) => {
     console.log('🔒 Security: Loading students for case manager:', userId)
     
     try {
-      // DEBUG: First, let's see what case manager IDs are actually in the database
-      console.log('🔒 Security: DEBUG - Checking all case manager IDs in database...')
-      const allStudentsQuery = query(collection(db, 'students'))
-      const allSnapshot = await getDocs(allStudentsQuery)
-      const allStudents = allSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      
-      const caseManagerIds = allStudents.map(s => s.app?.studentData?.caseManagerId).filter(Boolean)
-      console.log('🔒 Security: DEBUG - Found case manager IDs:', [...new Set(caseManagerIds)])
-      console.log('🔒 Security: DEBUG - Looking for userId:', userId)
-      
-      // Now try the actual query with orderBy (index is now deployed)
+      // Get students where user is the case manager
       const q = query(
         collection(db, 'students'),
         where('app.studentData.caseManagerId', '==', userId),
         orderBy('app.studentData.lastName', 'asc')
       )
-      const snapshot = await getDocs(q)
-      const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      console.log('🔒 Security: Case manager has access to', students.length, 'students')
+      const cmSnapshot = await getDocs(q)
+      const cmStudents = cmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       
-      // Debug: Log the first student to see structure
-      if (students.length > 0) {
-        console.log('🔒 Security: DEBUG - First student structure:', students[0])
-      }
+      console.log('🔒 Security: Case manager manages', cmStudents.length, 'students')
+      console.log('🔒 Security: CM student names:', cmStudents.map(s => 
+        `${s.app?.studentData?.firstName} ${s.app?.studentData?.lastName}`
+      ).slice(0, 5))
       
-      return students
+      // Also get students where user is a teacher (same logic as getTeacherStudents)
+      const allStudentsQuery = query(collection(db, 'students'))
+      const allSnapshot = await getDocs(allStudentsQuery)
+      
+      const teacherStudents = []
+      allSnapshot.docs.forEach(doc => {
+        const student = { id: doc.id, ...doc.data() }
+        
+        // Use same logic as getSchedule() to find schedule data
+        const schedule = student.schedule || 
+                        student.app?.schedule?.periods || 
+                        student.aeries?.schedule?.periods || 
+                        student.aeries?.schedule || 
+                        {}
+        
+        let isTeacher = false
+        
+        // Check each period
+        Object.entries(schedule).forEach(([period, data]) => {
+          // Handle both string and object formats
+          if (typeof data === 'string' && data === userId) {
+            isTeacher = true
+          } else if (typeof data === 'object') {
+            // Check primary teacher
+            if (data.teacherId === userId) {
+              isTeacher = true
+            }
+            // Check co-teacher
+            if (data.coTeaching?.caseManagerId === userId) {
+              isTeacher = true
+            }
+          }
+        })
+        
+        // Only add if they teach this student AND don't already case manage them
+        if (isTeacher && !cmStudents.find(s => s.id === student.id)) {
+          teacherStudents.push(student)
+        }
+      })
+      
+      console.log('🔒 Security: Case manager teaches', teacherStudents.length, 'additional students')
+      console.log('🔒 Security: Teaching student names:', teacherStudents.map(s => 
+        `${s.app?.studentData?.firstName} ${s.app?.studentData?.lastName}`
+      ).slice(0, 5))
+      
+      // Combine both lists
+      const allStudents = [...cmStudents, ...teacherStudents]
+      
+      console.log('🔒 Security: Total students for case manager:', allStudents.length)
+      
+      // Track in debug summary
+      setDatabaseStudents(allStudents.length, {
+        caseManaging: cmStudents.length,
+        teaching: teacherStudents.length
+      })
+      
+      // Sort combined list
+      return allStudents.sort((a, b) => {
+        const aName = `${a.app?.studentData?.lastName || ''}, ${a.app?.studentData?.firstName || ''}`
+        const bName = `${b.app?.studentData?.lastName || ''}, ${b.app?.studentData?.firstName || ''}`
+        return aName.localeCompare(bName)
+      })
+      
     } catch (error) {
       console.error('🔒 Security: Query failed:', error)
-      console.error('🔒 Security: Query details:', {
-        collection: 'students',
-        where: 'app.studentData.caseManagerId',
-        operator: '==',
-        value: userId
-      })
       throw error
     }
   }
@@ -72,24 +118,58 @@ export function useStudentQueries() {
   const getTeacherStudents = async (userId) => {
     console.log('🔒 Security: Loading students for teacher:', userId)
     
-    // Unfortunately, Firestore doesn't support querying object values directly
-    // We need to restructure the schedule data or use a different approach
-    // For now, we'll load all students and filter (this will be improved in phase 2)
-    const q = query(
-      collection(db, 'students'),
-      orderBy('app.studentData.lastName', 'asc')
-    )
-    const snapshot = await getDocs(q)
-    const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    try {
+      // Get all students where user is a teacher in any period
+      // We need to check both string format and object format schedules
+      const allStudentsQuery = query(collection(db, 'students'))
+      const snapshot = await getDocs(allStudentsQuery)
+      const students = []
+      
+      snapshot.docs.forEach(doc => {
+        const student = { id: doc.id, ...doc.data() }
+        
+        // Use same logic as getSchedule() to find schedule data
+        const schedule = student.schedule || 
+                        student.app?.schedule?.periods || 
+                        student.aeries?.schedule?.periods || 
+                        student.aeries?.schedule || 
+                        {}
+        
+        let isTeacher = false
+        
+        // Check each period
+        Object.entries(schedule).forEach(([period, data]) => {
+          // Handle both string and object formats
+          if (typeof data === 'string' && data === userId) {
+            isTeacher = true
+          } else if (typeof data === 'object') {
+            // Check primary teacher
+            if (data.teacherId === userId) {
+              isTeacher = true
+            }
+            // Check co-teacher
+            if (data.coTeaching?.caseManagerId === userId) {
+              isTeacher = true
+            }
+          }
+        })
+        
+        if (isTeacher) {
+          students.push(student)
+        }
+      })
     
-    // Filter students where teacher is in schedule
-    const teacherStudents = allStudents.filter(student => {
-      const schedule = student.app?.schedule?.periods || {}
-      return Object.values(schedule).includes(userId)
-    })
-    
-    console.log('🔒 Security: Teacher has access to', teacherStudents.length, 'students out of', allStudents.length, 'total')
-    return teacherStudents
+      console.log('🔒 Security: Teacher has access to', students.length, 'students')
+      return students.sort((a, b) => {
+        const aName = `${a.app?.studentData?.lastName || ''}, ${a.app?.studentData?.firstName || ''}`
+        const bName = `${b.app?.studentData?.lastName || ''}, ${b.app?.studentData?.firstName || ''}`
+        return aName.localeCompare(bName)
+      })
+
+    } catch (error) {
+      console.error('🔒 Security: Error loading teacher students:', error)
+      return []
+    }
   }
 
   /**
@@ -98,28 +178,37 @@ export function useStudentQueries() {
   const getServiceProviderStudents = async (userId) => {
     console.log('🔒 Security: Loading students for service provider:', userId)
     
-    // Similar to teacher, we need to filter by provider assignments
-    const q = query(
+    try {
+      // Get students where user is a service provider
+      const providerQuery = query(
       collection(db, 'students'),
-      orderBy('app.studentData.lastName', 'asc')
+        where('app.providers', 'array-contains', userId)
     )
-    const snapshot = await getDocs(q)
-    const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-    
-    // Filter students where service provider is assigned
-    const providerStudents = allStudents.filter(student => {
-      const providers = student.app?.providers || {}
-      const schedule = student.app?.schedule?.periods || {}
       
-      // Check if user is in providers OR in schedule (service providers can also teach)
-      const isProvider = Object.values(providers).includes(userId)
-      const isTeacher = Object.values(schedule).includes(userId)
-      
-      return isProvider || isTeacher
-    })
+      const providerSnapshot = await getDocs(providerQuery)
+      const students = providerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     
-    console.log('🔒 Security: Service provider has access to', providerStudents.length, 'students out of', allStudents.length, 'total')
-    return providerStudents
+      // Get students where user is a teacher (primary or co-teacher)
+      const teacherStudents = await getTeacherStudents(userId)
+      
+      // Combine and deduplicate
+      teacherStudents.forEach(student => {
+        if (!students.find(s => s.id === student.id)) {
+          students.push(student)
+        }
+      })
+
+      console.log('🔒 Security: Service provider has access to', students.length, 'students')
+      return students.sort((a, b) => {
+        const aName = `${a.app?.studentData?.lastName || ''}, ${a.app?.studentData?.firstName || ''}`
+        const bName = `${b.app?.studentData?.lastName || ''}, ${b.app?.studentData?.firstName || ''}`
+        return aName.localeCompare(bName)
+      })
+
+    } catch (error) {
+      console.error('🔒 Security: Error loading service provider students:', error)
+      return []
+    }
   }
 
   /**
@@ -260,12 +349,57 @@ export function useStudentQueries() {
     }
   }
 
+  /**
+   * Get testing students for role-based access
+   * Returns only students with flag2 (separate testing setting) = true
+   * with minimal data needed for testing view
+   */
+  const getTestingStudents = async (user) => {
+    console.log('🔒 Security: Loading testing students for user:', user.uid, 'role:', user.role)
+    
+    try {
+      // Get role-based students first
+      const roleBasedStudents = await getStudentsByRole(user)
+      
+      // Filter for students with testing flag enabled (flag2 = separateSetting)
+      const testingStudents = roleBasedStudents.filter(student => {
+        return student.app?.flags?.flag2 || student.flag2 || false
+      })
+      
+      // Return minimal data for testing view
+      const minimalTestingData = testingStudents.map(student => ({
+        id: student.id,
+        app: {
+          studentData: {
+            firstName: student.app?.studentData?.firstName || '',
+            lastName: student.app?.studentData?.lastName || '',
+            grade: student.app?.studentData?.grade || '',
+            studentId: student.app?.studentData?.studentId || '',
+            plan: student.app?.studentData?.plan || ''
+          },
+          flags: {
+            flag2: student.app?.flags?.flag2 || student.flag2 || false, // separateSetting
+            separateSetting: student.app?.flags?.flag2 || student.flag2 || false // alias for clarity
+          },
+          accommodations: student.app?.accommodations || {},
+          schedule: student.app?.schedule || {},
+          providers: student.app?.providers || {}
+        }
+      }))
+      
+      console.log('🔒 Security: User has access to', minimalTestingData.length, 'testing students')
+      return minimalTestingData
+      
+    } catch (error) {
+      console.error('🔒 Security: Error loading testing students:', error)
+      return []
+    }
+  }
+
+
+
   return {
     getStudentsByRole,
-    getAdminStudents,
-    getCaseManagerStudents,
-    getTeacherStudents,
-    getServiceProviderStudents,
-    getParaeducatorStudents
+    getTestingStudents
   }
 } 

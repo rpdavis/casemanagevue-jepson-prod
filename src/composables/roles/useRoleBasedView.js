@@ -54,13 +54,15 @@ export function useRoleBasedView(studentData, filterData) {
   const canEditAllStudents = computed(() => {
     const userRole = currentUser.value?.role
     // These roles can edit all students (matches Firebase rules)
-    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)
+    // Note: 'administrator' removed - they can only view, not edit
+    return ['admin', 'sped_chair'].includes(userRole)
   })
   
   const canEditOwnStudents = computed(() => {
     const userRole = currentUser.value?.role
     // These roles can edit their own assigned students (matches Firebase rules)
-    return ['case_manager'].includes(userRole)
+    // Note: 'administrator_504_CM' added - they can only edit students on their case load
+    return ['case_manager', 'administrator_504_CM'].includes(userRole)
   })
   
   const canViewAllStudents = computed(() => {
@@ -81,17 +83,20 @@ export function useRoleBasedView(studentData, filterData) {
     return ['admin', 'administrator', 'sped_chair'].includes(userRole)
   })
   
-  // Testing permissions - DYNAMIC (UI only, safe to be dynamic)
+  // Testing permissions - Based on role and proctorTest field
   const canAccessTesting = computed(() => {
-    return permissionStore.can(PERMISSION_ACTIONS.TESTING_ALL)
+    // All authenticated users can access testing view for their role-based students
+    return true
   })
 
   const canAccessTestingPartial = computed(() => {
-    return permissionStore.can(PERMISSION_ACTIONS.TESTING_PARTIAL)
+    // Legacy - now same as canAccessTesting
+    return true
   })
 
   const hasAnyTestingAccess = computed(() => {
-    return canAccessTesting.value || canAccessTestingPartial.value
+    // All authenticated users have testing access for their assigned students
+    return true
   })
 
   // Return combined functionality

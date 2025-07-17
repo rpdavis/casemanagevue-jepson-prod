@@ -1,5 +1,6 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { getDisplayValue } from '@/utils/studentUtils'
+import { usePeriodLabels } from '@/composables/usePeriodLabels'
 
 export function useBaseRoleView(studentData, filterData) {
   const {
@@ -12,15 +13,120 @@ export function useBaseRoleView(studentData, filterData) {
     formatDate
   } = studentData
 
+  const { getLabel } = usePeriodLabels()
+
   const {
     filteredStudents,
     currentFilters,
     applyFilters
   } = filterData
 
-  // Basic student data access
+  // Standardized Schedule Handling
+  const standardizeScheduleAccess = (schedule, userId) => {
+    if (!schedule) return { periods: {}, isTeacher: false, isCoTeacher: false }
+    
+    let isTeacher = false
+    let isCoTeacher = false
+    const periods = {}
+    
+    Object.entries(schedule).forEach(([period, data]) => {
+      // Handle both string and object formats
+      const teacherId = typeof data === 'string' ? data : data?.teacherId
+      const coTeachingData = typeof data === 'object' ? data?.coTeaching : null
+      const coTeachingCM = coTeachingData?.caseManagerId
+      
+      periods[period] = {
+        teacherId,
+        coTeaching: coTeachingData,
+        coTeachingCM,
+        teacherName: getUserName(teacherId),
+        coTeacherName: coTeachingCM ? getUserName(coTeachingCM) : null,
+        label: getLabel(period)
+      }
+      
+      if (teacherId === userId) isTeacher = true
+      if (coTeachingCM === userId) isCoTeacher = true
+    })
+    
+    return { periods, isTeacher, isCoTeacher }
+  }
+
+  // Standardized Provider View Filtering
+  const getProviderViewStudents = (students, userId, providerView) => {
+    if (!students || !userId) return []
+
+    switch (providerView) {
+      case 'case_manager':
+        return students.filter(student => 
+          getCaseManagerId(student) === userId
+        )
+      case 'service_provider':
+        return students.filter(student => {
+          const schedule = getSchedule(student)
+          
+          // Check if user teaches this student
+          const isTeacher = schedule ? Object.values(schedule).some(periodData => {
+            if (typeof periodData === 'string') {
+              return periodData === userId
+            } else if (periodData && typeof periodData === 'object') {
+              return periodData.teacherId === userId || 
+                     periodData.coTeaching?.caseManagerId === userId
+            }
+            return false
+          }) : false
+          
+          return isTeacher
+        })
+      case 'all':
+        return students
+      default:
+        console.warn(`Unknown provider view: ${providerView}`)
+        return []
+    }
+  }
+
+  // Standardized Class View Students
+  const getClassViewStudents = (students, userId) => {
+    if (!students || !userId) return []
+    
+    return students.filter(student => {
+      const { isTeacher, isCoTeacher } = standardizeScheduleAccess(getSchedule(student), userId)
+      return isTeacher || isCoTeacher
+    })
+  }
+
+  // Group students by period with standardized schedule
+  const groupStudentsByPeriod = (students, userId) => {
+    const groups = {}
+    
+    students.forEach(student => {
+      const schedule = getSchedule(student)
+      if (!schedule) return
+      
+      const { periods } = standardizeScheduleAccess(schedule, userId)
+      
+      Object.entries(periods).forEach(([period, data]) => {
+        if (data.teacherId === userId || data.coTeachingCM === userId) {
+          if (!groups[period]) groups[period] = []
+          groups[period].push(student)
+        }
+      })
+    })
+    
+    return groups
+  }
+
+  // Basic student data access with standardized filtering
   const visibleStudents = computed(() => {
-    return filteredStudents.value
+    const userId = currentUser.value?.uid
+    const students = filteredStudents.value
+    const providerView = currentFilters.providerView || 'all'
+
+    if (!userId || !students) return []
+
+    // Don't apply automatic filtering - let each role handle their own visibility rules
+    // The role-specific views will handle filtering based on their requirements
+    return students
   })
 
   // Basic student info formatting
@@ -106,49 +212,37 @@ export function useBaseRoleView(studentData, filterData) {
   })
 
   // UI Permission Logic - Common across all roles
-  const canAccessFilters = computed(() => {
-    const role = currentUser.value?.role
-    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
-  })
-
-  // View mode restrictions based on role
   const isClassViewDisabled = computed(() => {
     const role = currentUser.value?.role
+    const filters = currentFilters
     
-    // For case managers, class view is only available when SP (service provider) is selected
-    if (role === 'case_manager') {
-      return currentFilters.providerView !== 'service_provider'
-    }
-    
-    // For admin, class view is only available when teacher or paraeducator filter is selected
-    if (role === 'admin') {
-      return currentFilters.teacher === 'all' && currentFilters.paraeducator === 'all'
-    }
-    
-    // For administrator_504_CM and sped_chair, class view is available when:
-    // 1. Teacher or paraeducator filter is selected, OR
-    // 2. Their SP (service provider) view is selected
-    // BUT disabled when * is selected
-    if (role === 'administrator_504_CM' || role === 'sped_chair') {
-      // First check if * is selected - if so, disable class view
-      if (currentFilters.providerView === 'iep_all' || currentFilters.providerView === 'iep_504_all') {
-        return true
-      }
-      
-      // Otherwise, use the original logic
-      const hasTeacherOrParaeducatorFilter = currentFilters.teacher !== 'all' || currentFilters.paraeducator !== 'all'
-      const hasServiceProviderView = currentFilters.providerView === 'service_provider'
-      return !hasTeacherOrParaeducatorFilter && !hasServiceProviderView
-    }
-    
-    // For paraeducators, class view might have different restrictions
-    if (role === 'paraeducator') {
-      // Could add paraeducator-specific logic here if needed
+    // Teachers and paraeducators always have access to class view
+    if (['teacher', 'paraeducator'].includes(role)) {
       return false
     }
     
-    // For other roles (teacher, service_provider), class view is always available
-    return false
+    // Case managers can use class view ONLY in SP mode or when filtering by teacher
+    if (role === 'case_manager') {
+      return filters.providerView !== 'service_provider' && filters.teacher === 'all'
+    }
+    
+    // Sped chairs and administrator_504_CM can use class view ONLY in SP mode or when filtering by teacher
+    if (['sped_chair', 'administrator_504_CM'].includes(role)) {
+      return filters.providerView !== 'service_provider' && filters.teacher === 'all'
+    }
+    
+    // Admin and administrator can use class view when filtering by teacher or paraeducator
+    if (['admin', 'administrator'].includes(role)) {
+      return filters.teacher === 'all' && filters.paraeducator === 'all'
+    }
+    
+    // Service providers can use class view when they are teaching
+    if (role === 'service_provider') {
+      return filters.providerView !== 'service_provider'
+    }
+    
+    // Default to disabled for unknown roles
+    return true
   })
 
   // Check if user has admin-level permissions
@@ -157,11 +251,37 @@ export function useBaseRoleView(studentData, filterData) {
     return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
   })
 
+  // Check if user can access filters
+  const canAccessFilters = computed(() => {
+    const role = currentUser.value?.role
+    // All roles except paraeducator can access filters
+    return role !== 'paraeducator'
+  })
+
+  // Auto-switch to list view when class view becomes disabled
+  watch(
+    () => isClassViewDisabled.value,
+    (isDisabled) => {
+      if (isDisabled && currentFilters.viewMode === 'class') {
+        console.log('🔄 Auto-switching from class view to list view because class view is now disabled')
+        currentFilters.viewMode = 'list'
+        applyFilters()
+      }
+    },
+    { immediate: false }
+  )
+
   return {
     // Data
     visibleStudents,
     currentUser,
     userMapObj,
+
+    // Standardized Schedule Functions
+    standardizeScheduleAccess,
+    getProviderViewStudents,
+    getClassViewStudents,
+    groupStudentsByPeriod,
 
     // Computed groups
     groupStudentsByGrade,

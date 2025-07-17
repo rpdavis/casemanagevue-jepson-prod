@@ -617,7 +617,6 @@ watch(() => props.student, (newStudent) => {
 .students-table.testing-view td:nth-child(3) {
   width: 50%;
 }
-</style>
+</style>// Styles removed for migration to external CSS files
+// Styles removed for migration to external CSS files
 
-// Styles removed for migration to external CSS files
-// Styles removed for migration to external CSS files

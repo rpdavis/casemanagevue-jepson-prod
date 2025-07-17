@@ -80,7 +80,18 @@ const includeDocs = ref(false)
 const teacherIds = computed(() => {
   // Check new nested structure first
   if (student.app?.schedule?.periods) {
-    return Object.values(student.app.schedule.periods).filter(Boolean)
+    const ids = []
+    Object.values(student.app.schedule.periods).forEach(periodData => {
+      // Add main teacher
+      const teacherId = typeof periodData === 'string' ? periodData : periodData?.teacherId
+      if (teacherId) ids.push(teacherId)
+      
+      // Add co-teaching case manager if present
+      if (periodData?.coTeaching?.caseManagerId) {
+        ids.push(periodData.coTeaching.caseManagerId)
+      }
+    })
+    return ids
   }
   // Fallback to legacy structure
   const sched = student.schedule || {}

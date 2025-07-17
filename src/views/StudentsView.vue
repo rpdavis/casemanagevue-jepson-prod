@@ -85,8 +85,9 @@
             </label>
             <label v-if="canAccessTesting" class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
               <input type="radio" v-model="currentFilters.viewMode" value="testing" @change="applyFilters()">
-              Test
+              SS-Testing
             </label>
+
           </div>
         </div>
 
@@ -223,6 +224,9 @@
           @teacher-feedback="handleTeacherFeedback"
         />
       </div>
+      
+
+
     </div>
     
     <!-- Dialogs -->
@@ -267,7 +271,7 @@
 
 <script setup>
 // Vue imports
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // Composables
 import { useStudentData } from '@/composables/useStudentData.js'
@@ -275,6 +279,7 @@ import { useStudentFilters } from '@/composables/useStudentFilters.js'
 import { useRoleBasedView } from '@/composables/roles/useRoleBasedView.js'
 import { useStudentViews } from '@/composables/useStudentViews.js'
 import { useStudentNavActions } from '@/composables/useStudentNavActions.js'
+import { useStudentQueries } from '@/composables/useStudentQueries.js'
 
 // Components
 import StudentNavMenu from '@/components/students/StudentNavMenu.vue'
@@ -381,6 +386,18 @@ const {
   // Navigation
   handleNavAction
 } = navActions
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Fallback provider view options for roles that don't have custom options
 const defaultProviderViewOptions = computed(() => {
@@ -721,4 +738,21 @@ const defaultProviderViewOptions = computed(() => {
   padding-bottom: 8px;
   margin-bottom: 15px;
 }
+
+.testing-all-header {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.testing-all-header h3 {
+  margin: 0 0 8px 0;
+  color: #dc3545;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+
 </style>

@@ -1,11 +1,14 @@
 import { ref, computed, watch } from 'vue'
 import { getDisplayValue } from '@/utils/studentUtils'
+import { setClassViewPeriods } from '@/utils/debugSummary'
 
 export function useStudentViews(studentData, filterData, roleBasedStudents = null) {
   const {
     aideAssignment,
     getCaseManagerId,
-    getSchedule
+    getSchedule,
+    standardizeScheduleAccess,
+    currentUser
   } = studentData
 
   const {
@@ -31,8 +34,8 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
   // Get students for testing view (only those with separate setting)
   const testingViewStudents = computed(() => {
     return studentsToUse.value.filter(student => {
-      // Check both nested and legacy structures for flag2 (separate setting)
-      return student.app?.flags?.flag2 || student.flag2 || false
+      // Check flag2 (primary field) and separateSetting (alias) for backward compatibility
+      return student.app?.flags?.flag2 || student.app?.flags?.separateSetting || student.separateSetting || student.flag2 || false
     })
   })
 
@@ -40,30 +43,59 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
   const studentsByClass = computed(() => {
     const groups = {}
     
-    // Check if we're filtering by paraeducator
+    // Only process if we're in class view mode
+    if (currentViewMode.value !== 'class') {
+      return groups
+    }
+    
+    // Get current user ID
+    const currentUserId = currentUser.value?.uid
+    if (!currentUserId) {
+      console.log('🔴 studentsByClass: No current user ID')
+      return groups
+    }
+    
+    console.log('🔵 studentsByClass: Current user ID:', currentUserId)
+    console.log('🔵 studentsByClass: Processing', studentsToUse.value.length, 'students')
+    
+    // Get current filters to check for paraeducator filtering
     const currentFilters = getCurrentFilters()
     const isParaeducatorFilter = currentFilters.paraeducator && currentFilters.paraeducator !== 'all'
     
     studentsToUse.value.forEach(student => {
-      const schedule = getSchedule(student)
-      if (schedule) {
-        Object.entries(schedule).forEach(([period, data]) => {
-          if (!groups[period]) {
-            groups[period] = []
+      const schedule = getSchedule(student) || {}
+      // Debug: print full schedule object to inspect coTeaching structure
+      console.log(`🕵️ studentsByClass full schedule for ${student.app?.studentData?.firstName}:`, schedule)
+      
+      Object.entries(schedule).forEach(([period, data]) => {
+        // Extract teacherId from both simple and complex schedule structures
+        let teacherId, coTeacherId
+        if (typeof data === 'string') {
+          teacherId = data
+        } else if (data && typeof data === 'object') {
+          teacherId   = data.teacherId
+          coTeacherId = data.coTeaching?.caseManagerId
+          // Debug: if coTeaching exists, log its content
+          if (data.coTeaching) {
+            console.log(`🕵️ studentsByClass coTeaching data for ${student.app?.studentData?.firstName} in period ${period}:`, data.coTeaching)
           }
-          
-          // Extract teacherId from both simple and complex schedule structures
-          let teacherId
-          if (typeof data === 'string') {
-            teacherId = data
-          } else if (data && typeof data === 'object') {
-            teacherId = data.teacherId
-          } else {
-            return // Skip if no valid teacherId
-          }
-          
-          // If filtering by paraeducator, only add student to periods where aide is assigned
-          if (isParaeducatorFilter) {
+        } else {
+          return // Skip if no valid teacherId
+        }
+        
+        // CRITICAL FIX: Only add student to period if CURRENT USER teaches this period
+        const userTeachesThisPeriod = teacherId === currentUserId || coTeacherId === currentUserId
+        
+        if (!userTeachesThisPeriod) {
+          return // Skip this period - current user doesn't teach it
+        }
+        
+        if (!groups[period]) {
+          groups[period] = []
+        }
+        
+        // If filtering by paraeducator, only add student to periods where aide is assigned
+        if (isParaeducatorFilter) {
             const aideData = aideAssignment.value[currentFilters.paraeducator]
             if (aideData && aideData.classAssignment && aideData.classAssignment[period]) {
               const teacherIds = Array.isArray(aideData.classAssignment[period]) 
@@ -74,21 +106,16 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
               }
             }
           } else {
-            // No paraeducator filter, add student to all their periods
+            // No paraeducator filter, add student to this period (where user teaches)
             groups[period].push(student)
           }
         })
-      } else {
-        // Student has no schedule - add to special "No Schedule" group
-        // This is especially important for case managers who need to see all their students
-        if (!isParaeducatorFilter) {
-          if (!groups['No Schedule']) {
-            groups['No Schedule'] = []
-          }
-          groups['No Schedule'].push(student)
-        }
-      }
     })
+    
+    console.log('🟢 studentsByClass: Final groups:', Object.keys(groups).map(p => `Period ${p}: ${groups[p].length} students`))
+    
+    // Track class view periods
+    setClassViewPeriods(groups)
     
     // Remove periods with no students
     Object.keys(groups).forEach(period => {
@@ -97,7 +124,17 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
       }
     })
     
-    return groups
+    // Sort periods numerically
+    return Object.keys(groups)
+      .sort((a, b) => {
+        const numA = parseInt(a.replace(/\D/g, ''))
+        const numB = parseInt(b.replace(/\D/g, ''))
+        return numA - numB
+      })
+      .reduce((obj, key) => {
+        obj[key] = groups[key]
+        return obj
+      }, {})
   })
 
   // Get directly assigned students for paraeducator filter

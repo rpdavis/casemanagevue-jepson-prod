@@ -38,9 +38,8 @@ export const PERMISSION_ACTIONS = {
   VIEW_STUDENTS: "view_students",
   EDIT_STUDENT_CM: "edit_student_CM",      // Case Manager: edit students on their caseload
   EDIT_STUDENT_ALL: "edit_student_All",    // Sped Chair/Admin: edit any student
-  TESTING: "testing",                      // Legacy - kept for backward compatibility
-  TESTING_ALL: "testing_all",              // Full testing access to all students
-  TESTING_PARTIAL: "testing_partial"       // Testing access to assigned students only
+  // Note: Testing permissions are now handled by proctorTest field in user document
+  // TESTING_ALL and TESTING_PARTIAL are replaced by role-based + proctorTest field
 };
 
 // --- Permissions Matrix ---

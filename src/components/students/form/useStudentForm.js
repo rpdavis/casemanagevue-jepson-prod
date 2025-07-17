@@ -29,12 +29,10 @@ export function useStudentForm(props, emit) {
     }
   })
 
-  // Dynamic periods from app settings
+  // Dynamic periods from app settings - now returns numeric array
   const periods = computed(() => {
-    if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
-      return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
-    }
-    return ['Per1', 'Per2', 'Per3', 'Per4', 'Per5', 'Per6', 'Per7']
+    const numPeriods = appSettings.value?.numPeriods || 7
+    return Array.from({ length: numPeriods }, (_, i) => i + 1)
   })
 
   // Grades options from app settings
@@ -141,20 +139,59 @@ export function useStudentForm(props, emit) {
   // Form state - reactive object
   const form = reactive(initializeFormData(props.student || {}))
 
+  // Function to extract co-teaching services from schedule
+  const extractCoTeachingServices = (schedule) => {
+    const coTeachingServices = []
+    if (schedule && typeof schedule === 'object') {
+      Object.entries(schedule).forEach(([period, periodData]) => {
+        if (periodData && typeof periodData === 'object' && periodData.coTeaching) {
+          const subject = periodData.coTeaching.subject
+          if (subject) {
+            coTeachingServices.push(`Co-teach: ${subject}`)
+          }
+        }
+      })
+    }
+    return coTeachingServices
+  }
+
+  // Function to sync co-teaching services with schedule
+  const syncCoTeachingServices = () => {
+    const coTeachingServices = extractCoTeachingServices(form.schedule)
+    
+    // Remove existing co-teaching services from form.services
+    const nonCoTeachingServices = form.services.filter(service => 
+      !service.startsWith('Co-teach:')
+    )
+    
+    // Add current co-teaching services
+    form.services = [...nonCoTeachingServices, ...coTeachingServices]
+  }
+
+  // Watch for changes in schedule to auto-sync co-teaching services
+  watch(() => form.schedule, () => {
+    syncCoTeachingServices()
+  }, { deep: true })
+
   // Watch for changes in student prop and update form
-  watch(() => props.student, (newStudent) => {
-    if (newStudent && Object.keys(newStudent).length > 0) {
-      console.log('🔍 useStudentForm DEBUG - newStudent.app?.schedule?.periods:', JSON.stringify(newStudent?.app?.schedule?.periods, null, 2))
-      console.log('🔍 useStudentForm DEBUG - newStudent.aeries?.schedule?.periods:', JSON.stringify(newStudent?.aeries?.schedule?.periods, null, 2))
-      console.log('🔍 useStudentForm DEBUG - newStudent.schedule:', JSON.stringify(newStudent?.schedule, null, 2))
+  // Only update when student ID changes to avoid overwriting user changes
+  watch(() => props.student?.id, (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      console.log('🔍 useStudentForm DEBUG - Student ID changed, updating form:', newId)
+      console.log('🔍 useStudentForm DEBUG - newStudent.app?.schedule?.periods:', JSON.stringify(props.student?.app?.schedule?.periods, null, 2))
+      console.log('🔍 useStudentForm DEBUG - newStudent.aeries?.schedule?.periods:', JSON.stringify(props.student?.aeries?.schedule?.periods, null, 2))
+      console.log('🔍 useStudentForm DEBUG - newStudent.schedule:', JSON.stringify(props.student?.schedule, null, 2))
       
       // Update form with new student data
-      const newFormData = initializeFormData(newStudent)
+      const newFormData = initializeFormData(props.student)
       Object.assign(form, newFormData)
+      
+      // Sync co-teaching services after form initialization
+      syncCoTeachingServices()
       
       console.log('🔍 useStudentForm DEBUG - Processed form.schedule:', form.schedule)
     }
-  }, { immediate: true, deep: true })
+  }, { immediate: true })
 
   // Watch for app settings changes and update form accordingly
   watch(() => appSettings.value, (newSettings) => {
@@ -361,9 +398,46 @@ export function useStudentForm(props, emit) {
       
       // Compose schedule object
       const schedule = {}
+      console.log('🔍 FORM SCHEDULE DEBUG - Complete form.schedule:', JSON.stringify(form.schedule, null, 2))
+      console.log('🔍 FORM SCHEDULE DEBUG - periods.value:', periods.value)
+      
       periods.value.forEach(p => {
-        if (form.schedule[p]) schedule[p] = form.schedule[p]
+        console.log(`🔍 FORM SCHEDULE DEBUG - Period ${p} exists:`, !!form.schedule[p], 'Value:', form.schedule[p])
+        if (form.schedule[p]) {
+          const periodData = form.schedule[p]
+          console.log(`🔍 SCHEDULE DEBUG - Period ${p}:`, {
+            type: typeof periodData,
+            data: periodData,
+            hasCoTeaching: !!(periodData && periodData.coTeaching),
+            hasCaseManagerId: !!(periodData && periodData.coTeaching && periodData.coTeaching.caseManagerId)
+          })
+          
+          // Preserve the exact structure from the form
+          if (typeof periodData === 'string') {
+            schedule[p] = periodData
+          } else if (typeof periodData === 'object' && periodData !== null) {
+            // Ensure co-teaching structure is preserved correctly
+            if (periodData.coTeaching && periodData.coTeaching.caseManagerId) {
+              console.log(`🔍 SCHEDULE DEBUG - Period ${p} has co-teaching, preserving structure`)
+              schedule[p] = {
+                teacherId: periodData.teacherId,
+                coTeaching: {
+                  caseManagerId: periodData.coTeaching.caseManagerId,
+                  subject: periodData.coTeaching.subject || ''
+                }
+              }
+            } else {
+              console.log(`🔍 SCHEDULE DEBUG - Period ${p} converting to simple format`)
+              // Convert legacy formats or handle malformed data
+              schedule[p] = periodData.teacherId || String(periodData) || periodData
+            }
+          }
+        }
       })
+      
+      console.log('🔍 Schedule Composition Debug:')
+      console.log('Form schedule before:', JSON.stringify(form.schedule, null, 2))
+      console.log('Composed schedule after:', JSON.stringify(schedule, null, 2))
       
       console.log('Composed data:', { classServices, schedule })
       

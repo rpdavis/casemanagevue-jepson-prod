@@ -19,12 +19,23 @@
       <!-- Success state -->
       <template v-else-if="availableClassServices.length > 0">
         <ServiceCheckboxGroup
-          v-for="service in availableClassServices"
+          v-for="service in visibleClassServices"
           :key="service.name"
           :label="service.name"
           :items="service.enabledSubcategories"
           v-model="form.services"
         />
+        
+        <!-- Hidden co-teaching checkboxes (auto-populated from schedule) -->
+        <div style="display: none;">
+          <ServiceCheckboxGroup
+            v-for="service in hiddenCoTeachingServices"
+            :key="service.name"
+            :label="service.name"
+            :items="service.enabledSubcategories"
+            v-model="form.services"
+          />
+        </div>
       </template>
       
       <!-- No services state -->
@@ -39,6 +50,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import ServiceCheckboxGroup from '../ServiceCheckboxGroup.vue'
 
 // Props
@@ -49,7 +61,14 @@ const props = defineProps({
   appSettingsError: { type: String, default: null }
 })
 
-// No local state needed - all data flows through props
+// Separate visible services from hidden co-teaching services
+const visibleClassServices = computed(() => {
+  return props.availableClassServices.filter(service => service.name !== 'Co-teach')
+})
+
+const hiddenCoTeachingServices = computed(() => {
+  return props.availableClassServices.filter(service => service.name === 'Co-teach')
+})
 </script>
 
 <style scoped>

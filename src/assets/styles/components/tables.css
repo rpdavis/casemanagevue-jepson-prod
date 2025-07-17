@@ -443,7 +443,7 @@
 .students-table td:last-child {
   text-align: left;
   vertical-align: middle;
-  min-width: 120px;
+  min-width: 70px;
   padding: 0.7rem 0.4rem;
 }
 

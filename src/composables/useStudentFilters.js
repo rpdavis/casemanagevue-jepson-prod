@@ -53,10 +53,11 @@ export function useStudentFilters(studentData) {
     applyFilters()
   }
 
-  // Helper function to get current filters (for paraeducator filtering)
+  // Helper function to get current filters (for paraeducator and teacher filtering)
   const getCurrentFilters = () => {
     return {
-      paraeducator: currentFilters.paraeducator
+      paraeducator: currentFilters.paraeducator,
+      teacher: currentFilters.teacher
     }
   }
 

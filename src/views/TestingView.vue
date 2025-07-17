@@ -49,7 +49,7 @@
           <h4>Periods</h4>
           <div class="setting-values">
             <strong>Number:</strong> {{ appSettings.numPeriods || 0 }}<br>
-            <strong>Labels:</strong> {{ appSettings.periodLabels?.join(', ') || 'None' }}
+            <strong>Labels:</strong> {{ periodLabels?.join(', ') || 'None' }}
           </div>
         </div>
       </div>
@@ -103,6 +103,22 @@
     </div>
 
     <div class="test-section">
+      <h3>Period Label Migration</h3>
+      <div class="period-migration-controls">
+        <button @click="previewPeriodMigration" :disabled="periodMigrationRunning" class="btn btn-secondary">
+          {{ periodMigrationRunning ? 'Previewing...' : 'Preview Period Migration' }}
+        </button>
+        <button @click="runPeriodMigration" :disabled="periodMigrationRunning" class="btn btn-warning">
+          {{ periodMigrationRunning ? 'Migrating...' : 'Run Period Migration' }}
+        </button>
+      </div>
+      <div v-if="periodMigrationResult" class="migration-result">
+        <h4>Period Migration Result:</h4>
+        <p>{{ periodMigrationResult }}</p>
+      </div>
+    </div>
+
+    <div class="test-section">
       <h3>SSID Resolution Test</h3>
       <div class="ssid-test-controls">
         <button @click="testSSIDResolution" :disabled="ssidTestRunning" class="btn btn-primary">
@@ -123,17 +139,22 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { usePeriodLabels } from '@/composables/usePeriodLabels'
 import StudentForm from '@/components/students/StudentForm.vue'
 import { migrateStudentIds, verifyMigration as verifyMigrationUtil } from '@/utils/migrateStudentIds'
+import { previewPeriodLabelMigration, migratePeriodLabelsToNumeric } from '@/utils/periodLabelMigration'
 import { mapAeriesField, mapSeisField } from '@/composables/useImporters'
 
 const { appSettings, loadAppSettings, resetAppSettings, loading, error } = useAppSettings()
+const { labels: periodLabels } = usePeriodLabels()
 const showTestForm = ref(false)
 const migrationRunning = ref(false)
 const verificationRunning = ref(false)
 const migrationResult = ref(null)
 const ssidTestRunning = ref(false)
 const ssidTestResult = ref(null)
+const periodMigrationRunning = ref(false)
+const periodMigrationResult = ref(null)
 
 onMounted(async () => {
   console.log('TestingView: Component mounted, checking app settings...')
@@ -274,6 +295,57 @@ const testSSIDResolution = async () => {
 
 const clearSSIDTest = () => {
   ssidTestResult.value = null
+}
+
+const previewPeriodMigration = async () => {
+  periodMigrationRunning.value = true
+  periodMigrationResult.value = null
+  
+  try {
+    console.log('Starting period label migration preview...')
+    const result = await previewPeriodLabelMigration()
+    
+    if (result.error) {
+      periodMigrationResult.value = `Preview failed: ${result.error}`
+    } else if (result.changesNeeded) {
+      periodMigrationResult.value = `Preview completed: ${result.studentsNeedingMigration.length} students need migration (see console for details)`
+    } else {
+      periodMigrationResult.value = 'No migration needed - all students already use numeric period keys'
+    }
+  } catch (error) {
+    console.error('Period migration preview failed:', error)
+    periodMigrationResult.value = `Preview error: ${error.message}`
+  } finally {
+    periodMigrationRunning.value = false
+  }
+}
+
+const runPeriodMigration = async () => {
+  if (!confirm('This will update period keys from labels to numbers for all students. Continue?')) {
+    return
+  }
+  
+  periodMigrationRunning.value = true
+  periodMigrationResult.value = null
+  
+  try {
+    console.log('Starting period label migration...')
+    const result = await migratePeriodLabelsToNumeric()
+    
+    if (result.success) {
+      periodMigrationResult.value = `Migration completed: ${result.migratedStudents}/${result.totalStudents} students updated`
+      if (result.errors.length > 0) {
+        periodMigrationResult.value += ` (${result.errors.length} errors - see console)`
+      }
+    } else {
+      periodMigrationResult.value = `Migration failed: ${result.error}`
+    }
+  } catch (error) {
+    console.error('Period migration failed:', error)
+    periodMigrationResult.value = `Migration error: ${error.message}`
+  } finally {
+    periodMigrationRunning.value = false
+  }
 }
 </script>
 

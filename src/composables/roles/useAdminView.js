@@ -8,8 +8,10 @@ export function useAdminView(studentData, filterData) {
   const hasFullAccess = true
 
   // Override visible students to show ALL students for admin
+  // SECURITY: Start with database-filtered students (from useStudentQueries)
+  // FRONTEND: Apply frontend filtering (search, dropdowns) via baseView.visibleStudents
   const visibleStudents = computed(() => {
-    return studentData.students.value || []
+    return baseView.visibleStudents.value || []
   })
 
   // Admin-specific functionality

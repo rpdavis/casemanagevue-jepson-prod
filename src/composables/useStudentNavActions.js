@@ -73,6 +73,7 @@ export function useStudentNavActions(studentData) {
       case 'testing':
         navigateToTesting()
         break
+
       case 'aide-schedule':
         navigateToAideSchedule()
         break

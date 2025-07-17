@@ -89,6 +89,16 @@ export const usePermissionStore = defineStore('permission', () => {
         const data = snap.data() || {}
         userRoles.value = data.role ? [data.role] : []
         console.log('User roles updated:', userRoles.value)
+        
+        // Update auth store with latest user data (including proctorTest field)
+        if (authStore.currentUser) {
+          authStore.currentUser.value = {
+            ...authStore.currentUser.value,
+            ...data
+          }
+          console.log('🔄 Updated auth store user data:', authStore.currentUser.value)
+        }
+        
         // Only calculate permissions if matrix is loaded
         if (matrixLoaded.value) {
           userPermissions.value = derivePermissions(userRoles.value)

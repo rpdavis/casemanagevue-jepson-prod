@@ -237,14 +237,73 @@
 }
 
 /* Schedule list */
+.schedule-list {
+  padding: 0.5rem;
+}
+
 .schedule-list ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.schedule-list li {
-  margin-bottom: 2px;
+.schedule-period {
+  margin-bottom: 0.5rem;
+}
+
+.schedule-period:last-child {
+  margin-bottom: 0;
+}
+
+.period-assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.primary-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.period-label {
+  font-weight: 600;
+  color: #333;
+  min-width: 25px;
+  flex-shrink: 0;
+}
+
+.primary-teacher {
+  color: #333;
+  font-weight: 500;
+}
+
+.coteaching-info {
+  padding-left: 1rem;
+}
+
+.coteaching-indicator {
+  color: #666;
+  font-size: 0.85rem;
+  cursor: help;
+  border-bottom: 1px dotted #999;
+  transition: all 0.2s ease;
+}
+
+.coteaching-indicator:hover {
+  color: #1976d2;
+  border-bottom-color: #1976d2;
+}
+
+/* No schedule state */
+.no-schedule {
+  color: #999;
+  text-align: center;
+  padding: 1rem;
+  font-style: italic;
 }
 
 /* Bullet list for accommodations */

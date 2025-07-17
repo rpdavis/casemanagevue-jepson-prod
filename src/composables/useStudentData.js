@@ -7,6 +7,13 @@ import { useAuthStore } from '@/store/authStore'
 import { useTeacherFeedback } from '@/composables/useTeacherFeedback.js'
 import { useStudentQueries } from '@/composables/useStudentQueries.js'
 import { quickSecurityTest } from '@/utils/securityTest.js'
+import { 
+  getTeacherIdFromPeriod, 
+  getCoTeachingCaseManagerFromPeriod,
+  getAllTeacherIdsFromSchedule,
+  getCoTeachingCaseManagersFromSchedule,
+  isCoTeachingCaseManager 
+} from '@/utils/scheduleUtils.js'
 
 export function useStudentData() {
   // External dependencies
@@ -203,6 +210,13 @@ export function useStudentData() {
     getCaseManagerId,
     getSchedule,
     shouldAideSeeStudent,
+    
+    // Schedule utilities (co-teaching support)
+    getTeacherIdFromPeriod,
+    getCoTeachingCaseManagerFromPeriod,
+    getAllTeacherIdsFromSchedule,
+    getCoTeachingCaseManagersFromSchedule,
+    isCoTeachingCaseManager,
     
     // Navigation
     router

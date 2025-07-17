@@ -1,7 +1,13 @@
 <template>
   <td>
     <div class="action-buttons">
-      <button class="edit-btn" @click="$emit('edit', student.id)" title="Edit Student">✏️</button>
+      <!-- Only show Edit for admins/sped_chair or case managers on their own caseload -->
+      <button
+        v-if="currentUser?.role !== 'case_manager' || student.app?.studentData?.caseManagerId === currentUser.uid"
+        class="edit-btn"
+        @click="$emit('edit', student.id)"
+        title="Edit Student"
+      >✏️</button>
       <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
       <button v-if="currentUser?.role === 'case_manager'" 
               class="teacher-feedback-btn" 

@@ -3,30 +3,44 @@ import { useBaseRoleView } from './useBaseRoleView'
 
 export function useTeacherView(studentData, filterData) {
   const baseView = useBaseRoleView(studentData, filterData)
+  const currentUserId = computed(() => baseView.currentUser.value?.uid)
 
   // Override visible students to only show students in teacher's classes
   const visibleStudents = computed(() => {
-    return baseView.visibleStudents.value.filter(student => {
+    if (!currentUserId.value) return []
+    
+    // Get the raw filtered students from filterData, not the pre-filtered baseView students
+    const allFilteredStudents = filterData.filteredStudents.value
+    
+    // Filter students where teacher is in their schedule
+    const filtered = allFilteredStudents.filter(student => {
       const schedule = studentData.getSchedule(student)
-      return schedule ? Object.values(schedule).includes(baseView.currentUser.value?.uid) : false
+      if (!schedule) {
+        return false
+      }
+      
+      // Check if teacher ID is anywhere in the schedule
+      // Handle both string values (teacherId) and object values ({ teacherId, subject, room })
+      const hasTeacher = Object.values(schedule).some(periodData => {
+        if (typeof periodData === 'string') {
+          return periodData === currentUserId.value
+        } else if (periodData && typeof periodData === 'object') {
+          return periodData.teacherId === currentUserId.value || 
+                 periodData.coTeaching?.caseManagerId === currentUserId.value
+        }
+        return false
+      })
+      
+      return hasTeacher
     })
+    
+    return filtered
   })
 
   // Group students by period
   const studentsByPeriod = computed(() => {
-    const groups = {}
-    visibleStudents.value.forEach(student => {
-      const schedule = studentData.getSchedule(student)
-      if (schedule) {
-        Object.entries(schedule).forEach(([period, teacherId]) => {
-          if (teacherId === baseView.currentUser.value?.uid) {
-            if (!groups[period]) groups[period] = []
-            groups[period].push(student)
-          }
-        })
-      }
-    })
-    return groups
+    if (!currentUserId.value) return {}
+    return baseView.groupStudentsByPeriod(visibleStudents.value, currentUserId.value)
   })
 
   // Group students by accommodation type
@@ -67,23 +81,7 @@ export function useTeacherView(studentData, filterData) {
     return groups
   })
 
-  // Teacher-specific filtering
-  const filterByPeriod = (period) => {
-    filterData.currentFilters.period = period
-    filterData.applyFilters()
-  }
-
-  const filterByAccommodation = (type) => {
-    filterData.currentFilters.accommodationType = type
-    filterData.applyFilters()
-  }
-
-  const filterByProvider = (providerId) => {
-    filterData.currentFilters.serviceProvider = providerId
-    filterData.applyFilters()
-  }
-
-  // Teacher can only view accommodations and basic info
+  // Teacher permissions
   const canViewAccommodations = true
   const canViewBasicInfo = true
   const canViewServiceProviders = true
@@ -96,13 +94,12 @@ export function useTeacherView(studentData, filterData) {
     studentsByPeriod,
     studentsByAccommodation,
     studentsByServiceProvider,
-    filterByPeriod,
-    filterByAccommodation,
-    filterByProvider,
     canViewAccommodations,
     canViewBasicInfo,
     canViewServiceProviders,
     canViewDates,
-    canEditStudents
+    canEditStudents,
+    showProviderView: false,
+    providerViewOptions: computed(() => [])
   }
 } 

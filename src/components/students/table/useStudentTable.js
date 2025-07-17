@@ -1,6 +1,7 @@
 import { ref, onMounted } from 'vue'
 import { formatListFromText, getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { usePeriodLabels } from '@/composables/usePeriodLabels'
 
 /**
  * Composable for StudentTable logic and data processing
@@ -9,6 +10,7 @@ import { useAppSettings } from '@/composables/useAppSettings'
 export function useStudentTable(props) {
   // Load app settings for dynamic services and providers
   const { appSettings, loadAppSettings, loading: appSettingsLoading, error: appSettingsError } = useAppSettings()
+  const { getLabel } = usePeriodLabels()
   
   onMounted(async () => {
     try {
@@ -135,14 +137,9 @@ export function useStudentTable(props) {
       const formattedSchedule = {}
       Object.entries(student.aeries.schedule).forEach(([period, data]) => {
         if (data && data.teacherId) {
-          // Get period label from app settings
-          let periodLabel = period
-          if (appSettings.value && appSettings.value.periodLabels) {
-            const periodIndex = parseInt(period.replace('period', '')) - 1
-            if (periodIndex >= 0 && periodIndex < appSettings.value.periodLabels.length) {
-              periodLabel = appSettings.value.periodLabels[periodIndex]
-            }
-          }
+                  // Get period label using helper
+        const periodNum = parseInt(period.replace('period', ''))
+        const periodLabel = getLabel(periodNum)
           
           // Get teacher name from userMap
           let teacherName = data.teacherId
@@ -183,20 +180,45 @@ export function useStudentTable(props) {
     return null
   }
 
+  // Extract co-teaching services from schedule
+  const getCoTeachingServices = (student) => {
+    const coTeachingServices = []
+    const schedule = getSchedule(student)
+    
+    if (schedule) {
+      Object.entries(schedule).forEach(([period, periodData]) => {
+        if (periodData && typeof periodData === 'object' && periodData.coTeaching) {
+          const subject = periodData.coTeaching.subject
+          if (subject) {
+            coTeachingServices.push(`Co-teach: ${subject}`)
+          }
+        }
+      })
+    }
+    
+    return coTeachingServices
+  }
+
   // Services processing functions
   const getClassServices = (student) => {
     const services = student.app?.schedule?.classServices || 
                     student.services || 
                     []
     
+    // Extract co-teaching services from schedule
+    const coTeachingServices = getCoTeachingServices(student)
+    
+    // Combine regular services with co-teaching services
+    const allServices = [...services, ...coTeachingServices]
+    
     // If app settings are still loading, show all services
     if (appSettingsLoading.value) {
-      return Array.isArray(services) ? services.filter(s => typeof s === 'string' && s.includes(':')) : []
+      return Array.isArray(allServices) ? allServices.filter(s => typeof s === 'string' && s.includes(':')) : []
     }
     
     // If there was an error loading app settings, show all services
     if (appSettingsError.value) {
-      return Array.isArray(services) ? services.filter(s => typeof s === 'string' && s.includes(':')) : []
+      return Array.isArray(allServices) ? allServices.filter(s => typeof s === 'string' && s.includes(':')) : []
     }
     
     // Filter services to only show those that are enabled in app settings
@@ -205,7 +227,7 @@ export function useStudentTable(props) {
         .filter(svc => svc.enabledSubcategories && svc.enabledSubcategories.length > 0)
         .map(svc => svc.name)
       
-      return Array.isArray(services) ? services.filter(s => {
+      return Array.isArray(allServices) ? allServices.filter(s => {
         if (typeof s !== 'string' || !s.includes(':')) return false
         const serviceName = s.split(':')[0]
         return enabledServices.includes(serviceName)
@@ -213,7 +235,7 @@ export function useStudentTable(props) {
     }
     
     // Fallback to all services if app settings not available
-    return Array.isArray(services) ? services.filter(s => typeof s === 'string' && s.includes(':')) : []
+    return Array.isArray(allServices) ? allServices.filter(s => typeof s === 'string' && s.includes(':')) : []
   }
 
   const getOtherServices = (student) => {
@@ -389,6 +411,7 @@ export function useStudentTable(props) {
     // Services functions
     getClassServices,
     getOtherServices,
+    getCoTeachingServices,
     hasServiceProviders,
     getServiceProviderId,
     getProviderFieldName,

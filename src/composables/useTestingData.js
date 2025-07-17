@@ -1,27 +1,17 @@
 import { ref, computed } from 'vue'
 import { getDisplayValue } from '@/utils/studentUtils'
+import { usePeriodLabels } from '@/composables/usePeriodLabels'
 
 export function useTestingData(students, users, appSettings) {
+  const { getLabel } = usePeriodLabels()
   // Get available periods from app settings
   const availablePeriods = computed(() => {
-    if (appSettings.value?.numPeriods && appSettings.value?.periodLabels) {
-      return appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods).map((label, index) => ({
+    const numPeriods = appSettings.value?.numPeriods || 7
+    return Array.from({ length: numPeriods }, (_, index) => ({
         value: index.toString(), // Use index (0, 1, 2, 3, 4, 5, 6) instead of period number
-        label: label,
+      label: getLabel(index + 1), // Period numbers are 1-based
         periodIndex: index // Keep track of the actual index
       }))
-    }
-    
-    // Fallback to default periods
-    return [
-      { value: '0', label: 'Per1', periodIndex: 0 },
-      { value: '1', label: 'Per2', periodIndex: 1 },
-      { value: '2', label: 'Per3', periodIndex: 2 },
-      { value: '3', label: 'Per4', periodIndex: 3 },
-      { value: '4', label: 'Per5', periodIndex: 4 },
-      { value: '5', label: 'Per6', periodIndex: 5 },
-      { value: '6', label: 'Per7', periodIndex: 6 }
-    ]
   })
 
   // Get unique teachers from student schedules
@@ -184,8 +174,8 @@ export function useTestingData(students, users, appSettings) {
               user = users.value.find(u => u.aeriesId === String(period.teacherId))
             }
             
-            // Get the actual period label from app settings
-            const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+            // Get the actual period label from helper
+            const periodLabel = getLabel(i + 1)
             
             periods.push({
               period: periodLabel,
@@ -206,8 +196,8 @@ export function useTestingData(students, users, appSettings) {
           if (!isPeriodExcluded(periodKey, excludedPeriods)) {
             const user = users.value.find(u => u.id === String(teacherId))
             
-            // Get the actual period label from app settings
-            const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+            // Get the actual period label from helper
+            const periodLabel = getLabel(parseInt(periodKey))
             
             periods.push({
               period: periodLabel,
@@ -234,8 +224,8 @@ export function useTestingData(students, users, appSettings) {
             user = users.value.find(u => u.aeriesId === String(teacherId))
           }
           
-          // Get the actual period label from app settings
-          const periodLabel = appSettings.value?.periodLabels?.[i] || `Period ${i + 1}`
+          // Get the actual period label from helper
+          const periodLabel = getLabel(i + 1)
           
           periods.push({
             period: periodLabel,

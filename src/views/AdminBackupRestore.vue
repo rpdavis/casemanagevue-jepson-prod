@@ -1,5 +1,8 @@
 <template>
   <div class="admin-backup-restore">
+    <h1>🔧 Admin Tools</h1>
+    
+    <!-- Existing backup/restore sections -->
     <div class="header">
       <h1>Backup & Restore</h1>
       <p>Manage database backups and restore data from JSON files</p>
@@ -126,6 +129,47 @@
         </div>
         <p v-else class="no-backups">No backups found</p>
       </div>
+
+      <!-- Schedule Normalization Section -->
+      <div class="section">
+        <h2>🔄 Schedule Period Normalization</h2>
+        <p class="description">
+          This tool normalizes all student schedule periods to use numeric format (1-7) and merges co-teaching data 
+          from string periods (P1, P2, etc.) into numeric periods.
+        </p>
+        
+        <div class="warning-box">
+          <strong>⚠️ Important:</strong> This operation will modify all student records. Make sure to backup first!
+        </div>
+        
+        <div class="controls">
+          <button 
+            @click="startNormalization" 
+            :disabled="normalizationInProgress"
+            class="btn btn-primary"
+          >
+            {{ normalizationInProgress ? 'Normalizing...' : 'Start Schedule Normalization' }}
+          </button>
+          <button @click="clearNormalizationLog" class="btn btn-secondary">Clear Log</button>
+        </div>
+        
+        <div class="progress-section" v-if="normalizationProgress.total > 0">
+          <div class="progress-bar">
+            <div 
+              class="progress-fill" 
+              :style="{ width: (normalizationProgress.processed / normalizationProgress.total) * 100 + '%' }"
+            ></div>
+          </div>
+          <p class="progress-text">
+            Progress: {{ normalizationProgress.processed }}/{{ normalizationProgress.total }} processed, 
+            {{ normalizationProgress.updated }} updated
+          </p>
+        </div>
+        
+        <div class="log-container">
+          <pre class="log-output" ref="normalizationLogRef">{{ normalizationLog }}</pre>
+        </div>
+      </div>
     </div>
 
     <!-- Status Messages -->
@@ -138,7 +182,7 @@
 <script>
 import { ref, reactive, onMounted } from 'vue'
 import { db } from '@/firebase'
-import { collection, getDocs, doc, setDoc, deleteDoc, query, orderBy, limit } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, deleteDoc, query, orderBy, limit, updateDoc } from 'firebase/firestore'
 
 export default {
   name: 'AdminBackupRestore',
@@ -146,12 +190,12 @@ export default {
     const collections = ref([
       { id: 'users', name: 'Users' },
       { id: 'students', name: 'Students' },
-      { id: 'appSettings', name: 'App Settings' },
+      { id: 'app_settings', name: 'App Settings' },
       { id: 'aideSchedules', name: 'Aide Schedules' },
       { id: 'aideAssignments', name: 'Aide Assignments' }
     ])
 
-    const selectedCollections = ref(['users', 'students', 'appSettings'])
+    const selectedCollections = ref(['users', 'students', 'app_settings'])
     const backupName = ref('')
     const isBackingUp = ref(false)
     const isRestoring = ref(false)
@@ -207,14 +251,15 @@ export default {
 
         // Collect data from selected collections
         for (const collectionId of selectedCollections.value) {
-          const collectionRef = collection(db, collectionId)
-          const snapshot = await getDocs(collectionRef)
-          
-          if (collectionId === 'appSettings') {
-            // App settings is a single document
-            backup.collections[collectionId] = snapshot.docs[0]?.data() || {}
+          if (collectionId === 'app_settings') {
+            // App settings is a single document from app_settings/global
+            const settingsRef = doc(db, 'app_settings', 'global')
+            const settingsDoc = await getDoc(settingsRef)
+            backup.collections[collectionId] = settingsDoc.exists() ? settingsDoc.data() : {}
           } else {
             // Other collections are arrays of documents
+            const collectionRef = collection(db, collectionId)
+            const snapshot = await getDocs(collectionRef)
             backup.collections[collectionId] = snapshot.docs.map(doc => ({
               id: doc.id,
               ...doc.data()
@@ -289,9 +334,9 @@ export default {
 
       try {
         for (const [collectionName, data] of Object.entries(backupData.value.collections)) {
-          if (collectionName === 'appSettings') {
-            // Restore app settings
-            const settingsRef = doc(db, 'appSettings', 'default')
+          if (collectionName === 'app_settings' || collectionName === 'appSettings') {
+            // Restore app settings to the new app_settings/global location
+            const settingsRef = doc(db, 'app_settings', 'global')
             await setDoc(settingsRef, data, { merge: !restoreOptions.overwrite })
           } else {
             // Restore other collections
@@ -372,6 +417,135 @@ export default {
       }, 5000)
     }
 
+    // Schedule normalization state
+    const normalizationInProgress = ref(false)
+    const normalizationLog = ref('')
+    const normalizationLogRef = ref(null)
+    const normalizationProgress = ref({
+      total: 0,
+      processed: 0,
+      updated: 0
+    })
+
+    // Period mapping from various formats to numeric
+    const periodMap = {
+      '1': 1, 'P1': 1,
+      '2': 2, 'P2': 2,
+      '3': 3, 'P3': 3,
+      '4': 4, 'P4': 4,
+      '5': 5, 'P5': 5,
+      '6': 6, 'P6': 6,
+      '7': 7, 'SH': 7, 'F': 7
+    }
+
+    // Logging function for normalization
+    function logNormalization(message) {
+      const timestamp = new Date().toLocaleTimeString()
+      normalizationLog.value += `[${timestamp}] ${message}\n`
+      if (normalizationLogRef.value) {
+        normalizationLogRef.value.scrollTop = normalizationLogRef.value.scrollHeight
+      }
+    }
+
+    // Function to normalize schedule periods
+    function normalizeSchedule(rawSchedule) {
+      if (!rawSchedule || typeof rawSchedule !== 'object') return {}
+      
+      const normalized = {}
+      
+      Object.entries(rawSchedule).forEach(([key, value]) => {
+        const numericPeriod = periodMap[key]
+        if (numericPeriod && value) {
+          if (normalized[numericPeriod]) {
+            // If period already exists, prefer objects over strings and co-teaching data
+            if (typeof normalized[numericPeriod] === 'string' && typeof value === 'object') {
+              normalized[numericPeriod] = value
+            } else if (typeof normalized[numericPeriod] === 'object' && typeof value === 'object') {
+              if (value.coTeaching && !normalized[numericPeriod].coTeaching) {
+                normalized[numericPeriod] = value
+              }
+            }
+          } else {
+            normalized[numericPeriod] = value
+          }
+        }
+      })
+      
+      return normalized
+    }
+
+    // Main normalization function
+    async function startNormalization() {
+      if (normalizationInProgress.value) return
+      
+      normalizationInProgress.value = true
+      normalizationLog.value = ''
+      normalizationProgress.value = { total: 0, processed: 0, updated: 0 }
+      
+      try {
+        logNormalization('🔄 Starting schedule normalization...')
+        
+        // Get all students
+        const studentsSnapshot = await getDocs(collection(db, 'students'))
+        const students = studentsSnapshot.docs
+        
+        normalizationProgress.value.total = students.length
+        logNormalization(`📚 Found ${students.length} students to process`)
+        
+        for (const studentDoc of students) {
+          const studentData = studentDoc.data()
+          const studentId = studentDoc.id
+          
+          normalizationProgress.value.processed++
+          
+          // Check if student has schedule data
+          if (studentData.app?.schedule?.periods) {
+            const rawSchedule = studentData.app.schedule.periods
+            const normalizedSchedule = normalizeSchedule(rawSchedule)
+            
+            // Check if normalization made changes
+            const rawKeys = Object.keys(rawSchedule).sort()
+            const normalizedKeys = Object.keys(normalizedSchedule).map(k => String(k)).sort()
+            
+            const hasChanges = JSON.stringify(rawKeys) !== JSON.stringify(normalizedKeys) ||
+                              JSON.stringify(rawSchedule) !== JSON.stringify(normalizedSchedule)
+            
+            if (hasChanges) {
+              logNormalization(`📝 Updating student ${studentId}:`)
+              logNormalization(`   Before: ${JSON.stringify(rawSchedule)}`)
+              logNormalization(`   After:  ${JSON.stringify(normalizedSchedule)}`)
+              
+              // Update the student document
+              await updateDoc(doc(db, 'students', studentId), {
+                'app.schedule.periods': normalizedSchedule
+              })
+              
+              normalizationProgress.value.updated++
+            }
+          }
+          
+          // Small delay to prevent overwhelming Firebase
+          if (normalizationProgress.value.processed % 10 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+        }
+        
+        logNormalization('✅ Schedule normalization complete!')
+        logNormalization(`📊 Final stats: ${normalizationProgress.value.processed} processed, ${normalizationProgress.value.updated} updated`)
+        
+      } catch (error) {
+        logNormalization(`❌ Error during normalization: ${error.message}`)
+        console.error('Normalization error:', error)
+      } finally {
+        normalizationInProgress.value = false
+      }
+    }
+
+    function clearNormalizationLog() {
+      normalizationLog.value = ''
+      normalizationProgress.value = { total: 0, processed: 0, updated: 0 }
+    }
+
     onMounted(() => {
       loadBackups()
     })
@@ -395,7 +569,13 @@ export default {
       downloadBackup,
       deleteBackup,
       formatFileSize,
-      formatDate
+      formatDate,
+      normalizationInProgress,
+      normalizationLog,
+      normalizationLogRef,
+      normalizationProgress,
+      startNormalization,
+      clearNormalizationLog
     }
   }
 }
@@ -650,5 +830,55 @@ input[type="file"] {
   .checkbox-group {
     grid-template-columns: 1fr;
   }
+}
+
+.warning-box {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  padding: 15px;
+  border-radius: 5px;
+  margin: 15px 0;
+}
+
+.progress-section {
+  margin: 20px 0;
+}
+
+.progress-bar {
+  background-color: #e9ecef;
+  border-radius: 5px;
+  height: 20px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  background-color: #28a745;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.log-container {
+  margin-top: 20px;
+}
+
+.log-output {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 15px;
+  border-radius: 5px;
+  height: 300px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  margin: 0;
 }
 </style> 
