@@ -2,7 +2,7 @@
 
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 import { handleFirebaseError } from '@/utils/firebaseErrorHandler';
@@ -27,18 +27,30 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
-// Enable offline persistence
-enableIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.')
-    } else if (err.code === 'unimplemented') {
-      console.warn('The current browser doesn\'t support persistence.')
-    }
-  });
-
 // Set up Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
+
+// Enable offline persistence with unlimited cache
+enableIndexedDbPersistence(db, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  synchronizeTabs: true
+}).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.')
+  } else if (err.code === 'unimplemented') {
+    console.warn('The current browser doesn\'t support persistence.')
+  } else {
+    console.error('Error enabling persistence:', err)
+  }
+});
+
+// Configure Firestore settings
+db.settings({
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  ignoreUndefinedProperties: true,
+  experimentalForceLongPolling: true, // Force long polling instead of WebSocket
+  experimentalAutoDetectLongPolling: true // Auto-detect best connection method
+});
 
 // Set up error handler for Firestore
 db.onError = (error) => {
