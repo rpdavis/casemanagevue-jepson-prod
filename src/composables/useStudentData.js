@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
@@ -14,6 +14,8 @@ import {
   getCoTeachingCaseManagersFromSchedule,
   isCoTeachingCaseManager 
 } from '@/utils/scheduleUtils.js'
+import { doc, onSnapshot } from 'firebase/firestore'
+import { db } from '@/firebase'
 
 export function useStudentData() {
   // External dependencies
@@ -41,7 +43,8 @@ export function useStudentData() {
   const error = ref(null)
 
   // Computed properties
-  const currentUser = computed(() => authStore.currentUser)
+  // Use computed 'user' from auth store for correct reactive user object
+  const currentUser = authStore.user
   
   const isAdmin = computed(() => {
     const role = currentUser.value?.role
@@ -89,6 +92,22 @@ export function useStudentData() {
       const userRole = currentUser.value?.role
       if (['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)) {
         await loadAideAssignments()
+      }
+      // Paraeducator: subscribe to own aideSchedules doc for real-time updates
+      if (userRole === 'paraeducator' && currentUser.value.uid) {
+        // Ensure aideAssignments loaded
+        await loadAideAssignments()
+        // Listen for changes to studentIds field
+        const aideDocRef = doc(db, 'aideSchedules', currentUser.value.uid)
+        const unsubscribe = onSnapshot(aideDocRef, async snap => {
+          if (snap.exists()) {
+            // Re-fetch role-based students (will use updated studentIds)
+            const updated = await getStudentsByRole(currentUser.value)
+            setStudents(updated)
+          }
+        })
+        // Clean up on unmount
+        onUnmounted(() => unsubscribe())
       }
       
       console.log('🔒 Security: Loaded', students.value.length, 'students for', currentUser.value?.role)
