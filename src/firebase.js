@@ -1,8 +1,13 @@
 // /Users/rd/CaseManageVue/src/firebase.js
 
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, onAuthStateChanged } from "firebase/auth";
+import { 
+  getFirestore, 
+  enableIndexedDbPersistence, 
+  CACHE_SIZE_UNLIMITED,
+  connectFirestoreEmulator 
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 import { handleFirebaseError } from '@/utils/firebaseErrorHandler';
@@ -18,39 +23,88 @@ const firebaseConfig = {
   measurementId: "G-YBRDQX9NFR"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+let auth;
+let db;
+let storage;
+let functions;
+let googleProvider;
 
 // Initialize Firebase services
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
-const functions = getFunctions(app);
+const initializeFirebase = async () => {
+  try {
+    // Initialize Firebase app if not already initialized
+    if (!app) {
+      app = initializeApp(firebaseConfig);
+      console.log('🔥 Firebase app initialized');
+    }
 
-// Set up Google Auth Provider
-const googleProvider = new GoogleAuthProvider();
+    // Initialize Auth if not already initialized
+    if (!auth) {
+      auth = getAuth(app);
+      console.log('🔐 Firebase Auth initialized');
+    }
 
-// Enable offline persistence with unlimited cache
-enableIndexedDbPersistence(db, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  synchronizeTabs: true
-}).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.')
-  } else if (err.code === 'unimplemented') {
-    console.warn('The current browser doesn\'t support persistence.')
-  } else {
-    console.error('Error enabling persistence:', err)
+    // Initialize Firestore if not already initialized
+    if (!db) {
+      db = getFirestore(app);
+      
+      // Configure Firestore settings
+      db.settings({
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+        ignoreUndefinedProperties: true,
+        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true
+      });
+
+      // Enable offline persistence
+      try {
+        await enableIndexedDbPersistence(db, {
+          cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+          synchronizeTabs: true
+        });
+        console.log('📦 Firestore offline persistence enabled');
+      } catch (err) {
+        if (err.code === 'failed-precondition') {
+          console.warn('Multiple tabs open, persistence enabled in another tab');
+        } else if (err.code === 'unimplemented') {
+          console.warn('Browser doesn\'t support persistence');
+        } else {
+          console.error('Error enabling persistence:', err);
+        }
+      }
+      
+      console.log('🗄️ Firestore initialized');
+    }
+
+    // Initialize Storage if not already initialized
+    if (!storage) {
+      storage = getStorage(app);
+      console.log('📁 Firebase Storage initialized');
+    }
+
+    // Initialize Functions if not already initialized
+    if (!functions) {
+      functions = getFunctions(app);
+      console.log('⚡ Firebase Functions initialized');
+    }
+
+    // Initialize Google Auth Provider if not already initialized
+    if (!googleProvider) {
+      googleProvider = new GoogleAuthProvider();
+      console.log('🔑 Google Auth Provider initialized');
+    }
+
+    console.log('✅ All Firebase services initialized successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error initializing Firebase:', error);
+    throw error;
   }
-});
+};
 
-// Configure Firestore settings
-db.settings({
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  ignoreUndefinedProperties: true,
-  experimentalForceLongPolling: true, // Force long polling instead of WebSocket
-  experimentalAutoDetectLongPolling: true // Auto-detect best connection method
-});
+// Initialize immediately
+initializeFirebase().catch(console.error);
 
 // Set up error handler for Firestore
 db.onError = (error) => {
@@ -60,4 +114,12 @@ db.onError = (error) => {
 
 console.log('🔥 Connected to Firebase project:', firebaseConfig.projectId);
 
-export { auth, db, storage, functions, googleProvider };
+// Export initialized services and initialization function
+export { 
+  auth, 
+  db, 
+  storage, 
+  functions, 
+  googleProvider,
+  initializeFirebase // Export for manual re-initialization if needed
+};
