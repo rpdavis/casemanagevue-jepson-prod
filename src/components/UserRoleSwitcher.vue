@@ -294,7 +294,13 @@ export default {
       
       selectedRole.value = ''
     }
-    
+
+    // Switch to a quick test user
+    const switchToUser = (user) => {
+      authStore.setUser(user)
+      localStorage.setItem('debug-user', JSON.stringify(user))
+    }
+
     const resetToRealUser = () => {
       // Remove debug user from localStorage
       localStorage.removeItem('debug-user')
