@@ -15,8 +15,8 @@ export function useCaseManagerView(studentData, filterData) {
   const visibleStudents = computed(() => {
     if (!currentUserId.value) return []
     
-    // Get base filtered students
-    const baseStudents = baseView.visibleStudents.value
+    // Get base filtered students (all SP-accessible before role-based filtering)
+    const baseStudents = filterData.filteredStudents.value || []
     
     console.log('🔵 CM visibleStudents: Starting with', baseStudents.length, 'base students')
     
