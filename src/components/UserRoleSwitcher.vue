@@ -25,6 +25,18 @@
         </select>
       </div>
       
+      <div class="real-user-selector">
+        <label for="real-user-select">Switch to User:</label>
+        <select id="real-user-select" v-model="selectedRealUserId" @change="switchToRealUser">
+          <option value="">-- Select User --</option>
+          <optgroup v-for="role in availableRoles" :label="role.label" :key="role.value">
+            <option v-for="user in usersByRole[role.value]" :key="user.id" :value="user.id">
+              {{ user.name || user.email }}
+            </option>
+          </optgroup>
+        </select>
+      </div>
+      
       <div class="test-users">
         <h5>Quick Test Users:</h5>
         <div class="test-user-buttons">
@@ -109,6 +121,7 @@ import { useDebugMenu } from '@/composables/useDebugMenu'
 import { VALID_ROLES, PERMISSION_ACTIONS } from '@/config/roles'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/firebase'
+import useUsers from '@/composables/useUsers'
 
 export default {
   name: 'UserRoleSwitcher',
@@ -135,6 +148,17 @@ export default {
       { value: 'service_provider', label: 'Service Provider' }
     ]
     
+    // Real users for debug dropdown
+    const { userList, fetchUsers } = useUsers()
+    const selectedRealUserId = ref('')
+    const usersByRole = computed(() => {
+      const map = {}
+      availableRoles.forEach(role => {
+        map[role.value] = userList.value.filter(u => u.role === role.value)
+      })
+      return map
+    })
+
     // Test users for quick switching
     const testUsers = [
       {
@@ -188,6 +212,24 @@ export default {
 
     ]
     
+    // Switch to a real user fetched from Firestore
+    const switchToRealUser = () => {
+      if (!selectedRealUserId.value) return
+      const u = userList.value.find(u => u.id === selectedRealUserId.value)
+      if (u) {
+        const debugUser = {
+          uid: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          lastSyncTrigger: new Date().toISOString()
+        }
+        authStore.setUser(debugUser)
+        localStorage.setItem('debug-user', JSON.stringify(debugUser))
+      }
+      selectedRealUserId.value = ''
+    }
+
     // Load permissions matrix from database
     const loadPermissionsMatrix = async () => {
       loadingPermissions.value = true
@@ -256,14 +298,6 @@ export default {
       selectedRole.value = ''
     }
     
-    const switchToUser = (user) => {
-      // Update the auth store
-      authStore.setUser(user)
-      
-      // Store in localStorage for persistence
-      localStorage.setItem('debug-user', JSON.stringify(user))
-    }
-    
     const resetToRealUser = () => {
       // Remove debug user from localStorage
       localStorage.removeItem('debug-user')
@@ -277,6 +311,8 @@ export default {
     }
     
     onMounted(async () => {
+      // Load real users for debug
+      await fetchUsers()
       // Load permissions matrix from database
       await loadPermissionsMatrix()
       
@@ -330,7 +366,12 @@ export default {
       switchRole,
       switchToUser,
       resetToRealUser,
-      refreshPage
+      refreshPage,
+      // Expose new debug user selector state
+      userList,
+      selectedRealUserId,
+      usersByRole,
+      switchToRealUser
     }
   }
 }
@@ -456,6 +497,26 @@ export default {
 }
 
 .role-selector select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+}
+
+.real-user-selector {
+  margin-bottom: 16px;
+}
+
+.real-user-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.real-user-selector select {
   width: 100%;
   padding: 8px;
   border-radius: 4px;
