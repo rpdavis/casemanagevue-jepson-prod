@@ -45,7 +45,8 @@ const props = defineProps({
   hasServiceProviders: { type: Function, required: true },
   getServiceProviderId: { type: Function, required: true },
   getProviderFieldName: { type: Function, required: true },
-  getUserInitialLastName: { type: Function, required: true }
+  getUserInitialLastName: { type: Function, required: true },
+  getCoTeachingCaseManager: { type: Function, required: true }
 })
 
 // Provider configuration

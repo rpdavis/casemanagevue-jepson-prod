@@ -121,11 +121,39 @@ export function useBaseRoleView(studentData, filterData) {
     const userId = currentUser.value?.uid
     const students = filteredStudents.value
     const providerView = currentFilters.providerView || 'all'
+    const userRole = currentUser.value?.role
 
-    if (!userId || !students) return []
+    console.log('🔍 BASE ROLE DEBUG: visibleStudents computed called')
+    console.log('🔍 BASE ROLE DEBUG: userId:', userId)
+    console.log('🔍 BASE ROLE DEBUG: userRole:', userRole)
+    console.log('🔍 BASE ROLE DEBUG: students:', students ? students.length : 'null/undefined')
+    console.log('🔍 BASE ROLE DEBUG: providerView:', providerView)
+
+    // For roles that should have broad access, bypass userId check when students are available
+    const broadAccessRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM']
+    if (broadAccessRoles.includes(userRole)) {
+      if (!students) {
+        console.log('🔍 BASE ROLE DEBUG: Broad access user but no students - returning empty array')
+        return []
+      }
+      console.log('🔍 BASE ROLE DEBUG: Broad access user - returning all students:', students.length)
+      return students
+    }
+
+    // For other roles, still require userId but add better error handling
+    if (!userId) {
+      console.log('🔍 BASE ROLE DEBUG: No userId for role:', userRole, '- returning empty array')
+      return []
+    }
+
+    if (!students) {
+      console.log('🔍 BASE ROLE DEBUG: No students available - returning empty array')
+      return []
+    }
 
     // Don't apply automatic filtering - let each role handle their own visibility rules
     // The role-specific views will handle filtering based on their requirements
+    console.log('🔍 BASE ROLE DEBUG: Returning students for role:', userRole, '- count:', students.length)
     return students
   })
 

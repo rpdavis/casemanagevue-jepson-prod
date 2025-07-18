@@ -63,6 +63,9 @@ export function useStudentFilters(studentData) {
 
   // Main filtering function
   const applyFilters = (filters = currentFilters) => {
+    console.log('🔍 FILTER DEBUG: applyFilters called with students.value.length:', students.value.length)
+    console.log('🔍 FILTER DEBUG: currentUser:', currentUser.value?.role, currentUser.value?.uid)
+    
     let result = students.value
 
     // Apply provider view filtering (for case managers)
@@ -176,14 +179,19 @@ export function useStudentFilters(studentData) {
 
     // Store the filtered results
     filteredStudents.value = result
+    console.log('🔍 FILTER DEBUG: applyFilters completed. filteredStudents.value.length:', filteredStudents.value.length)
   }
 
   // Watch for data changes and reapply filters
   watch(
     () => [students.value, currentUser.value],
     () => {
+      console.log('🔍 FILTER DEBUG: Watcher triggered. students.value.length:', students.value.length)
       if (students.value.length > 0) {
+        console.log('🔍 FILTER DEBUG: Calling applyFilters from watcher')
         applyFilters()
+      } else {
+        console.log('🔍 FILTER DEBUG: No students to filter')
       }
     },
     { deep: true }

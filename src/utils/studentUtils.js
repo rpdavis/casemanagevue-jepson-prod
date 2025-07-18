@@ -165,7 +165,7 @@ export function labelize(field) {
 export function formatListFromText(text) {
   if (!text) return "<div>—</div>";
   const items = text
-    .split(/\n|\r|\d+\.\s+|\-\s+/)
+    .split(/\n|\r|\d+\.\s+|\-\s+|;/)
     .map(s => s.trim())
     .filter(Boolean)
     .map(item => `<li>${item}</li>`)

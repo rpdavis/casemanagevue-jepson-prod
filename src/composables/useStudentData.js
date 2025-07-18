@@ -94,7 +94,7 @@ export function useStudentData() {
         await loadAideAssignments()
       }
       // Paraeducator: subscribe to own aideSchedules doc for real-time updates
-      if (userRole === 'paraeducator' && currentUser.value.uid) {
+      if (userRole === 'paraeducator' && currentUser.value?.uid) {
         // Ensure aideAssignments loaded
         await loadAideAssignments()
         // Listen for changes to studentIds field

@@ -96,6 +96,7 @@
             :get-service-provider-id="getServiceProviderId"
             :get-provider-field-name="getProviderFieldName"
             :get-user-initial-last-name="getUserInitialLastName"
+            :get-co-teaching-case-manager="getCoTeachingCaseManager"
           />
           
           <!-- Schedule Cell -->
@@ -502,6 +503,11 @@ function getProviderFieldName(abbr) {
     'SW': 'swId'
   }
   return providerFieldMap[abbr] || `${abbr.toLowerCase()}Id`
+}
+
+function getCoTeachingCaseManager(periodData) {
+  if (!periodData || typeof periodData !== 'object') return null
+  return periodData.coTeaching?.caseManagerId || null
 }
 
 function isDirectAssignment(studentId) {
