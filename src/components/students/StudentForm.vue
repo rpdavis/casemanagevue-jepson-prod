@@ -146,7 +146,7 @@ const saveButtonText = computed(() => {
   } else if (isSaving.value) {
     return 'Saving...'
   } else {
-    return mode === 'edit' ? 'Save' : 'Add Student'
+    return props.mode === 'edit' ? 'Save' : 'Add Student'
   }
 })
 
