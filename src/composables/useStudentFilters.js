@@ -8,7 +8,8 @@ export function useStudentFilters(studentData) {
     shouldAideSeeStudent,
     userMap,
     getCaseManagerId,
-    getSchedule
+    getSchedule,
+    aideAssignment
   } = studentData
 
   // Filter state
@@ -68,10 +69,24 @@ export function useStudentFilters(studentData) {
     
     let result = students.value
 
-    // Apply provider view filtering (for case managers)
-    if (filters.providerView === 'case_manager') {
+    // Apply provider view filtering (for roles that have provider views)
+    // Skip provider view filtering for roles that don't have provider view options
+    const userRole = currentUser.value?.role
+    const rolesWithoutProviderViews = ['admin', 'administrator']
+    
+    console.log('🔍 FILTER DEBUG: Provider view filtering check:', {
+      userRole,
+      providerView: filters.providerView,
+      shouldSkip: rolesWithoutProviderViews.includes(userRole),
+      resultLengthBefore: result.length
+    })
+    
+    if (!rolesWithoutProviderViews.includes(userRole) && filters.providerView === 'case_manager') {
+      console.log('🔍 FILTER DEBUG: Applying case_manager filter')
       result = result.filter(s => getCaseManagerId(s) === currentUser.value?.uid)
-    } else if (filters.providerView === 'service_provider') {
+      console.log('🔍 FILTER DEBUG: After case_manager filter:', result.length)
+    } else if (!rolesWithoutProviderViews.includes(userRole) && filters.providerView === 'service_provider') {
+      console.log('🔍 FILTER DEBUG: Applying service_provider filter')
       result = result.filter(s => {
         // Check if user is in schedule (handle both simple and complex structures)
         const schedule = getSchedule(s)
@@ -88,21 +103,19 @@ export function useStudentFilters(studentData) {
         const isNotCaseManager = getCaseManagerId(s) !== currentUser.value?.uid
         return (isInSchedule || isInServices) && isNotCaseManager
       })
+      console.log('🔍 FILTER DEBUG: After service_provider filter:', result.length)
+    } else {
+      console.log('🔍 FILTER DEBUG: Skipping provider view filtering for role:', userRole)
     }
 
     // Apply role-based filtering
     // Note: For case managers, the role-based view (useCaseManagerView) handles provider view filtering
     // so we skip the general filtering here to avoid conflicts
+    // Note: For paraeducators, students are already filtered at database level via staffIds or aideSchedules
+    // so no additional filtering is needed
     if (currentUser.value?.role === 'paraeducator') {
-      // Filter students based on aide assignments
-      result = result.filter(s => {
-        try {
-          return shouldAideSeeStudent(currentUser.value.uid, s.id, students.value, userMap.value)
-        } catch (error) {
-          console.error('Error filtering student for aide:', error)
-          return false
-        }
-      })
+      // Students are already filtered at database level - no additional filtering needed
+      console.log('🔍 FILTER DEBUG: Paraeducator - using database-filtered students, no additional filtering')
     }
 
     // Apply text search
@@ -140,16 +153,38 @@ export function useStudentFilters(studentData) {
       })
     }
 
-    // Apply paraeducator filter
+    // Apply paraeducator filter - use the same query approach as paraeducator view
     if (filters.paraeducator && filters.paraeducator !== 'all') {
-      result = result.filter(s => {
-        try {
-          return shouldAideSeeStudent(filters.paraeducator, s.id, students.value, userMap.value)
-        } catch (error) {
-          console.error('Error filtering student for paraeducator:', error)
-          return false
+      console.log('🔍 FILTER DEBUG: Applying paraeducator filter for:', filters.paraeducator)
+      
+      // Get the aide's assigned student IDs from aideSchedules collection (same as paraeducator query)
+      const aideData = aideAssignment.value[filters.paraeducator]
+      if (aideData) {
+        console.log('🔍 FILTER DEBUG: Found aide data:', aideData)
+        
+        // Get student IDs the same way as getParaeducatorStudents query
+        let assignedStudentIds = []
+        
+        // Primary: Use studentIds array if available
+        if (aideData.studentIds && Array.isArray(aideData.studentIds)) {
+          assignedStudentIds = aideData.studentIds
+          console.log('🔍 FILTER DEBUG: Using studentIds array:', assignedStudentIds)
         }
-      })
+        // Fallback: Use directAssignment if studentIds not available
+        else if (aideData.directAssignment) {
+          assignedStudentIds = Array.isArray(aideData.directAssignment) 
+            ? aideData.directAssignment 
+            : [aideData.directAssignment]
+          console.log('🔍 FILTER DEBUG: Using directAssignment as fallback:', assignedStudentIds)
+        }
+        
+        // Filter to only students assigned to this aide
+        result = result.filter(s => assignedStudentIds.includes(s.id))
+        console.log('🔍 FILTER DEBUG: After paraeducator filter:', result.length, 'students')
+      } else {
+        console.log('🔍 FILTER DEBUG: No aide data found for:', filters.paraeducator)
+        result = [] // No aide data means no students
+      }
     }
 
     // Apply plan filter

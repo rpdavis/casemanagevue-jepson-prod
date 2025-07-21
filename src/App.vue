@@ -5,12 +5,38 @@
     <div id="main-content">
       <router-view />
     </div>
-    <UserRoleSwitcher />
+    <!-- Debug Role Switcher - Hidden by default, show with Ctrl+Shift+D -->
+    <UserRoleSwitcher v-if="showDebugRoleSwitcher" />
+    <!-- Debug Access Info - Shows admin users how to access debug tools -->
+    <DebugAccessInfo />
+    <SessionTimeoutDialog />
   </div>
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import UserRoleSwitcher from '@/components/UserRoleSwitcher.vue'
+import DebugAccessInfo from '@/components/DebugAccessInfo.vue'
+import SessionTimeoutDialog from '@/components/SessionTimeoutDialog.vue'
+
+const showDebugRoleSwitcher = ref(false)
+
+// Keyboard shortcut to show/hide debug role switcher: Ctrl+Shift+D
+const handleKeydown = (event) => {
+  if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+    event.preventDefault()
+    showDebugRoleSwitcher.value = !showDebugRoleSwitcher.value
+    console.log('Debug Role Switcher:', showDebugRoleSwitcher.value ? 'Shown' : 'Hidden')
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style>

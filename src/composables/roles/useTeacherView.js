@@ -9,8 +9,8 @@ export function useTeacherView(studentData, filterData) {
   const visibleStudents = computed(() => {
     if (!currentUserId.value) return []
     
-    // Get the raw filtered students from filterData, not the pre-filtered baseView students
-    const allFilteredStudents = filterData.filteredStudents.value
+    // Get the raw students from database for teachers (similar to case manager fix)
+    const allFilteredStudents = studentData.students.value
     
     // Filter students where teacher is in their schedule
     const filtered = allFilteredStudents.filter(student => {

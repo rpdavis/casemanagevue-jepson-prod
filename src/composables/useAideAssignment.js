@@ -133,14 +133,21 @@ export default function useAideAssignment() {
         teacherIdArray.forEach(teacherId => {
           if (teacherId) {
             students.forEach(student => {
-              if (student.schedule && student.schedule[period] === teacherId) {
-                const existingIndex = aideStudents.findIndex(s => s.id === student.id)
-                if (existingIndex === -1) {
-                  aideStudents.push({ ...student, assignmentType: 'class', period, teacherId })
-                } else {
-                  aideStudents[existingIndex].assignmentType = 'both'
-                  aideStudents[existingIndex].period = period
-                  aideStudents[existingIndex].teacherId = teacherId
+              const schedule = getStudentSchedule(student)
+              if (schedule) {
+                // Handle both simple string format and complex object format
+                const periodData = schedule[period]
+                const studentTeacherId = typeof periodData === 'string' ? periodData : periodData?.teacherId
+                
+                if (studentTeacherId === teacherId) {
+                  const existingIndex = aideStudents.findIndex(s => s.id === student.id)
+                  if (existingIndex === -1) {
+                    aideStudents.push({ ...student, assignmentType: 'class', period, teacherId })
+                  } else {
+                    aideStudents[existingIndex].assignmentType = 'both'
+                    aideStudents[existingIndex].period = period
+                    aideStudents[existingIndex].teacherId = teacherId
+                  }
                 }
               }
             })
@@ -157,19 +164,53 @@ export default function useAideAssignment() {
     if (!student) return false
     const aideData = aideAssignment.value[aideId]
     if (!aideData) return false
+    
+    // Check direct assignment first
     const directStudentIds = Array.isArray(aideData.directAssignment) 
       ? aideData.directAssignment 
       : (aideData.directAssignment ? [aideData.directAssignment] : [])
     if (directStudentIds.includes(studentId)) return true
-    if (!student.schedule) return false
+    
+    // Get schedule using proper accessor that handles different data structures
+    const schedule = getStudentSchedule(student)
+    if (!schedule) return false
+    
+    // Check class assignment
     const aidePeriods = aideData.classAssignment || {}
-    const hasClassAssignment = Object.entries(student.schedule).some(([period, teacherId]) => {
+    const hasClassAssignment = Object.entries(schedule).some(([period, data]) => {
+      // Handle both simple string format and complex object format
+      const teacherId = typeof data === 'string' ? data : data?.teacherId
       const aideTeacherIds = aidePeriods[period]
-      if (!aideTeacherIds) return false
+      if (!aideTeacherIds || !teacherId) return false
       const teacherIdArray = Array.isArray(aideTeacherIds) ? aideTeacherIds : [aideTeacherIds]
       return teacherIdArray.includes(teacherId)
     })
     return hasClassAssignment
+  }
+
+  // Helper function to get student schedule from various possible locations
+  function getStudentSchedule(student) {
+    // Check Aeries schedule structure first (direct schedule object)
+    if (student.schedule) {
+      return student.schedule
+    }
+    
+    // Check new nested structure
+    if (student.app?.schedule?.periods) {
+      return student.app.schedule.periods
+    }
+    
+    // Check Aeries schedule.periods structure
+    if (student.aeries?.schedule?.periods) {
+      return student.aeries.schedule.periods
+    }
+    
+    // Check legacy Aeries schedule structure
+    if (student.aeries?.schedule) {
+      return student.aeries.schedule
+    }
+    
+    return null
   }
 
   return {

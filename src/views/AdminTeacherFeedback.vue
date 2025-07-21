@@ -127,17 +127,17 @@
           <div v-for="form in activeForms" :key="form.id" class="form-card">
             <div class="form-header">
               <h4>{{ form.title || 'Untitled Form' }}</h4>
-              <div class="form-actions">
-                <button @click="openForm(form)" class="action-btn view" title="View Form">
+              <div class="admin-action-btns">
+                <button @click="openForm(form)" class="admin-action-btn info" title="View Form">
                   👁️
                 </button>
-                <button @click="syncFormResponses(form)" class="action-btn sync" title="Sync Responses">
+                <button @click="syncFormResponses(form)" class="admin-action-btn warning" title="Sync Responses">
                   🔄
                 </button>
-                <button @click="editForm(form)" class="action-btn edit" title="Edit Form">
+                <button @click="editForm(form)" class="admin-action-btn edit" title="Edit Form">
                   ✏️
                 </button>
-                <button @click="deleteForm(form)" class="action-btn delete" title="Delete Form">
+                <button @click="deleteForm(form)" class="admin-action-btn delete" title="Delete Form">
                   🗑️
                 </button>
               </div>

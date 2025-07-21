@@ -41,7 +41,7 @@
           <button 
             @click="createBackup" 
             :disabled="isBackingUp || selectedCollections.length === 0"
-            class="btn btn-primary"
+            class="admin-action-btn primary" style="min-width: 140px; max-width: 140px;"
           >
             <span v-if="isBackingUp">Creating Backup...</span>
             <span v-else>Create Backup</span>
@@ -102,7 +102,7 @@
           <button 
             @click="restoreBackup" 
             :disabled="isRestoring || !selectedFile || !backupData"
-            class="btn btn-warning"
+            class="admin-action-btn warning" style="min-width: 140px; max-width: 140px;"
           >
             <span v-if="isRestoring">Restoring...</span>
             <span v-else>Restore Backup</span>
@@ -121,9 +121,9 @@
               <p>Size: {{ formatFileSize(backup.size) }}</p>
               <p>Collections: {{ backup.collections.join(', ') }}</p>
             </div>
-            <div class="backup-actions">
-              <button @click="downloadBackup(backup)" class="btn btn-secondary">Download</button>
-              <button @click="deleteBackup(backup.id)" class="btn btn-danger">Delete</button>
+            <div class="admin-action-btns">
+              <button @click="downloadBackup(backup)" class="admin-action-btn secondary">Download</button>
+              <button @click="deleteBackup(backup.id)" class="admin-action-btn delete">Delete</button>
             </div>
           </div>
         </div>
@@ -142,15 +142,15 @@
           <strong>⚠️ Important:</strong> This operation will modify all student records. Make sure to backup first!
         </div>
         
-        <div class="controls">
+        <div class="admin-action-btns">
           <button 
             @click="startNormalization" 
             :disabled="normalizationInProgress"
-            class="btn btn-primary"
+            class="admin-action-btn primary" style="min-width: 220px; max-width: 220px;"
           >
             {{ normalizationInProgress ? 'Normalizing...' : 'Start Schedule Normalization' }}
           </button>
-          <button @click="clearNormalizationLog" class="btn btn-secondary">Clear Log</button>
+          <button @click="clearNormalizationLog" class="admin-action-btn secondary" style="min-width: 100px; max-width: 100px;">Clear Log</button>
         </div>
         
         <div class="progress-section" v-if="normalizationProgress.total > 0">

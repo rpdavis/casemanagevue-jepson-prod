@@ -52,7 +52,25 @@
     <!-- Session Security Section -->
     <div class="security-section">
       <h3>⏲️ Session Security</h3>
+      
+      <!-- Debug Component -->
+      <SessionTimeoutDebug />
+      
       <div class="setting-group">
+        <label>
+          <input 
+            type="checkbox" 
+            v-model="sessionTimeoutEnabled"
+            @change="toggleSessionTimeout"
+          >
+          Enable Auto Logout Timer
+        </label>
+        <div class="setting-description">
+          Automatically log out users after a period of inactivity
+        </div>
+      </div>
+
+      <div class="setting-group" v-if="sessionTimeoutEnabled">
         <label>
           Auto Logout Timer (minutes):
           <input 
@@ -228,6 +246,8 @@ import { ref, onMounted } from 'vue'
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '@/firebase'
 import DebugEncryption from './DebugEncryption.vue'
+import SessionTimeoutDebug from './SessionTimeoutDebug.vue'
+import { useSessionTimeout } from '@/composables/useSessionTimeout'
 
 // Props
 const props = defineProps({
@@ -241,8 +261,8 @@ const props = defineProps({
 const accessLogs = ref([])
 const timeRange = ref(1)
 
-// Session Security
-const sessionTimeout = ref(30)
+// Session Security - Use real session timeout system
+const { isEnabled: sessionTimeoutEnabled, timeoutMinutes: sessionTimeout, updateSettings } = useSessionTimeout()
 const enforcePasswordChange = ref(false)
 const requireMFA = ref(false)
 
@@ -270,6 +290,30 @@ const refreshLogs = async () => {
     const daysAgo = new Date()
     daysAgo.setDate(daysAgo.getDate() - timeRange.value)
     
+    // Try to fetch from new auditLogs collection first
+    try {
+      const auditQuery = query(
+        collection(db, 'auditLogs'),
+        where('timestamp', '>=', daysAgo),
+        orderBy('timestamp', 'desc'),
+        limit(100)
+      )
+      
+      const auditSnapshot = await getDocs(auditQuery)
+      accessLogs.value = auditSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      
+      if (accessLogs.value.length > 0) {
+        console.log('📋 Loaded', accessLogs.value.length, 'audit logs')
+        return
+      }
+    } catch (auditError) {
+      console.log('📋 No audit logs found, trying legacy iepAccessLogs')
+    }
+    
+    // Fallback to legacy iepAccessLogs collection
     const q = query(
       collection(db, 'iepAccessLogs'),
       where('timestamp', '>=', daysAgo),
@@ -282,8 +326,12 @@ const refreshLogs = async () => {
       id: doc.id,
       ...doc.data()
     }))
+    
+    console.log('📋 Loaded', accessLogs.value.length, 'legacy access logs')
+    
   } catch (error) {
     console.error('Failed to fetch logs:', error)
+    accessLogs.value = [] // Set empty array on error
   }
 }
 
@@ -296,9 +344,20 @@ const formatDate = (timestamp) => {
   }).format(date)
 }
 
-const updateSessionTimeout = () => {
-  // Implementation for updating session timeout
-  console.log('Session timeout updated:', sessionTimeout.value)
+const toggleSessionTimeout = async () => {
+  try {
+    await updateSettings(sessionTimeoutEnabled.value, sessionTimeout.value)
+  } catch (error) {
+    console.error('Failed to toggle session timeout:', error)
+  }
+}
+
+const updateSessionTimeout = async () => {
+  try {
+    await updateSettings(sessionTimeoutEnabled.value, sessionTimeout.value)
+  } catch (error) {
+    console.error('Failed to update session timeout:', error)
+  }
 }
 
 const updatePasswordPolicy = () => {

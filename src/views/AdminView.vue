@@ -39,11 +39,15 @@
         >
           System Configuration
         </button>
+        <button 
+          @click="setActiveCategory('monitoring')" 
+          :class="{ active: activeCategory === 'monitoring' }"
+          class="category-btn"
+        >
+          System Monitoring
+        </button>
       </div>
       <div class="admin-actions">
-        <button v-if="canShowDebugMenu" @click="toggleDebugMenu" class="debug-btn">
-          🔧 {{ isDebugMenuVisible ? 'Hide' : 'Show' }} Debug
-        </button>
         <button @click="goToStudents" class="return-btn">
           <span>←</span> Return to Students
         </button>
@@ -152,9 +156,14 @@
         <SecurityControlCenter :selected-student="currentStudent" />
       </div>
 
-      <!-- System Health Tab -->
-      <div v-if="activeTab === 'system-health'" class="admin-section">
-        <SystemHealthCheck />
+      <!-- Component Health Dashboard Tab -->
+      <div v-if="activeTab === 'component-health'" class="admin-section">
+        <ComponentHealthDashboard />
+      </div>
+
+      <!-- Admin Panel Permissions Tab (Admin Only) -->
+      <div v-if="activeTab === 'admin-permissions'" class="admin-section">
+        <AdminPermissionsMatrix />
       </div>
     </div>
   </div>
@@ -162,7 +171,7 @@
 
 <script>
 // Admin panel styles now included in main.css
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import useStudents from '@/composables/useStudents.js'
 import useUsers from '@/composables/useUsers.js'
@@ -186,10 +195,13 @@ import AdminBackupRestore from './AdminBackupRestore.vue'
 import AdminTeacherFeedback from './AdminTeacherFeedback.vue'
 import TestingLinks from '../components/TestingLinks.vue'
 import AdminDashboard from '../components/AdminDashboard.vue'
-import { useDebugMenu } from '@/composables/useDebugMenu'
+
 import DebugEncryption from '@/components/DebugEncryption.vue'
 import SecurityControlCenter from '@/components/SecurityControlCenter.vue'
-import SystemHealthCheck from '@/components/SystemHealthCheck.vue'
+
+import ComponentHealthDashboard from '@/components/ComponentHealthDashboard.vue'
+import AdminPermissionsMatrix from '@/components/AdminPermissionsMatrix.vue'
+import { useAuth } from '@/composables/useAuth'
 
 export default {
   name: 'AdminView',
@@ -215,7 +227,8 @@ export default {
     AdminDashboard,
     DebugEncryption,
     SecurityControlCenter,
-    SystemHealthCheck
+    ComponentHealthDashboard,
+    AdminPermissionsMatrix
   },
   setup() {
     const router = useRouter()
@@ -226,6 +239,9 @@ export default {
     // Load students and users data
     const { students, fetchStudents } = useStudents()
     const { users: userMap, fetchUsers } = useUsers()
+    
+    // Get current user for admin-only features
+    const { currentUser } = useAuth()
     
     // Fetch data on mount
     onMounted(async () => {
@@ -242,17 +258,18 @@ export default {
       }
     })
 
-    const tabs = [
+    // Base tabs available to all admin users
+    const baseTabs = [
       { key: 'dashboard', label: 'Dashboard', category: 'dashboard' },
       { key: 'usersAdd', label: 'Add Users', category: 'users-students' },
       { key: 'usersEdit', label: 'Manage Users', category: 'users-students' },
       { key: 'students', label: 'Students', category: 'users-students' },
       { key: 'addStudents', label: 'Add Students', category: 'users-students' },
       { key: 'aide-assignment', label: 'Aide Assignment', category: 'aide-management' },
-      { key: 'aide-schedule', label: 'Aide Schedule', category: 'aide-management' },
+      { key: 'aide-schedule', label: 'Aide Schedule', category: 'aide-management', status: 'not-working' },
       { key: 'time-table', label: 'Time Table', category: 'aide-management' },
-      { key: 'seis', label: 'SEIS Import', category: 'data-integration' },
-      { key: 'aeries', label: 'Aeries API & Import', category: 'data-integration' },
+      { key: 'seis', label: 'SEIS Import', category: 'data-integration', status: 'not-active' },
+      { key: 'aeries', label: 'Aeries API & Import', category: 'data-integration', status: 'not-active' },
       { key: 'testing-links', label: 'Testing Links', category: 'data-integration' },
       { key: 'teacher-feedback', label: 'Teacher Feedback Forms', category: 'data-integration' },
       { key: 'backup-restore', label: 'Backup & Restore', category: 'data-integration' },
@@ -260,11 +277,25 @@ export default {
       { key: 'settings', label: 'App Settings', category: 'system-config' },
       { key: 'iep-security', label: 'IEP Security', category: 'system-config' },
       { key: 'security', label: 'Security Controls', category: 'system-config' },
-      { key: 'system-health', label: 'System Health', category: 'monitoring' }
+      { key: 'component-health', label: 'Component Debug', category: 'monitoring' }
     ]
+    
+    // Admin-only tabs (only visible to 'admin' role)
+    const adminOnlyTabs = [
+      { key: 'admin-permissions', label: 'Admin Panel Permissions', category: 'system-config' }
+    ]
+    
+    // Combine tabs based on user role
+    const tabs = computed(() => {
+      const userRole = currentUser.value?.role
+      if (userRole === 'admin') {
+        return [...baseTabs, ...adminOnlyTabs]
+      }
+      return baseTabs
+    })
 
     const getTabsForCategory = (categoryKey) => {
-      return tabs.filter(tab => tab.category === categoryKey)
+      return tabs.value.filter(tab => tab.category === categoryKey)
     }
 
     const setActiveCategory = (categoryKey) => {
@@ -307,8 +338,6 @@ export default {
       }
     }
 
-    const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu } = useDebugMenu()
-
     return {
       activeTab,
       activeCategory,
@@ -322,10 +351,7 @@ export default {
       goToDashboard,
       handleGoToCategory,
       handleBulkImporterClose,
-      handleStudentsImported,
-      isDebugMenuVisible,
-      canShowDebugMenu,
-      toggleDebugMenu
+      handleStudentsImported
     }
   }
 }

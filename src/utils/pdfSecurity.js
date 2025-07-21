@@ -7,31 +7,73 @@ import CryptoJS from 'crypto-js'
 class SecurePdfHandler {
   constructor() {
     // In production, this key should come from environment variables
-    this.encryptionKey = process.env.VUE_APP_PDF_ENCRYPTION_KEY || 'your-dev-key-here';
+    this.encryptionKey = import.meta.env.VITE_PDF_ENCRYPTION_KEY || 'your-dev-key-here';
   }
 
   async encryptAndUploadPdf(file, studentId) {
     try {
+      console.log('🔒 Starting PDF encryption for student:', studentId);
+      console.log('📁 File details:', { name: file.name, size: file.size, type: file.type });
+      
+      // Check if encryption key is available
+      if (!this.encryptionKey || this.encryptionKey === 'your-dev-key-here') {
+        console.warn('⚠️ Using default encryption key - set VITE_PDF_ENCRYPTION_KEY in production');
+      }
+      
+      // Check if user is authenticated
+      if (!auth.currentUser) {
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('👤 Current user:', auth.currentUser.uid);
+      
+      // Check if student exists and user has access
+      if (studentId) {
+        console.log('🔍 Checking student access for:', studentId);
+        try {
+          const studentDoc = await getDoc(doc(db, 'students', studentId));
+          if (!studentDoc.exists()) {
+            throw new Error(`Student ${studentId} not found`);
+          }
+          console.log('✅ Student document exists');
+        } catch (error) {
+          console.error('❌ Student access check failed:', error);
+          throw new Error(`Student access check failed: ${error.message}`);
+        }
+      }
+      
       // Read PDF as ArrayBuffer
+      console.log('📖 Reading file as ArrayBuffer...');
       const arrayBuffer = await file.arrayBuffer();
+      console.log('✅ ArrayBuffer read, size:', arrayBuffer.byteLength);
       
       // Convert to Base64 for encryption
+      console.log('🔄 Converting to Base64...');
       const base64 = btoa(
         new Uint8Array(arrayBuffer)
           .reduce((data, byte) => data + String.fromCharCode(byte), '')
       );
+      console.log('✅ Base64 conversion complete, length:', base64.length);
       
       // Encrypt the PDF content
+      console.log('🔐 Encrypting content...');
       const encrypted = CryptoJS.AES.encrypt(base64, this.encryptionKey).toString();
+      console.log('✅ Encryption complete, length:', encrypted.length);
       
       // Generate a unique filename
       const secureFileName = `${uuidv4()}.enc`;
+      console.log('📝 Generated filename:', secureFileName);
       
       // Upload encrypted content
-      const storageRef = ref(storage, `encrypted-pdfs/${studentId}/${secureFileName}`);
+      console.log('📤 Uploading to storage...');
+      const storageRef = ref(storage, `students/${studentId}/${secureFileName}`);
+      console.log('📍 Storage path:', `students/${studentId}/${secureFileName}`);
+      
       await uploadString(storageRef, encrypted);
+      console.log('✅ Upload to storage successful');
       
       // Store metadata in Firestore
+      console.log('💾 Storing metadata in Firestore...');
       await setDoc(doc(db, 'pdfMetadata', secureFileName), {
         originalName: file.name,
         studentId: studentId,
@@ -43,11 +85,17 @@ class SecurePdfHandler {
         fileSize: file.size,
         mimeType: file.type
       });
+      console.log('✅ Metadata stored successfully');
 
       return secureFileName;
     } catch (error) {
-      console.error('PDF encryption failed:', error);
-      throw new Error('Failed to securely store PDF');
+      console.error('❌ PDF encryption failed:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      throw new Error(`Failed to securely store PDF: ${error.message}`);
     }
   }
 
@@ -59,14 +107,28 @@ class SecurePdfHandler {
         throw new Error('Access denied');
       }
 
-      // Log access attempt
-      await this.logAccess(secureFileName, studentId);
-
-      // Download encrypted content
-      const storageRef = ref(storage, `encrypted-pdfs/${studentId}/${secureFileName}`);
-      const downloadUrl = await getDownloadURL(storageRef);
-      const response = await fetch(downloadUrl);
+      // Use HTTP proxy Cloud Function to avoid CORS issues
+      const { auth } = await import('@/firebase');
+      const idToken = await auth.currentUser.getIdToken();
+      
+      // Use the HTTP proxy function instead of signed URLs
+      const proxyUrl = `https://downloadstudentfile-zr6j2ycwuq-uc.a.run.app/downloadStudentFile?studentId=${studentId}&fileName=${secureFileName}`;
+      
+      console.log('🔗 Using proxy URL for secure download');
+      
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      
       const encrypted = await response.text();
+      console.log('✅ Downloaded encrypted content via proxy');
 
       // Decrypt content
       const decrypted = CryptoJS.AES.decrypt(encrypted, this.encryptionKey).toString(CryptoJS.enc.Utf8);
@@ -80,9 +142,7 @@ class SecurePdfHandler {
         { type: 'application/pdf' }
       );
 
-      // Update access count
-      await this.updateAccessMetadata(secureFileName);
-
+      console.log('✅ PDF decrypted and blob created');
       return pdfBlob;
     } catch (error) {
       console.error('PDF decryption failed:', error);

@@ -5,10 +5,10 @@ import CryptoJS from 'crypto-js'
 class IEPSecurityHandler {
   constructor() {
     // This key should come from environment variables in production
-    this.encryptionKey = process.env.VUE_APP_PDF_ENCRYPTION_KEY || 'default-dev-key-replace-in-production';
+    this.encryptionKey = import.meta.env.VITE_PDF_ENCRYPTION_KEY || 'default-dev-key-replace-in-production';
     
     // Read encryption toggle from environment
-    this.encryptionEnabled = process.env.VUE_APP_ENABLE_ENCRYPTION !== 'false';
+    this.encryptionEnabled = import.meta.env.VITE_ENABLE_ENCRYPTION !== 'false';
     
     // Log encryption status in any environment
     console.log('🔒 IEP Encryption:', this.encryptionEnabled ? 'Enabled' : 'Disabled');

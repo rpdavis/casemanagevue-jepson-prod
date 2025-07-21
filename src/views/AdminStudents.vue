@@ -30,13 +30,14 @@
           <th>Last Name</th>
           <th>Grade</th>
           <th>Case Manager</th>
+          <th title="Staff ID Array present">staffIdArr</th>
           <th>Date Added</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-if="!paginatedStudents.length">
-          <td colspan="7">No students found.</td>
+          <td colspan="8">No students found.</td>
         </tr>
         <tr 
           v-for="student in paginatedStudents" 
@@ -81,17 +82,22 @@
               @input="updateStudentField(student.id, 'caseManagerId', $event.target.value)"
             />
           </td>
+          <td class="staff-id-status" :title="getStaffIdStatusTooltip(student)">
+            <span class="status-icon" :class="hasStaffIds(student) ? 'present' : 'missing'">
+              {{ hasStaffIds(student) ? '✓' : '✗' }}
+            </span>
+          </td>
           <td>{{ formatDate(student.created_at) }}</td>
-          <td class="action-btns">
+          <td class="admin-action-btns">
             <!-- Edit Mode -->
             <template v-if="activeEditId === student.id">
-              <button @click="saveStudent(student.id)" class="btn-save" title="Save">💾</button>
-              <button @click="cancelEdit" class="btn-cancel" title="Cancel">❌</button>
-              <button @click="deleteStudentRecord(student.id)" class="btn-delete" title="Delete">🗑️</button>
+              <button @click="saveStudent(student.id)" class="admin-action-btn save" title="Save">💾</button>
+              <button @click="cancelEdit" class="admin-action-btn cancel" title="Cancel">❌</button>
+              <button @click="deleteStudentRecord(student.id)" class="admin-action-btn delete" title="Delete">🗑️</button>
             </template>
             <!-- View Mode -->
             <template v-else>
-              <button @click="startEdit(student.id)" class="btn-edit" title="Edit">✏️</button>
+              <button @click="startEdit(student.id)" class="admin-action-btn edit" title="Edit">✏️</button>
             </template>
           </td>
         </tr>
@@ -418,6 +424,21 @@ const formatDate = (dateValue) => {
   }
 }
 
+// Check if student has staffIds array
+const hasStaffIds = (student) => {
+  return student.app?.staffIds && Array.isArray(student.app.staffIds) && student.app.staffIds.length > 0
+}
+
+// Get tooltip text for staffIds status
+const getStaffIdStatusTooltip = (student) => {
+  if (hasStaffIds(student)) {
+    const count = student.app.staffIds.length
+    return `Staff ID Array present (${count} staff members)`
+  } else {
+    return 'Staff ID Array missing or empty'
+  }
+}
+
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
@@ -450,5 +471,35 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Styles are in admin-panel.css */
+.staff-id-status {
+  text-align: center;
+  padding: 8px;
+}
+
+.status-icon {
+  font-weight: bold;
+  font-size: 16px;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.status-icon.present {
+  color: #28a745;
+  background-color: #d4edda;
+}
+
+.status-icon.missing {
+  color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.staff-id-status:hover {
+  cursor: help;
+}
+
+/* Existing admin styles are in admin-panel.css */
 </style>

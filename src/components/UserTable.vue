@@ -94,14 +94,14 @@
             <td v-else>
               <span>Loading...</span>
             </td>
-            <td class="action-btns">
-              <button v-if="activeRowId !== user.id" class="edit-btn" @click="startEdit(user.id)">
+            <td class="admin-action-btns">
+              <button v-if="activeRowId !== user.id" class="admin-action-btn edit" @click="startEdit(user.id)">
                 ✏️
               </button>
               <template v-else>
-                <button class="save-btn" @click="saveUser(user.id)">💾</button>
-                <button class="cancel-btn" @click="cancelEdit">❌</button>
-                <button class="delete-btn" @click="deleteUser(user.id)">🗑️</button>
+                <button class="admin-action-btn save" @click="saveUser(user.id)">💾</button>
+                <button class="admin-action-btn cancel" @click="cancelEdit">❌</button>
+                <button class="admin-action-btn delete" @click="deleteUser(user.id)">🗑️</button>
               </template>
             </td>
           </tr>

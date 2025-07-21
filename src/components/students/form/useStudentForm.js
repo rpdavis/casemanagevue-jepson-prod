@@ -1,7 +1,7 @@
 import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { db, storage } from '@/firebase'
+import { db, storage, auth } from '@/firebase'
 import { getDisplayValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { 
@@ -129,6 +129,8 @@ export function useStudentForm(props, emit) {
       flag2: student.app?.flags?.flag2 || student.flag2 || false,
       ataglancePdfUrl: student.app?.documents?.ataglancePdfUrl || student.ataglancePdfUrl || student.ataglance_pdf_url || '',
       bipPdfUrl: student.app?.documents?.bipPdfUrl || student.bipPdfUrl || student.bip_pdf_url || '',
+      ataglanceFileName: student.app?.documents?.ataglanceFileName || student.ataglanceFileName || '',
+      bipFileName: student.app?.documents?.bipFileName || student.bipFileName || '',
       bipFile: null,
       ataglanceFile: null,
       removeBipFile: false,
@@ -249,31 +251,55 @@ export function useStudentForm(props, emit) {
     form.ataglanceFile = null
   }
 
-  // File upload/delete utilities
+  // File upload/delete utilities - SECURE VERSION
   const uploadFile = async (file, path) => {
     if (!file) return null
     const fileRef = storageRef(storage, path)
     const snapshot = await uploadBytes(fileRef, file)
-    return await getDownloadURL(snapshot.ref)
+    
+    // Note: Firebase automatically creates download tokens on upload
+    // These tokens bypass security rules and make files publicly accessible
+    // We need a Cloud Function to remove these tokens server-side
+    // For now, we return the file path and rely on the token removal script
+    
+    return path
   }
 
   const deleteFile = async (url) => {
     if (!url) return
     
     try {
-      // Extract the file path from the URL
-      const urlObj = new URL(url)
-      const pathSegments = urlObj.pathname.split('/')
-      const filePath = pathSegments.slice(pathSegments.indexOf('o') + 1).join('/')
+      let filePath
       
-      // Decode the path
-      const decodedPath = decodeURIComponent(filePath)
+      // Check if it's a URL or already a file path
+      if (url.startsWith('http')) {
+        try {
+          // Extract the file path from the URL
+          const urlObj = new URL(url)
+          const pathSegments = urlObj.pathname.split('/')
+          filePath = pathSegments.slice(pathSegments.indexOf('o') + 1).join('/')
+          filePath = decodeURIComponent(filePath)
+        } catch (urlError) {
+          console.warn('Invalid URL format, treating as file path:', url)
+          // If URL parsing fails, treat it as a file path
+          filePath = url
+        }
+      } else {
+        // It's already a file path
+        filePath = url
+      }
       
       // Delete from Firebase Storage
-      const fileRef = storageRef(storage, decodedPath)
+      const fileRef = storageRef(storage, filePath)
       await deleteObject(fileRef)
-      console.log('File deleted successfully:', decodedPath)
+      console.log('File deleted successfully:', filePath)
     } catch (error) {
+      // If file doesn't exist, that's okay - it's already deleted
+      if (error.code === 'storage/object-not-found') {
+        console.log('File already deleted or does not exist:', url)
+        return // Don't throw error for non-existent files
+      }
+      
       console.error('Error deleting file:', error)
       throw error
     }
@@ -350,11 +376,24 @@ export function useStudentForm(props, emit) {
 
   // Enhanced form validation with security checks
   const validateForm = () => {
-    // Sanitize form data first
+    // Sanitize form data first (works with flat structure)
     const sanitizedData = sanitizeStudentFormData(form)
     
-    // Comprehensive validation
-    const validation = validateStudentData(sanitizedData, { 
+    // Create nested structure for validateStudentData (which expects app.studentData)
+    const validationData = {
+      app: {
+        studentData: {
+          firstName: sanitizedData.firstName,
+          lastName: sanitizedData.lastName,
+          grade: sanitizedData.grade,
+          plan: sanitizedData.plan,
+          caseManagerId: sanitizedData.caseManagerId
+        }
+      }
+    }
+    
+    // Comprehensive validation using the nested structure
+    const validation = validateStudentData(validationData, { 
       isNew: props.mode === 'new' 
     })
     
@@ -375,7 +414,7 @@ export function useStudentForm(props, emit) {
       }
     }
     
-    // Apply sanitized data back to form
+    // Apply sanitized data back to form (flat structure)
     Object.assign(form, sanitizedData)
     
     return true
@@ -384,8 +423,21 @@ export function useStudentForm(props, emit) {
   // Main submit handler
   const handleSubmit = async () => {
     try {
+      // Prevent duplicate submissions
+      if (isSaving.value) {
+        console.log('Form submission already in progress, ignoring duplicate')
+        return
+      }
+      
       console.log('Form submitted:', form)
       isSaving.value = true
+      
+      // Debug authentication and user info
+      console.log('🔍 AUTH DEBUG - Current user:', {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        claims: await auth.currentUser?.getIdTokenResult()
+      })
       
       // Validate form
       if (!validateForm()) {
@@ -441,36 +493,63 @@ export function useStudentForm(props, emit) {
       
       console.log('Composed data:', { classServices, schedule })
       
-      // Handle file uploads and removals
+      // Handle secure PDF files - these are already uploaded by the secure system
       let bipPdfUrl = form.bipPdfUrl || null
       let ataglancePdfUrl = form.ataglancePdfUrl || null
       
-      // Handle BIP file
+      console.log('🔍 Form submission - PDF URLs:', {
+        bipPdfUrl,
+        ataglancePdfUrl,
+        formBipPdfUrl: form.bipPdfUrl,
+        formAtaglancePdfUrl: form.ataglancePdfUrl,
+        bipFileName: form.bipFileName,
+        ataglanceFileName: form.ataglanceFileName,
+        bipFile: form.bipFile,
+        ataglanceFile: form.ataglanceFile
+      })
+      
+      // Handle BIP file removal
       if (form.removeBipFile) {
         console.log('Removing BIP file...')
         if (bipPdfUrl) {
-          await deleteFile(bipPdfUrl)
+          // For secure PDFs, we need to delete from the students storage
+          try {
+            // Delete from students storage
+            const storageRef = ref(storage, `students/${props.student.id || 'temp'}/${bipPdfUrl}`)
+            await deleteObject(storageRef)
+            
+            // Delete metadata from Firestore
+            await deleteDoc(doc(db, 'pdfMetadata', bipPdfUrl))
+            
+            console.log('Secure BIP file deleted:', bipPdfUrl)
+          } catch (error) {
+            console.warn('Error deleting secure BIP file:', error)
+            // Continue with save even if delete fails
+          }
           bipPdfUrl = null
         }
-      } else if (form.bipFile) {
-        console.log('Uploading BIP file...')
-        const studentId = props.mode === 'edit' && props.student.id ? props.student.id : 'temp'
-        bipPdfUrl = await uploadFile(form.bipFile, `students/${studentId}/bip.pdf`)
-        console.log('BIP uploaded:', bipPdfUrl)
       }
       
-      // Handle At-A-Glance file
+      // Handle At-A-Glance file removal
       if (form.removeAtaglanceFile) {
         console.log('Removing At-A-Glance file...')
         if (ataglancePdfUrl) {
-          await deleteFile(ataglancePdfUrl)
+          // For secure PDFs, we need to delete from the students storage
+          try {
+            // Delete from students storage
+            const storageRef = ref(storage, `students/${props.student.id || 'temp'}/${ataglancePdfUrl}`)
+            await deleteObject(storageRef)
+            
+            // Delete metadata from Firestore
+            await deleteDoc(doc(db, 'pdfMetadata', ataglancePdfUrl))
+            
+            console.log('Secure At-A-Glance file deleted:', ataglancePdfUrl)
+          } catch (error) {
+            console.warn('Error deleting secure At-A-Glance file:', error)
+            // Continue with save even if delete fails
+          }
           ataglancePdfUrl = null
         }
-      } else if (form.ataglanceFile) {
-        console.log('Uploading At-A-Glance file...')
-        const studentId = props.mode === 'edit' && props.student.id ? props.student.id : 'temp'
-        ataglancePdfUrl = await uploadFile(form.ataglanceFile, `students/${studentId}/ataglance.pdf`)
-        console.log('At-A-Glance uploaded:', ataglancePdfUrl)
       }
       
       // Compose payload - save to nested 'app' structure with categories
@@ -527,12 +606,22 @@ export function useStudentForm(props, emit) {
           flag2: form.flag2
         },
         
-        // Documents - preserve URLs unless explicitly removed
+        // Documents - secure PDF references
         documents: {
           ataglancePdfUrl,
-          bipPdfUrl
+          bipPdfUrl,
+          // Store original filenames for display
+          bipFileName: form.bipFileName || null,
+          ataglanceFileName: form.ataglanceFileName || null
         }
       }
+      
+      console.log('📋 Documents being saved:', {
+        ataglancePdfUrl,
+        bipPdfUrl,
+        bipFileName: form.bipFileName || null,
+        ataglanceFileName: form.ataglanceFileName || null
+      })
       
       console.log('Saving payload:', appData)
       
@@ -545,10 +634,13 @@ export function useStudentForm(props, emit) {
       console.log('Saving payload:', payload)
       
       // Save to Firestore
+      let newStudentId = null
+      
       if (props.mode === 'edit' && props.student.id) {
         console.log('Updating existing student:', props.student.id)
         // Update existing student with merge to preserve other data
         await setDoc(doc(db, 'students', props.student.id), payload, { merge: true })
+        newStudentId = props.student.id
         console.log('Student updated successfully')
       } else {
         console.log('Adding new student')
@@ -567,15 +659,23 @@ export function useStudentForm(props, emit) {
         const docRef = doc(collection(db, 'students'))
         payload.createdAt = serverTimestamp()
         await setDoc(docRef, payload)
-        payload.id = docRef.id
-        console.log('Student added successfully with ID:', docRef.id, 'SSID:', ssid)
+        newStudentId = docRef.id
+        payload.id = newStudentId
+        console.log('Student added successfully with ID:', newStudentId, 'SSID:', ssid)
       }
+      
+
       
       emit('saved', payload)
       emit('close')
     } catch (error) {
       console.error('Error saving student:', error)
-      alert('Error saving student. Please try again.')
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      })
+      alert(`Error saving student: ${error.message || error}. Please try again.`)
     } finally {
       isSaving.value = false
     }

@@ -109,10 +109,31 @@ export function useStudentTable(props) {
   }
 
   const getDocumentUrl = (student, type) => {
-    return student.app?.documents?.[type] || 
-           student[`${type}Url`] || 
-           student[`${type}_url`] ||
+    console.log('🔍 getDocumentUrl called with:', { 
+      studentId: student.id, 
+      type, 
+      appDocuments: student.app?.documents,
+      directUrl: student[`${type}Url`],
+      underscoreUrl: student[`${type}_url`],
+      appLevel: student.app?.[type]
+    })
+    
+    // The type parameter is already the full field name (e.g., 'ataglancePdfUrl', 'bipPdfUrl')
+    // Check multiple possible locations for the document URL
+    const url = student.app?.documents?.[type] ||  // Primary location: app.documents.ataglancePdfUrl
+           student.app?.[type] ||                  // Secondary: app.ataglancePdfUrl
+           student[type] ||                        // Legacy: ataglancePdfUrl at root
+           student[`${type}_url`] ||               // Legacy underscore: ataglance_pdf_url
            null
+           
+    console.log('🔍 getDocumentUrl result:', url)
+    
+    // Additional debugging for secure filenames
+    if (url && url.includes('.enc')) {
+      console.log('🔍 Secure filename detected:', url)
+    }
+    
+    return url
   }
 
   // Schedule processing functions
@@ -365,11 +386,7 @@ export function useStudentTable(props) {
     return aideData?.directAssignment === studentId
   }
 
-  // Utility functions
-  const formatListFromText = (text) => {
-    if (!text) return ''
-    return text.split('\n').map(line => line.trim()).filter(line => line).join('<br>')
-  }
+  // Utility functions - formatListFromText is imported from studentUtils
 
   const getFlagClass = (flag) => {
     const flagLower = flag.toLowerCase()

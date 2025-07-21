@@ -191,6 +191,188 @@
 /* =====================
    Action Buttons
    ===================== */
+
+/* New Admin Action Button Class - Consistent styling for admin panels */
+.admin-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  max-width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0 2px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 1.1em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.admin-action-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.admin-action-btn:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #3b82f6;
+  ring-opacity: 0.5;
+}
+
+/* Admin Action Button Variants */
+.admin-action-btn.edit {
+  color: #1976d2;
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+
+.admin-action-btn.edit:hover {
+  color: #0d47a1;
+  background: #bbdefb;
+  border-color: #1976d2;
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.2);
+}
+
+.admin-action-btn.save {
+  color: #2e7d32;
+  background: #e8f5e8;
+  border-color: #a5d6a7;
+}
+
+.admin-action-btn.save:hover {
+  color: #1b5e20;
+  background: #c8e6c9;
+  border-color: #2e7d32;
+  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.2);
+}
+
+.admin-action-btn.cancel {
+  color: #757575;
+  background: #f5f5f5;
+  border-color: #bdbdbd;
+}
+
+.admin-action-btn.cancel:hover {
+  color: #424242;
+  background: #eeeeee;
+  border-color: #757575;
+  box-shadow: 0 4px 8px rgba(117, 117, 117, 0.2);
+}
+
+.admin-action-btn.delete {
+  color: #d32f2f;
+  background: #ffebee;
+  border-color: #ffcdd2;
+}
+
+.admin-action-btn.delete:hover {
+  color: #b71c1c;
+  background: #ffcdd2;
+  border-color: #d32f2f;
+  box-shadow: 0 4px 8px rgba(211, 47, 47, 0.2);
+}
+
+/* Additional Button Variants for Admin Panel */
+.admin-action-btn.primary {
+  color: #ffffff;
+  background: #2196f3;
+  border-color: #1976d2;
+}
+
+.admin-action-btn.primary:hover {
+  color: #ffffff;
+  background: #1976d2;
+  border-color: #0d47a1;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.admin-action-btn.secondary {
+  color: #6c757d;
+  background: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.admin-action-btn.secondary:hover {
+  color: #495057;
+  background: #e9ecef;
+  border-color: #adb5bd;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.2);
+}
+
+.admin-action-btn.warning {
+  color: #e65100;
+  background: #fff3e0;
+  border-color: #ffcc02;
+}
+
+.admin-action-btn.warning:hover {
+  color: #bf360c;
+  background: #ffe0b2;
+  border-color: #e65100;
+  box-shadow: 0 4px 8px rgba(230, 81, 0, 0.2);
+}
+
+.admin-action-btn.info {
+  color: #0277bd;
+  background: #e1f5fe;
+  border-color: #81d4fa;
+}
+
+.admin-action-btn.info:hover {
+  color: #01579b;
+  background: #b3e5fc;
+  border-color: #0277bd;
+  box-shadow: 0 4px 8px rgba(2, 119, 189, 0.2);
+}
+
+.admin-action-btn.success {
+  color: #2e7d32;
+  background: #e8f5e8;
+  border-color: #a5d6a7;
+}
+
+.admin-action-btn.success:hover {
+  color: #1b5e20;
+  background: #c8e6c9;
+  border-color: #2e7d32;
+  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.2);
+}
+
+/* Admin Action Button Container */
+.admin-action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 120px;
+  padding: 0.25rem;
+}
+
+/* Disabled state */
+.admin-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* Legacy action-btns class - keeping for backward compatibility */
 .action-btns {
   display: flex;
   justify-content: center;

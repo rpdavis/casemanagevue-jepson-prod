@@ -57,11 +57,11 @@
 
     <div class="test-section">
       <h3>Test Actions</h3>
-      <div class="action-buttons">
-        <button @click="reloadSettings" :disabled="loading" class="btn btn-primary">
+      <div class="admin-action-btns">
+        <button @click="reloadSettings" :disabled="loading" class="admin-action-btn" style="min-width: 140px; max-width: 140px;">
           {{ loading ? 'Loading...' : 'Reload Settings' }}
         </button>
-        <button @click="resetSettings" :disabled="loading" class="btn btn-secondary">
+        <button @click="resetSettings" :disabled="loading" class="admin-action-btn" style="min-width: 140px; max-width: 140px;">
           Reset to Defaults
         </button>
       </div>
@@ -88,11 +88,11 @@
 
     <div class="test-section">
       <h3>Migration Tools</h3>
-      <div class="migration-controls">
-        <button @click="runMigration" :disabled="migrationRunning" class="btn btn-warning">
+      <div class="admin-action-btns">
+        <button @click="runMigration" :disabled="migrationRunning" class="admin-action-btn" style="min-width: 160px; max-width: 160px;">
           {{ migrationRunning ? 'Migrating...' : 'Migrate Student IDs' }}
         </button>
-        <button @click="verifyMigration" :disabled="verificationRunning" class="btn btn-secondary">
+        <button @click="verifyMigration" :disabled="verificationRunning" class="admin-action-btn" style="min-width: 140px; max-width: 140px;">
           {{ verificationRunning ? 'Verifying...' : 'Verify Migration' }}
         </button>
       </div>
@@ -133,6 +133,11 @@
         <pre>{{ JSON.stringify(ssidTestResult, null, 2) }}</pre>
       </div>
     </div>
+
+    <div class="test-section">
+      <h3>🔒 Secure PDF System Test</h3>
+      <SecurePdfTest />
+    </div>
   </div>
 </template>
 
@@ -141,6 +146,7 @@ import { ref, onMounted } from 'vue'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { usePeriodLabels } from '@/composables/usePeriodLabels'
 import StudentForm from '@/components/students/StudentForm.vue'
+import SecurePdfTest from '@/components/testing/SecurePdfTest.vue'
 import { migrateStudentIds, verifyMigration as verifyMigrationUtil } from '@/utils/migrateStudentIds'
 import { previewPeriodLabelMigration, migratePeriodLabelsToNumeric } from '@/utils/periodLabelMigration'
 import { mapAeriesField, mapSeisField } from '@/composables/useImporters'

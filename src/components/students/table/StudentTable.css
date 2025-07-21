@@ -26,7 +26,7 @@
 }
 
 .data-source {
-  font-size: 12px;
+  font-size: .8em;
   opacity: 0.7;
   cursor: help;
 }
@@ -51,6 +51,95 @@
   border-radius: 12px;
   font-size: 0.8em;
   font-weight: 500;
+}
+
+/* Services section layout */
+.services-section {
+  margin-bottom: 0.5rem;
+}
+
+.services-section:last-child {
+  margin-bottom: 0;
+}
+
+.services-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Service items - for regular services */
+.service-item {
+  display: inline-block;
+  background-color: #f5f5f5;
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #ddd;
+}
+
+/* Service provider items - for staff assignments */
+.service-provider-item {
+  display: inline-block;
+  background-color: #e8f4fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #bbdefb;
+}
+
+/* Hover effects */
+.service-item:hover,
+.service-provider-item:hover {
+  opacity: 0.8;
+  cursor: default;
+}
+
+/* Services section layout */
+.services-section {
+  margin-bottom: 0.5rem;
+}
+
+.services-section:last-child {
+  margin-bottom: 0;
+}
+
+.services-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Service items - for regular services */
+.service-item {
+  display: inline-block;
+  background-color: #f5f5f5;
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #ddd;
+  white-space: nowrap;
+}
+
+/* Service provider items - for SP, MH, OT, etc. */
+.service-provider-item {
+  display: inline-block;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #bbdefb;
+  white-space: nowrap;
 }
 
 /* Badge container */
@@ -221,14 +310,14 @@
 .instruction-cell .flag-overlay {
   background: #ffeeba;
   color: #333;
-  font-size: 0.75rem;
-  padding: 0 6px;
+  font-size: 0.8rem;
+ 
   border-radius: 3px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin: 0.1rem 0.4rem;
+  
   width: 90%;
 }
 
@@ -237,73 +326,14 @@
 }
 
 /* Schedule list */
-.schedule-list {
-  padding: 0.5rem;
-}
-
 .schedule-list ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.schedule-period {
-  margin-bottom: 0.5rem;
-}
-
-.schedule-period:last-child {
-  margin-bottom: 0;
-}
-
-.period-assignment {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.primary-line {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.period-label {
-  font-weight: 600;
-  color: #333;
-  min-width: 25px;
-  flex-shrink: 0;
-}
-
-.primary-teacher {
-  color: #333;
-  font-weight: 500;
-}
-
-.coteaching-info {
-  padding-left: 1rem;
-}
-
-.coteaching-indicator {
-  color: #666;
-  font-size: 0.85rem;
-  cursor: help;
-  border-bottom: 1px dotted #999;
-  transition: all 0.2s ease;
-}
-
-.coteaching-indicator:hover {
-  color: #1976d2;
-  border-bottom-color: #1976d2;
-}
-
-/* No schedule state */
-.no-schedule {
-  color: #999;
-  text-align: center;
-  padding: 1rem;
-  font-style: italic;
+.schedule-list li {
+  margin-bottom: 2px;
 }
 
 /* Bullet list for accommodations */
@@ -315,7 +345,7 @@
 .bullet-list ul {
   list-style: disc !important;
   padding-left: 1.2rem;
-  margin: 0;
+  margin: 0 .5rem
 }
 
 .bullet-list li {
@@ -403,3 +433,21 @@
   background-color: #f3e5f5 !important;
   color: #7b1fa2 !important;
 } 
+.period-assignment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  
+}
+
+.primary-line {
+  display: flex;
+  gap: 4px;
+}
+
+.coteaching-info {
+  margin-left: 1.2em; /* indent under primary teacher */
+  
+  
+}

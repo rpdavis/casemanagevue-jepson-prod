@@ -2,18 +2,18 @@
   <div class="admin-time-table">
     <div class="header">
       <h1>Time Table Management</h1>
-      <div class="header-actions">
-        <button @click="saveTimeTables" class="btn btn-primary" :disabled="saving">
+      <div class="admin-action-btns">
+        <button @click="saveTimeTables" class="admin-action-btn primary" :disabled="saving" style="min-width: 160px; max-width: 160px;">
           {{ saving ? 'Saving...' : 'Save Time Tables' }}
         </button>
-        <button @click="addTimeTable" class="btn btn-secondary">
+        <button @click="addTimeTable" class="admin-action-btn secondary" style="min-width: 140px; max-width: 140px;">
           Add Time Table
         </button>
       </div>
     </div>
 
     <div class="import-section">
-      <button @click="triggerFileInput" class="btn btn-secondary">Import CSV/XLSX</button>
+      <button @click="triggerFileInput" class="admin-action-btn info" style="min-width: 150px; max-width: 150px;">Import CSV/XLSX</button>
       <input ref="fileInput" type="file" accept=".csv,.xlsx,.xls" style="display:none" @change="handleFileChange" />
       <div class="import-note">
         You can export from Google Sheets or Excel as CSV, or upload your Excel file directly.
@@ -92,11 +92,11 @@
                 <h3>{{ timeTable.name }}</h3>
                 <p class="time-table-days">{{ formatDays(timeTable.days) }}</p>
               </div>
-              <div class="time-table-actions">
-                <button @click="editTimeTable(index)" class="btn btn-small btn-secondary">
+              <div class="admin-action-btns">
+                <button @click="editTimeTable(index)" class="admin-action-btn edit">
                   Edit
                 </button>
-                <button @click="deleteTimeTable(index)" class="btn btn-small btn-danger">
+                <button @click="deleteTimeTable(index)" class="admin-action-btn delete">
                   Delete
                 </button>
               </div>
@@ -180,22 +180,22 @@
                     type="time" 
                     class="form-input time-input"
                   />
-                  <button @click="removeScheduleItem(itemIndex)" class="btn btn-small btn-danger">
+                  <button @click="removeScheduleItem(itemIndex)" class="admin-action-btn delete">
                     Delete
                   </button>
                 </div>
               </div>
               
-              <button @click="addScheduleItem" class="btn btn-secondary btn-add-item">
+              <button @click="addScheduleItem" class="admin-action-btn secondary" style="min-width: 150px; max-width: 150px;">
                 Add Schedule Item
               </button>
             </div>
           </div>
         </div>
         
-        <div class="dialog-actions">
-          <button @click="closeEditDialog" class="btn btn-secondary">Cancel</button>
-          <button @click="saveTimeTable" class="btn btn-primary">Save Time Table</button>
+        <div class="admin-action-btns">
+          <button @click="closeEditDialog" class="admin-action-btn cancel" style="min-width: 100px; max-width: 100px;">Cancel</button>
+          <button @click="saveTimeTable" class="admin-action-btn primary" style="min-width: 140px; max-width: 140px;">Save Time Table</button>
         </div>
       </div>
     </div>

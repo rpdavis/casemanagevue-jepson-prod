@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useBaseRoleView } from './useBaseRoleView'
 import { getDisplayValue } from '@/utils/studentUtils'
 
@@ -19,14 +19,30 @@ export function useSpedChairView(studentData, filterData) {
       ]
     } else if (role === 'administrator_504_CM') {
       return [
-        { value: 'all', label: 'All' },
         { value: 'case_manager', label: 'CM' },
-        { value: 'service_provider', label: 'SP' },
         { value: 'iep_504_all', label: '*' }
       ]
     }
     return []
   })
+  
+  // Ensure the current filter is valid for this view; default to first option if not
+  watch(providerViewOptions, (options) => {
+    // Default for sped_chair is 'all'; for 504 CM default to IEP/504 '*' view
+    const role = currentRole.value
+    let defaultValue = ''
+    if (role === 'administrator_504_CM') {
+      defaultValue = 'iep_504_all'
+    } else if (role === 'sped_chair') {
+      defaultValue = 'all'
+    }
+    // If current filter isn't valid for this view, set to default
+    const validValues = options.map(o => o.value)
+    if (!validValues.includes(filterData.currentFilters.providerView) && validValues.includes(defaultValue)) {
+      filterData.currentFilters.providerView = defaultValue
+      filterData.applyFilters()
+    }
+  }, { immediate: true })
 
   // Override visible students with frontend filtering
   const visibleStudents = computed(() => {
@@ -67,7 +83,7 @@ export function useSpedChairView(studentData, filterData) {
       
       case 'iep_all':
         if (role === 'sped_chair') {
-      // Show all students with IEP
+          // Show all students with IEP
           return baseStudents.filter(student => 
             getDisplayValue(student, 'plan') === 'IEP'
           )
@@ -76,12 +92,12 @@ export function useSpedChairView(studentData, filterData) {
       
       case 'iep_504_all':
         if (role === 'administrator_504_CM') {
-      // Show all students with IEP or 504
+          // Show all students with IEP or 504 plans
           return baseStudents.filter(student => {
-        const plan = getDisplayValue(student, 'plan')
-        return plan === 'IEP' || plan === '504'
-      })
-    }
+            const plan = getDisplayValue(student, 'plan')
+            return plan === 'IEP' || plan === '504'
+          })
+        }
         return []
       
       default:

@@ -1,608 +1,389 @@
-// Input Validation and Sanitization Utilities
-// Provides comprehensive security validation for all user inputs
+// src/utils/validation.js
+// Client-side security validation utilities
 
-// ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VALID_ROLES = [
-  'admin',
-  'administrator', 
-  'administrator_504_CM',
-  'sped_chair',
-  'case_manager',
-  'teacher',
-  'service_provider',
-  'paraeducator'
-]
-
-const VALID_GRADES = [
-  'K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12',
-  'TK', 'Pre-K', 'Ungraded'
-]
-
-const VALID_PLAN_TYPES = ['IEP', '504']
-
-const VALID_PROVIDERS = [
-  'SLP', 'OT', 'PT', 'SC', 'MH', 'TR', 'AUD', 'VI', 'AT', 'DHH', 'O&M', 'BIS', 'HN', 'SW'
-]
-
-const VALID_FILE_TYPES = {
-  pdf: ['application/pdf'],
-  csv: ['text/csv', 'application/csv'],
-  excel: ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-}
-
-// ─── SANITIZATION FUNCTIONS ───────────────────────────────────────────────────
-/**
- * Sanitize string input to prevent XSS attacks
- * @param {string} input - Raw input string
- * @param {Object} options - Sanitization options
- * @returns {string} Sanitized string
- */
-export function sanitizeString(input, options = {}) {
+// ─── INPUT SANITIZATION ──────────────────────────────────────────────────────
+export function sanitizeString(input, maxLength = 255) {
   if (typeof input !== 'string') {
-    return ''
+    return '';
   }
-
-  let sanitized = input
-
-  // Remove null bytes
-  sanitized = sanitized.replace(/\0/g, '')
-
-  // Trim whitespace
-  if (options.trim !== false) {
-    sanitized = sanitized.trim()
-  }
-
-  // Remove HTML tags if specified
-  if (options.stripHtml) {
-    sanitized = sanitized.replace(/<[^>]*>/g, '')
-  }
-
-  // Escape HTML entities
-  if (options.escapeHtml) {
-    sanitized = sanitized
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#x27;')
-      .replace(/\//g, '&#x2F;')
-  }
-
-  // Remove potentially dangerous characters
-  if (options.removeDangerous) {
-    sanitized = sanitized.replace(/[<>'"&]/g, '')
-  }
-
-  // Limit length
-  if (options.maxLength && sanitized.length > options.maxLength) {
-    sanitized = sanitized.substring(0, options.maxLength)
-  }
-
-  return sanitized
+  
+  return input
+    .trim()
+    .replace(/\0/g, '') // Remove null bytes
+    .replace(/[<>'"&]/g, '') // Remove potentially dangerous characters
+    .substring(0, maxLength);
 }
 
-/**
- * Sanitize email input
- * @param {string} email - Raw email string
- * @returns {string} Sanitized email
- */
 export function sanitizeEmail(email) {
-  if (typeof email !== 'string') {
-    return ''
-  }
-
-  return email.toLowerCase().trim()
+  if (typeof email !== 'string') return '';
+  return email.trim().toLowerCase().substring(0, 255);
 }
 
-/**
- * Sanitize numeric input
- * @param {any} input - Raw numeric input
- * @param {Object} options - Sanitization options
- * @returns {number|null} Sanitized number or null if invalid
- */
-export function sanitizeNumber(input, options = {}) {
-  const num = parseFloat(input)
-  
-  if (isNaN(num)) {
-    return null
-  }
-
-  // Apply min/max constraints
-  if (options.min !== undefined && num < options.min) {
-    return options.min
-  }
-  
-  if (options.max !== undefined && num > options.max) {
-    return options.max
-  }
-
-  // Round to specified decimal places
-  if (options.decimals !== undefined) {
-    return Math.round(num * Math.pow(10, options.decimals)) / Math.pow(10, options.decimals)
-  }
-
-  return num
+export function sanitizeNumeric(input, min = 0, max = 999999) {
+  const num = parseFloat(input);
+  if (isNaN(num)) return 0;
+  return Math.max(min, Math.min(max, num));
 }
 
-/**
- * Sanitize date input
- * @param {string} dateString - Raw date string
- * @returns {string|null} ISO date string or null if invalid
- */
 export function sanitizeDate(dateString) {
-  if (!dateString) return null
-  
-  const date = new Date(dateString)
-  
-  if (isNaN(date.getTime())) {
-    return null
-  }
-
-  // Return ISO date string (YYYY-MM-DD)
-  return date.toISOString().split('T')[0]
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
 }
 
-// ─── VALIDATION FUNCTIONS ─────────────────────────────────────────────────────
-/**
- * Validate required field
- * @param {any} value - Value to validate
- * @param {string} fieldName - Field name for error message
- * @returns {Object} Validation result
- */
+// ─── VALIDATION FUNCTIONS ────────────────────────────────────────────────────
 export function validateRequired(value, fieldName) {
-  const isEmpty = value === null || value === undefined || 
-                  (typeof value === 'string' && value.trim() === '') ||
-                  (Array.isArray(value) && value.length === 0)
-  
-  return {
-    isValid: !isEmpty,
-    error: isEmpty ? `${fieldName} is required` : null
+  if (!value || (typeof value === 'string' && value.trim() === '')) {
+    return { isValid: false, error: `${fieldName} is required` };
   }
+  return { isValid: true };
 }
 
-/**
- * Validate email format
- * @param {string} email - Email to validate
- * @returns {Object} Validation result
- */
 export function validateEmail(email) {
-  if (!email) {
-    return { isValid: false, error: 'Email is required' }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: 'Invalid email format' };
   }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const isValid = emailRegex.test(email)
-  
-  return {
-    isValid,
-    error: isValid ? null : 'Invalid email format'
-  }
+  return { isValid: true };
 }
 
-/**
- * Validate string length
- * @param {string} value - String to validate
- * @param {Object} options - Validation options
- * @returns {Object} Validation result
- */
-export function validateStringLength(value, options = {}) {
+export function validateStringLength(value, fieldName, minLength = 0, maxLength = 255) {
   if (typeof value !== 'string') {
-    return { isValid: false, error: 'Value must be a string' }
+    return { isValid: false, error: `${fieldName} must be a string` };
   }
-
-  const { min = 0, max = Infinity, fieldName = 'Field' } = options
-  const length = value.length
-
-  if (length < min) {
-    return { isValid: false, error: `${fieldName} must be at least ${min} characters` }
+  
+  if (value.length < minLength) {
+    return { isValid: false, error: `${fieldName} must be at least ${minLength} characters` };
   }
-
-  if (length > max) {
-    return { isValid: false, error: `${fieldName} must be no more than ${max} characters` }
+  
+  if (value.length > maxLength) {
+    return { isValid: false, error: `${fieldName} must be no more than ${maxLength} characters` };
   }
-
-  return { isValid: true, error: null }
+  
+  return { isValid: true };
 }
 
-/**
- * Validate user role
- * @param {string} role - Role to validate
- * @returns {Object} Validation result
- */
 export function validateRole(role) {
-  const isValid = VALID_ROLES.includes(role)
+  const validRoles = [
+    'admin', 'administrator', 'administrator_504_CM', 'sped_chair',
+    'case_manager', 'teacher', 'service_provider', 'paraeducator'
+  ];
   
-  return {
-    isValid,
-    error: isValid ? null : `Invalid role. Valid roles: ${VALID_ROLES.join(', ')}`
+  if (!validRoles.includes(role)) {
+    return { isValid: false, error: 'Invalid role' };
   }
+  
+  return { isValid: true };
 }
 
-/**
- * Validate grade
- * @param {string} grade - Grade to validate
- * @returns {Object} Validation result
- */
-export function validateGrade(grade) {
-  const isValid = VALID_GRADES.includes(grade)
-  
-  return {
-    isValid,
-    error: isValid ? null : `Invalid grade. Valid grades: ${VALID_GRADES.join(', ')}`
-  }
-}
-
-/**
- * Validate plan type
- * @param {string} plan - Plan type to validate
- * @returns {Object} Validation result
- */
-export function validatePlanType(plan) {
-  const isValid = VALID_PLAN_TYPES.includes(plan)
-  
-  return {
-    isValid,
-    error: isValid ? null : `Invalid plan type. Valid types: ${VALID_PLAN_TYPES.join(', ')}`
-  }
-}
-
-/**
- * Validate provider type
- * @param {string} provider - Provider type to validate
- * @returns {Object} Validation result
- */
-export function validateProvider(provider) {
-  if (!provider) return { isValid: true, error: null } // Optional field
-  
-  const isValid = VALID_PROVIDERS.includes(provider)
-  
-  return {
-    isValid,
-    error: isValid ? null : `Invalid provider type. Valid types: ${VALID_PROVIDERS.join(', ')}`
-  }
-}
-
-/**
- * Validate SSID format
- * @param {string} ssid - SSID to validate
- * @returns {Object} Validation result
- */
-export function validateSSID(ssid) {
-  if (!ssid) {
-    return { isValid: false, error: 'SSID is required' }
-  }
-
-  // SSID should be 10 digits
-  const ssidRegex = /^\d{10}$/
-  const isValid = ssidRegex.test(ssid)
-  
-  return {
-    isValid,
-    error: isValid ? null : 'SSID must be exactly 10 digits'
-  }
-}
-
-/**
- * Validate file upload
- * @param {File} file - File to validate
- * @param {Object} options - Validation options
- * @returns {Object} Validation result
- */
-export function validateFile(file, options = {}) {
+export function validateFileUpload(file, allowedTypes = [], maxSize = 10 * 1024 * 1024) {
   if (!file) {
-    return { isValid: true, error: null } // Optional in most cases
+    return { isValid: false, error: 'No file selected' };
   }
-
-  const {
-    allowedTypes = ['pdf'],
-    maxSize = 10 * 1024 * 1024, // 10MB default
-    fieldName = 'File'
-  } = options
-
+  
   // Check file type
-  const allowedMimeTypes = allowedTypes.flatMap(type => VALID_FILE_TYPES[type] || [])
-  if (!allowedMimeTypes.includes(file.type)) {
-    return {
-      isValid: false,
-      error: `${fieldName} must be of type: ${allowedTypes.join(', ')}`
-    }
+  if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
+    return { isValid: false, error: `Invalid file type. Allowed: ${allowedTypes.join(', ')}` };
   }
-
+  
   // Check file size
   if (file.size > maxSize) {
-    const maxSizeMB = Math.round(maxSize / (1024 * 1024))
-    return {
-      isValid: false,
-      error: `${fieldName} must be smaller than ${maxSizeMB}MB`
-    }
+    return { isValid: false, error: `File too large. Maximum size: ${maxSize / (1024 * 1024)}MB` };
   }
-
-  return { isValid: true, error: null }
+  
+  // Check for suspicious file names
+  const suspiciousPatterns = [
+    /\.exe$/i, /\.bat$/i, /\.cmd$/i, /\.scr$/i, /\.vbs$/i, /\.js$/i, /\.jar$/i
+  ];
+  
+  if (suspiciousPatterns.some(pattern => pattern.test(file.name))) {
+    return { isValid: false, error: 'Suspicious file type detected' };
+  }
+  
+  return { isValid: true };
 }
 
-// ─── COMPOSITE VALIDATION FUNCTIONS ──────────────────────────────────────────
-/**
- * Validate student data
- * @param {Object} studentData - Student data to validate
- * @param {Object} options - Validation options
- * @returns {Object} Validation result with all errors
- */
-export function validateStudentData(studentData, options = {}) {
-  const errors = []
-  const { isNew = false } = options
-
-  // Required fields
-  if (isNew) {
-    const ssidResult = validateSSID(studentData.ssid)
-    if (!ssidResult.isValid) errors.push(ssidResult.error)
-  }
-
-  const firstNameResult = validateRequired(studentData.firstName, 'First Name')
-  if (!firstNameResult.isValid) errors.push(firstNameResult.error)
-
-  const lastNameResult = validateRequired(studentData.lastName, 'Last Name')
-  if (!lastNameResult.isValid) errors.push(lastNameResult.error)
-
-  const gradeResult = validateGrade(studentData.grade)
-  if (!gradeResult.isValid) errors.push(gradeResult.error)
-
-  // Plan validation - only if plan is provided
-  if (studentData.plan) {
-    const planResult = validatePlanType(studentData.plan)
-    if (!planResult.isValid) errors.push(planResult.error)
-  }
-
-  // Optional fields with validation
-  if (studentData.reviewDate) {
-    const sanitizedDate = sanitizeDate(studentData.reviewDate)
-    if (!sanitizedDate) errors.push('Invalid review date format')
-  }
-
-  if (studentData.reevalDate) {
-    const sanitizedDate = sanitizeDate(studentData.reevalDate)
-    if (!sanitizedDate) errors.push('Invalid reevaluation date format')
-  }
-
-  if (studentData.meetingDate) {
-    const sanitizedDate = sanitizeDate(studentData.meetingDate)
-    if (!sanitizedDate) errors.push('Invalid meeting date format')
-  }
-
-  // Validate text fields length
-  const textFields = [
-    { field: 'firstName', max: 50 },
-    { field: 'lastName', max: 50 },
-    { field: 'instruction', max: 2000 },
-    { field: 'assessment', max: 2000 }
-  ]
-
-  textFields.forEach(({ field, max }) => {
-    if (studentData[field]) {
-      const lengthResult = validateStringLength(studentData[field], { max, fieldName: field })
-      if (!lengthResult.isValid) errors.push(lengthResult.error)
-    }
-  })
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  }
-}
-
-/**
- * Validate user data
- * @param {Object} userData - User data to validate
- * @returns {Object} Validation result with all errors
- */
-export function validateUserData(userData) {
-  const errors = []
-
-  // Required fields
-  const nameResult = validateRequired(userData.name, 'Name')
-  if (!nameResult.isValid) errors.push(nameResult.error)
-
-  const emailResult = validateEmail(userData.email)
-  if (!emailResult.isValid) errors.push(emailResult.error)
-
-  const roleResult = validateRole(userData.role)
-  if (!roleResult.isValid) errors.push(roleResult.error)
-
-  // Optional provider validation
-  if (userData.provider) {
-    const providerResult = validateProvider(userData.provider)
-    if (!providerResult.isValid) errors.push(providerResult.error)
-  }
-
-  // Validate text field lengths
-  const nameLength = validateStringLength(userData.name, { min: 2, max: 100, fieldName: 'Name' })
-  if (!nameLength.isValid) errors.push(nameLength.error)
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  }
-}
-
-// ─── SANITIZATION HELPERS ────────────────────────────────────────────────────
-/**
- * Sanitize student form data
- * @param {Object} formData - Raw form data
- * @returns {Object} Sanitized form data
- */
-export function sanitizeStudentFormData(formData) {
-  const sanitized = {}
-
-  // Basic string fields
-  const stringFields = ['firstName', 'lastName', 'grade', 'plan', 'instruction', 'assessment']
-  stringFields.forEach(field => {
-    if (formData[field]) {
-      sanitized[field] = sanitizeString(formData[field], { 
-        trim: true, 
-        maxLength: field.includes('instruction') || field.includes('assessment') ? 2000 : 100,
-        removeDangerous: true
-      })
-    }
-  })
-
-  // SSID
-  if (formData.ssid) {
-    sanitized.ssid = sanitizeString(formData.ssid, { trim: true, maxLength: 10 })
-  }
-
-  // Dates
-  const dateFields = ['reviewDate', 'reevalDate', 'meetingDate']
-  dateFields.forEach(field => {
-    if (formData[field]) {
-      sanitized[field] = sanitizeDate(formData[field])
-    }
-  })
-
-  // Boolean fields
-  const booleanFields = ['flag1', 'flag2']
-  booleanFields.forEach(field => {
-    if (formData[field] !== undefined) {
-      sanitized[field] = Boolean(formData[field])
-    }
-  })
-
-  // Arrays (services)
-  if (Array.isArray(formData.services)) {
-    sanitized.services = formData.services
-      .filter(service => typeof service === 'string')
-      .map(service => sanitizeString(service, { trim: true, maxLength: 200 }))
-      .filter(service => service.length > 0)
-  }
-
-  // Schedule object
-  if (formData.schedule && typeof formData.schedule === 'object') {
-    sanitized.schedule = {}
-    Object.entries(formData.schedule).forEach(([period, periodData]) => {
-      if (periodData) {
-        if (typeof periodData === 'string') {
-          // Simple teacher ID string
-          sanitized.schedule[period] = sanitizeString(periodData, { trim: true, maxLength: 50 })
-        } else if (typeof periodData === 'object' && periodData.teacherId) {
-          // Co-teaching object with teacherId and coTeaching data
-          sanitized.schedule[period] = {
-            teacherId: sanitizeString(periodData.teacherId, { trim: true, maxLength: 50 }),
-            coTeaching: {
-              caseManagerId: periodData.coTeaching?.caseManagerId ? 
-                sanitizeString(periodData.coTeaching.caseManagerId, { trim: true, maxLength: 50 }) : '',
-              subject: periodData.coTeaching?.subject ? 
-                sanitizeString(periodData.coTeaching.subject, { trim: true, maxLength: 100 }) : ''
-            }
-          }
-        }
-      }
-    })
-  }
-
-  return sanitized
-}
-
-/**
- * Sanitize user form data
- * @param {Object} formData - Raw form data
- * @returns {Object} Sanitized form data
- */
-export function sanitizeUserFormData(formData) {
-  const sanitized = {}
-
-  // Basic string fields
-  if (formData.name) {
-    sanitized.name = sanitizeString(formData.name, { trim: true, maxLength: 100, removeDangerous: true })
-  }
-
-  if (formData.email) {
-    sanitized.email = sanitizeEmail(formData.email)
-  }
-
-  if (formData.role) {
-    sanitized.role = sanitizeString(formData.role, { trim: true, maxLength: 50 })
-  }
-
-  if (formData.provider) {
-    sanitized.provider = sanitizeString(formData.provider, { trim: true, maxLength: 10 })
-  }
-
-  if (formData.aeriesId) {
-    sanitized.aeriesId = sanitizeString(formData.aeriesId, { trim: true, maxLength: 20 })
-  }
-
-  return sanitized
-}
-
-// ─── SECURITY HELPERS ────────────────────────────────────────────────────────
-/**
- * Check if input contains potential security threats
- * @param {string} input - Input to check
- * @returns {Object} Security check result
- */
+// ─── SECURITY THREAT DETECTION ───────────────────────────────────────────────
 export function checkSecurityThreats(input) {
   if (typeof input !== 'string') {
-    return { isSafe: true, threats: [] }
+    return { isSafe: true, threats: [] };
   }
-
-  const threats = []
-
+  
+  const threats = [];
+  
   // Check for script injection
   if (/<script|javascript:|vbscript:|onload=|onerror=/i.test(input)) {
-    threats.push('Script injection attempt detected')
+    threats.push('Script injection attempt');
   }
-
+  
   // Check for SQL injection patterns
   if (/(\bunion\b|\bselect\b|\binsert\b|\bupdate\b|\bdelete\b|\bdrop\b).*(\bfrom\b|\binto\b|\bwhere\b)/i.test(input)) {
-    threats.push('SQL injection pattern detected')
+    threats.push('SQL injection pattern');
   }
-
+  
   // Check for path traversal
   if (/\.\.\/|\.\.\\|%2e%2e%2f|%2e%2e%5c/i.test(input)) {
-    threats.push('Path traversal attempt detected')
+    threats.push('Path traversal attempt');
   }
-
-  // Check for null bytes
-  if (input.includes('\0')) {
-    threats.push('Null byte injection detected')
+  
+  // Check for HTML injection
+  if (/<[^>]*>/i.test(input)) {
+    threats.push('HTML injection attempt');
   }
-
+  
+  // Check for null byte injection
+  if (/\0/.test(input)) {
+    threats.push('Null byte injection');
+  }
+  
   return {
     isSafe: threats.length === 0,
     threats
+  };
+}
+
+// ─── RATE LIMITING ───────────────────────────────────────────────────────────
+const rateLimitStorage = {};
+
+export function checkRateLimit(action, limit = 10, windowMs = 60000) {
+  const now = Date.now();
+  const key = `${action}_${Math.floor(now / windowMs)}`;
+  
+  if (!rateLimitStorage[key]) {
+    rateLimitStorage[key] = 0;
+  }
+  
+  rateLimitStorage[key]++;
+  
+  if (rateLimitStorage[key] > limit) {
+    return { 
+      allowed: false, 
+      error: `Rate limit exceeded. Maximum ${limit} requests per ${windowMs / 1000} seconds.` 
+    };
+  }
+  
+  // Clean up old entries
+  Object.keys(rateLimitStorage).forEach(storageKey => {
+    const keyTime = parseInt(storageKey.split('_').pop()) * windowMs;
+    if (now - keyTime > windowMs * 2) {
+      delete rateLimitStorage[storageKey];
+    }
+  });
+  
+  return { allowed: true };
+}
+
+// ─── STUDENT DATA VALIDATION ─────────────────────────────────────────────────
+export function validateStudentData(data, options = {}) {
+  const errors = [];
+  const { isNew = false } = options;
+  
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, errors: ['Invalid student data'] };
+  }
+  
+  // Validate student data structure
+  if (!data.app || !data.app.studentData) {
+    errors.push('Student data structure is invalid');
+    return { isValid: false, errors };
+  }
+  
+  const studentData = data.app.studentData;
+  
+  // Required fields
+  const requiredFields = [
+    { field: 'firstName', name: 'First Name' },
+    { field: 'lastName', name: 'Last Name' },
+    { field: 'caseManagerId', name: 'Case Manager' }
+  ];
+  
+  requiredFields.forEach(({ field, name }) => {
+    const validation = validateRequired(studentData[field], name);
+    if (!validation.isValid) {
+      errors.push(validation.error);
+    }
+  });
+  
+  // String length validations
+  const stringFields = [
+    { field: 'firstName', name: 'First Name', maxLength: 100 },
+    { field: 'lastName', name: 'Last Name', maxLength: 100 },
+    { field: 'studentId', name: 'Student ID', maxLength: 50 },
+    { field: 'grade', name: 'Grade', maxLength: 10 }
+  ];
+  
+  stringFields.forEach(({ field, name, maxLength }) => {
+    if (studentData[field]) {
+      const validation = validateStringLength(studentData[field], name, 1, maxLength);
+      if (!validation.isValid) {
+        errors.push(validation.error);
+      }
+    }
+  });
+  
+  // Security threat detection
+  const textFields = ['firstName', 'lastName', 'studentId', 'grade'];
+  textFields.forEach(field => {
+    if (studentData[field]) {
+      const securityCheck = checkSecurityThreats(studentData[field]);
+      if (!securityCheck.isSafe) {
+        errors.push(`Security threat detected in ${field}: ${securityCheck.threats.join(', ')}`);
+      }
+    }
+  });
+  
+  // Validate encrypted fields
+  if (data.app.accommodations && 
+      typeof data.app.accommodations !== 'string' && 
+      data.app.accommodations !== null) {
+    errors.push('Accommodations must be encrypted string or null');
+  }
+  
+  if (data.app.classServices && 
+      typeof data.app.classServices !== 'string' && 
+      data.app.classServices !== null) {
+    errors.push('Class services must be encrypted string or null');
+  }
+  
+  if (studentData.plan && 
+      typeof studentData.plan !== 'string' && 
+      studentData.plan !== null) {
+    errors.push('Student plan must be encrypted string or null');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// ─── USER DATA VALIDATION ────────────────────────────────────────────────────
+export function validateUserData(data) {
+  const errors = [];
+  
+  if (!data || typeof data !== 'object') {
+    return { isValid: false, errors: ['Invalid user data'] };
+  }
+  
+  // Required fields
+  const requiredValidation = validateRequired(data.name, 'Name');
+  if (!requiredValidation.isValid) errors.push(requiredValidation.error);
+  
+  const emailRequiredValidation = validateRequired(data.email, 'Email');
+  if (!emailRequiredValidation.isValid) errors.push(emailRequiredValidation.error);
+  
+  const roleRequiredValidation = validateRequired(data.role, 'Role');
+  if (!roleRequiredValidation.isValid) errors.push(roleRequiredValidation.error);
+  
+  // Email format validation
+  if (data.email) {
+    const emailValidation = validateEmail(data.email);
+    if (!emailValidation.isValid) {
+      errors.push(emailValidation.error);
+    }
+  }
+  
+  // Role validation
+  if (data.role) {
+    const roleValidation = validateRole(data.role);
+    if (!roleValidation.isValid) {
+      errors.push(roleValidation.error);
+    }
+  }
+  
+  // String length validations
+  if (data.name) {
+    const nameValidation = validateStringLength(data.name, 'Name', 1, 100);
+    if (!nameValidation.isValid) {
+      errors.push(nameValidation.error);
+    }
+  }
+  
+  if (data.email) {
+    const emailLengthValidation = validateStringLength(data.email, 'Email', 1, 255);
+    if (!emailLengthValidation.isValid) {
+      errors.push(emailLengthValidation.error);
+    }
+  }
+  
+  // Security threat detection
+  const textFields = ['name', 'email'];
+  textFields.forEach(field => {
+    if (data[field]) {
+      const securityCheck = checkSecurityThreats(data[field]);
+      if (!securityCheck.isSafe) {
+        errors.push(`Security threat detected in ${field}: ${securityCheck.threats.join(', ')}`);
+      }
+    }
+  });
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+// ─── SANITIZATION HELPERS ────────────────────────────────────────────────────
+export function sanitizeStudentFormData(formData) {
+  const sanitized = { ...formData };
+  
+  // Handle nested app.studentData structure
+  if (sanitized.app && sanitized.app.studentData) {
+    const studentData = sanitized.app.studentData;
+    
+    // Sanitize text fields
+    const textFields = ['firstName', 'lastName', 'studentId', 'grade'];
+    textFields.forEach(field => {
+      if (studentData[field]) {
+        studentData[field] = sanitizeString(studentData[field], 100);
+      }
+    });
+  } else {
+    // Handle flat form structure (direct form fields)
+    const textFields = ['firstName', 'lastName', 'studentId', 'grade'];
+    textFields.forEach(field => {
+      if (sanitized[field]) {
+        sanitized[field] = sanitizeString(sanitized[field], 100);
+      }
+    });
+  }
+  
+  return sanitized;
+}
+
+export function sanitizeUserFormData(formData) {
+  const sanitized = { ...formData };
+  
+  if (sanitized.name) {
+    sanitized.name = sanitizeString(sanitized.name, 100);
+  }
+  
+  if (sanitized.email) {
+    sanitized.email = sanitizeEmail(sanitized.email);
+  }
+  
+  return sanitized;
+}
+
+// ─── FORM VALIDATION INTEGRATION ─────────────────────────────────────────────
+export function validateForm(formData, validationType = 'student') {
+  // Rate limiting check
+  const rateLimitCheck = checkRateLimit(`validate_${validationType}`, 20, 60000);
+  if (!rateLimitCheck.allowed) {
+    return { isValid: false, errors: [rateLimitCheck.error] };
+  }
+  
+  switch (validationType) {
+    case 'student':
+      return validateStudentData(formData);
+    case 'user':
+      return validateUserData(formData);
+    default:
+      return { isValid: false, errors: ['Unknown validation type'] };
   }
 }
 
-/**
- * Rate limiting helper (basic implementation)
- * @param {string} key - Rate limit key (e.g., user ID, IP)
- * @param {number} limit - Maximum requests
- * @param {number} windowMs - Time window in milliseconds
- * @returns {Object} Rate limit result
- */
-export function checkRateLimit(key, limit = 10, windowMs = 60000) {
-  if (typeof window === 'undefined') {
-    // Server-side rate limiting would be implemented differently
-    return { allowed: true, remaining: limit }
-  }
-
-  const now = Date.now()
-  const windowKey = `rateLimit_${key}`
-  
-  let requests = JSON.parse(localStorage.getItem(windowKey) || '[]')
-  
-  // Remove old requests outside the window
-  requests = requests.filter(timestamp => now - timestamp < windowMs)
-  
-  if (requests.length >= limit) {
-    return { allowed: false, remaining: 0 }
-  }
-  
-  // Add current request
-  requests.push(now)
-  localStorage.setItem(windowKey, JSON.stringify(requests))
-  
-  return { allowed: true, remaining: limit - requests.length }
-}
-
+// ─── BATCH OPERATIONS ────────────────────────────────────────────────────────
 /**
  * Performs a rate-limited batch operation on Firestore documents
  * @param {Array} items - Array of items to process
@@ -633,13 +414,7 @@ export const performRateLimitedBatchOperation = async (items, operationFn, batch
   }
 
   return results
-}
-
-// ─── EXPORTS ──────────────────────────────────────────────────────────────────
-export {
-  VALID_ROLES,
-  VALID_GRADES,
-  VALID_PLAN_TYPES,
-  VALID_PROVIDERS,
-  VALID_FILE_TYPES
 } 
+// Aliases for backward compatibility
+export const validateFile = validateFileUpload;
+export const sanitizeNumber = sanitizeNumeric; 

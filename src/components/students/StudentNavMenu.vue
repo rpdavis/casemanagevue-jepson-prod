@@ -34,7 +34,11 @@
         <div class="nav-section">
           <h4>Actions</h4>
           <div class="nav-buttons">
-            <button @click="handleAction('add-student')" class="nav-btn primary">
+            <button 
+              v-if="canAddStudents"
+              @click="handleAction('add-student')" 
+              class="nav-btn primary"
+            >
               <span>➕</span> Add Student
             </button>
             <button @click="handleAction('export')" class="nav-btn">
@@ -59,15 +63,7 @@
           </div>
         </div>
 
-        <!-- Debug Section (Development Only) -->
-        <div v-if="canShowDebugMenu" class="nav-section">
-          <h4>Debug</h4>
-          <div class="nav-buttons">
-            <button @click="onDebugMenuClick" class="nav-btn secondary">
-              <span>🔧</span> {{ isDebugMenuVisible ? 'Hide' : 'Show' }} Debug Menu
-            </button>
-          </div>
-        </div>
+
 
         <!-- Paraeducator Actions Section -->
         <div v-if="currentUser?.role === 'paraeducator'" class="nav-section">
@@ -101,8 +97,6 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
-import { useDebugMenu } from '@/composables/useDebugMenu'
-
 const props = defineProps({
   currentUser: {
     type: Object,
@@ -116,12 +110,14 @@ const props = defineProps({
 
 const emit = defineEmits(['action'])
 
-const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu } = useDebugMenu()
-// Toggle debug panel and close nav menu
-function onDebugMenuClick() {
-  toggleDebugMenu()
-  closeMenu()
-}
+// Determine if current user can add students
+const canAddStudents = computed(() => {
+  const role = props.currentUser?.role
+  // Hide Add Student button for paraeducators and teachers
+  return role !== 'paraeducator' && role !== 'teacher'
+})
+
+
 
 const isMenuOpen = ref(false)
 
@@ -137,7 +133,6 @@ function handleAction(action) {
   emit('action', action)
   closeMenu()
 }
-
 
 </script>
 

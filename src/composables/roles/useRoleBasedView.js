@@ -7,6 +7,8 @@ import { useSpedChairView } from './useSpedChairView'
 import { useTeacherView } from './useTeacherView'
 import { useServiceProviderView } from './useServiceProviderView'
 import { useParaeducatorView } from './useParaeducatorView'
+import { useAdministratorView } from './useAdministratorView'
+import { useAdministrator504View } from './useAdministrator504View'
 
 export function useRoleBasedView(studentData, filterData) {
   const { currentUser } = studentData
@@ -29,8 +31,11 @@ export function useRoleBasedView(studentData, filterData) {
         return useCaseManagerView(studentData, filterData)
       
       case 'sped_chair':
-      case 'administrator_504_CM':
+        // Sped Chair sees via SpedChairView
         return useSpedChairView(studentData, filterData)
+      case 'administrator_504_CM':
+        // 504 CM sees their own view (CM caseload or IEP/504 only)
+        return useAdministrator504View(studentData, filterData)
       
       case 'teacher':
         return useTeacherView(studentData, filterData)
@@ -42,7 +47,8 @@ export function useRoleBasedView(studentData, filterData) {
         return useParaeducatorView(studentData, filterData)
       
       case 'administrator':
-        return useAdminView(studentData, filterData)
+        // Administrator sees full admin view
+        return useAdministratorView(studentData, filterData)
       
       default:
         // Guest or unknown role - return minimal view

@@ -178,10 +178,10 @@
 
       <!-- Save/Load/Reset -->
       <section class="settings-section">
-        <div class="action-buttons">
-          <button type="submit" :disabled="saveLoading || loading">💾 Save Settings</button>
-          <button type="button" @click="() => loadSettings(true)" :disabled="loading">📂 Load</button>
-          <button type="button" @click="resetSettings" :disabled="loading">↩️ Reset</button>
+        <div class="admin-action-btns">
+          <button type="submit" :disabled="saveLoading || loading" class="admin-action-btn primary" style="min-width: 140px; max-width: 140px;">💾 Save Settings</button>
+          <button type="button" @click="() => loadSettings(true)" :disabled="loading" class="admin-action-btn info" style="min-width: 100px; max-width: 100px;">📂 Load</button>
+          <button type="button" @click="resetSettings" :disabled="loading" class="admin-action-btn warning" style="min-width: 100px; max-width: 100px;">↩️ Reset</button>
         </div>
         <div v-if="status" class="status-message" :class="{ error: statusError, success: !statusError }">
           {{ status }}
@@ -204,7 +204,7 @@ import {
   checkSecurityThreats, 
   validateStringLength,
   checkRateLimit,
-  sanitizeNumber
+  sanitizeNumeric
 } from '@/utils/validation.js'
 
 const { currentUser } = useAuth()
@@ -272,7 +272,7 @@ const settings = ref({
 // Enhanced validation functions
 const validateSettings = () => {
   // Validate number of periods
-  const sanitizedNumPeriods = sanitizeNumber(settings.value.numPeriods, {
+  const sanitizedNumPeriods = sanitizeNumeric(settings.value.numPeriods, {
     min: 1,
     max: 15,
     decimals: 0
@@ -410,7 +410,7 @@ const removeCustomServiceProvider = (index) => {
 // Watchers for validation
 watch(() => settings.value.numPeriods, (newVal) => {
   // Sanitize and validate on change
-  const sanitizedVal = sanitizeNumber(newVal, { min: 1, max: 15, decimals: 0 })
+  const sanitizedVal = sanitizeNumeric(newVal, { min: 1, max: 15, decimals: 0 })
   if (sanitizedVal !== null && sanitizedVal !== newVal) {
     settings.value.numPeriods = sanitizedVal
   }

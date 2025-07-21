@@ -38,9 +38,7 @@
           <a @click="navigateTo('/students')">All Students</a>
           <a @click="showExport = true">Export Data</a>
           <a @click="printPage">Print View</a>
-          <a v-if="canShowDebugMenu" @click="toggleDebugMenu" class="debug-menu-item">
-            <span>🔧</span> {{ isDebugMenuVisible ? 'Hide' : 'Show' }} Debug Menu
-          </a>
+
         </div>
       </div>
 
@@ -97,11 +95,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/authStore'
-import { useDebugMenu } from '@/composables/useDebugMenu'
-
 const router = useRouter()
 const authStore = useAuthStore()
-const { isDebugMenuVisible, canShowDebugMenu, toggleDebugMenu } = useDebugMenu()
 
 const currentUser = computed(() => authStore.currentUser)
 const showDropdown = ref(false)
@@ -212,15 +207,7 @@ button.active {
   background-color: #f4f4f4;
 }
 
-.dropdown-content a.debug-menu-item {
-  border-top: 1px solid #e0e0e0;
-  color: #666;
-  font-style: italic;
-}
 
-.dropdown-content a.debug-menu-item:hover {
-  background-color: #f0f8ff;
-}
 
 .dropdown.open .dropdown-content {
   display: block;

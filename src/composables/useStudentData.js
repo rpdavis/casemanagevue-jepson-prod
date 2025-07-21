@@ -36,7 +36,7 @@ export function useStudentData() {
     feedbackForms,
     formsLoading
   } = useTeacherFeedback()
-  const { getStudentsByRole } = useStudentQueries()
+  const { loadStudents } = useStudentQueries()
 
   // Loading state
   const isLoading = ref(false)
@@ -44,7 +44,7 @@ export function useStudentData() {
 
   // Computed properties
   // Use computed 'user' from auth store for correct reactive user object
-  const currentUser = authStore.user
+  const currentUser = computed(() => authStore.currentUser)
   
   const isAdmin = computed(() => {
     const role = currentUser.value?.role
@@ -64,18 +64,24 @@ export function useStudentData() {
 
   // Data fetching with role-based security
   const fetchData = async () => {
+    console.log('🔍 useStudentData: fetchData() called')
     isLoading.value = true
     error.value = null
     
     try {
+      console.log('🔍 useStudentData: About to fetchUsers()...')
       // First, fetch users (needed for role-based student queries)
       await fetchUsers()
+      console.log('🔍 useStudentData: fetchUsers() completed')
       
       // Then fetch students based on user role (SECURITY: Database-level filtering)
       const user = currentUser.value
+      console.log('🔍 useStudentData: Checking user for loadStudents call:', user)
       if (user) {
         console.log('🔒 Security: Fetching students for user role:', user.role)
-        const roleBasedStudents = await getStudentsByRole(user)
+        console.log('🔍 useStudentData: About to call loadStudents()...')
+        const roleBasedStudents = await loadStudents()
+        console.log('🔍 useStudentData: loadStudents() returned:', roleBasedStudents.length, 'students')
         setStudents(roleBasedStudents)
         
         // Run security test to verify access control
@@ -88,21 +94,25 @@ export function useStudentData() {
         setStudents([])
       }
       
-      // Only load aide assignments for admin roles that have permission
+      // Load aide assignments based on user role and permissions
       const userRole = currentUser.value?.role
       if (['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)) {
+        // Admin roles can load all aide assignments
         await loadAideAssignments()
-      }
-      // Paraeducator: subscribe to own aideSchedules doc for real-time updates
-      if (userRole === 'paraeducator' && currentUser.value?.uid) {
-        // Ensure aideAssignments loaded
-        await loadAideAssignments()
-        // Listen for changes to studentIds field
+      } else if (userRole === 'paraeducator' && currentUser.value.uid) {
+        // Paraeducators can only load their own aide assignment
+        console.log('🔍 useStudentData: Loading individual aide assignment for paraeducator:', currentUser.value.uid)
+        await loadAideAssignment(currentUser.value.uid)
+        
+        // Listen for changes to their own aideSchedules document for real-time updates
         const aideDocRef = doc(db, 'aideSchedules', currentUser.value.uid)
         const unsubscribe = onSnapshot(aideDocRef, async snap => {
           if (snap.exists()) {
+            console.log('🔍 useStudentData: Aide schedule updated, reloading students...')
+            // Update the aide assignment data
+            await loadAideAssignment(currentUser.value.uid)
             // Re-fetch role-based students (will use updated studentIds)
-            const updated = await getStudentsByRole(currentUser.value)
+            const updated = await loadStudents()
             setStudents(updated)
           }
         })
@@ -170,7 +180,10 @@ export function useStudentData() {
   }
 
   // Auto-load data on mount
-  onMounted(fetchData)
+  onMounted(() => {
+    console.log('🔍 useStudentData: onMounted triggered, calling fetchData...')
+    fetchData()
+  })
 
   // Watch for user role changes and reload data accordingly
   watch(
@@ -181,8 +194,11 @@ export function useStudentData() {
         
         // Reload students with new role
         const user = currentUser.value
+        console.log('🔍 useStudentData: Role watcher - checking user:', user)
         if (user) {
-          const roleBasedStudents = await getStudentsByRole(user)
+          console.log('🔍 useStudentData: Role watcher - about to call loadStudents()...')
+          const roleBasedStudents = await loadStudents()
+          console.log('🔍 useStudentData: Role watcher - loadStudents() returned:', roleBasedStudents.length, 'students')
           setStudents(roleBasedStudents)
           
           // Run security test

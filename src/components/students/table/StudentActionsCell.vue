@@ -3,7 +3,7 @@
     <div class="action-buttons">
       <!-- Only show Edit for admins/sped_chair or case managers on their own caseload -->
       <button
-        v-if="currentUser?.role !== 'case_manager' || student.app?.studentData?.caseManagerId === currentUser.uid"
+        v-if="canEditStudent"
         class="edit-btn"
         @click="$emit('edit', student.id)"
         title="Edit Student"
@@ -21,6 +21,8 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   student: {
     type: Object,
@@ -33,6 +35,27 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['edit', 'email', 'teacher-feedback'])
+
+// Determine if current user can edit this student
+const canEditStudent = computed(() => {
+  if (!props.currentUser?.role) return false
+  
+  const role = props.currentUser.role
+  
+  // Hide edit button for paraeducators and teachers
+  if (role === 'paraeducator' || role === 'teacher') {
+    return false
+  }
+  
+  // Case managers can only edit students in their own caseload
+  if (role === 'case_manager') {
+    return props.student.app?.studentData?.caseManagerId === props.currentUser.uid
+  }
+  
+  // Admin roles (admin, administrator, sped_chair, administrator_504_CM, service_provider) can edit all students
+  const adminRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM', 'service_provider']
+  return adminRoles.includes(role)
+})
 
 function formatDate(timestamp, shortFormat = false) {
   if (!timestamp?.seconds) return '';

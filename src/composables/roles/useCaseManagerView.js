@@ -15,8 +15,8 @@ export function useCaseManagerView(studentData, filterData) {
   const visibleStudents = computed(() => {
     if (!currentUserId.value) return []
     
-    // Get base filtered students (all SP-accessible before role-based filtering)
-    const baseStudents = filterData.filteredStudents.value || []
+    // Get base filtered students
+    const baseStudents = baseView.visibleStudents.value
     
     console.log('🔵 CM visibleStudents: Starting with', baseStudents.length, 'base students')
     
@@ -28,17 +28,64 @@ export function useCaseManagerView(studentData, filterData) {
     let filteredStudents
     
     if (providerView === 'service_provider') {
-      // Show only students where user teaches (provides services)
+      // Show only students where user teaches OR is a co-teaching case manager
       filteredStudents = baseStudents.filter(student => {
         const schedule = studentData.getSchedule(student)
-        const { isTeacher, isCoTeacher } = baseView.standardizeScheduleAccess(schedule, currentUserId.value)
-        const teaches = isTeacher || isCoTeacher
         
-        if (teaches) {
-          console.log(`✅ SP mode: User teaches ${student.app?.studentData?.firstName} (teacher=${isTeacher}, coTeacher=${isCoTeacher})`)
+        // Debug logging for each student
+        console.log(`🔍 SP DEBUG: Checking student ${student.app?.studentData?.firstName}`)
+        console.log(`🔍 SP DEBUG: Raw schedule:`, schedule)
+        console.log(`🔍 SP DEBUG: Looking for userId:`, currentUserId.value)
+        
+        if (!schedule) {
+          console.log(`🔍 SP DEBUG: No schedule found`)
+          return false
         }
         
-        return teaches
+        // Check each period for teacher or co-teaching case manager
+        let isTeacher = false
+        let isCoTeachingCM = false
+        
+        Object.entries(schedule).forEach(([period, periodData]) => {
+          console.log(`🔍 SP DEBUG: Period ${period}:`, periodData)
+          
+          if (typeof periodData === 'string') {
+            // Simple format - just teacher ID
+            if (periodData === currentUserId.value) {
+              isTeacher = true
+              console.log(`✅ Found as teacher in ${period}`)
+            }
+          } else if (typeof periodData === 'object' && periodData !== null) {
+            // Enhanced format - check both teacher and co-teaching case manager
+            if (periodData.teacherId === currentUserId.value) {
+              isTeacher = true
+              console.log(`✅ Found as teacherId in ${period}`)
+            }
+            
+            // Check co-teaching case manager (both old and new formats)
+            const coTeachingCM = periodData.coTeachingCaseManager || periodData.coTeaching?.caseManagerId
+            if (coTeachingCM === currentUserId.value) {
+              isCoTeachingCM = true
+              console.log(`✅ Found as co-teaching CM in ${period}`)
+            }
+          }
+        })
+        
+        const hasAccess = isTeacher || isCoTeachingCM
+        
+        console.log(`🔍 SP DEBUG: Final result for ${student.app?.studentData?.firstName}:`, {
+          isTeacher,
+          isCoTeachingCM,
+          hasAccess
+        })
+        
+        if (hasAccess) {
+          console.log(`✅ SP mode: User has access to ${student.app?.studentData?.firstName} (teacher=${isTeacher}, coTeachingCM=${isCoTeachingCM})`)
+        } else {
+          console.log(`❌ SP mode: User does NOT have access to ${student.app?.studentData?.firstName}`)
+        }
+        
+        return hasAccess
       })
     } else if (providerView === 'case_manager') {
       // Show only students where user is the case manager
@@ -47,18 +94,40 @@ export function useCaseManagerView(studentData, filterData) {
         return isCaseManager
       })
     } else {
-      // 'all' - show both CM and teaching students
+      // 'all' - show CM, teaching, and co-teaching CM students
       filteredStudents = baseStudents.filter(student => {
         const isCaseManager = studentData.getCaseManagerId(student) === currentUserId.value
         const schedule = studentData.getSchedule(student)
-        const { isTeacher, isCoTeacher } = baseView.standardizeScheduleAccess(schedule, currentUserId.value)
-        const teaches = isTeacher || isCoTeacher
         
-        if (teaches || isCaseManager) {
-          console.log(`✅ All mode: User has access to ${student.app?.studentData?.firstName}: CM=${isCaseManager}, Teacher=${isTeacher}, CoTeacher=${isCoTeacher}`)
+        // Check for teaching or co-teaching case manager access
+        let isTeacher = false
+        let isCoTeachingCM = false
+        
+        if (schedule) {
+          Object.entries(schedule).forEach(([period, periodData]) => {
+            if (typeof periodData === 'string') {
+              if (periodData === currentUserId.value) {
+                isTeacher = true
+              }
+            } else if (typeof periodData === 'object' && periodData !== null) {
+              if (periodData.teacherId === currentUserId.value) {
+                isTeacher = true
+              }
+              const coTeachingCM = periodData.coTeachingCaseManager || periodData.coTeaching?.caseManagerId
+              if (coTeachingCM === currentUserId.value) {
+                isCoTeachingCM = true
+              }
+            }
+          })
         }
         
-        return isCaseManager || teaches
+        const hasAccess = isCaseManager || isTeacher || isCoTeachingCM
+        
+        if (hasAccess) {
+          console.log(`✅ All mode: User has access to ${student.app?.studentData?.firstName}: CM=${isCaseManager}, Teacher=${isTeacher}, CoTeachingCM=${isCoTeachingCM}`)
+        }
+        
+        return hasAccess
       })
     }
     

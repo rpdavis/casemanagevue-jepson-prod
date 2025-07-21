@@ -236,19 +236,19 @@
     <div class="quick-actions">
       <h2>🚀 Quick Actions</h2>
       <div class="actions-grid">
-        <button @click="$emit('goToStudents')" class="action-btn students">
+        <button @click="$emit('goToStudents')" class="admin-action-btn primary" style="min-width: 160px; max-width: 160px; height: 60px; flex-direction: column; gap: 8px;">
           <span class="action-icon">👥</span>
           <span>View Students</span>
         </button>
-        <button @click="$emit('goToCategory', 'users-students')" class="action-btn users">
+        <button @click="$emit('goToCategory', 'users-students')" class="admin-action-btn success" style="min-width: 160px; max-width: 160px; height: 60px; flex-direction: column; gap: 8px;">
           <span class="action-icon">👨‍🏫</span>
           <span>Manage Users</span>
         </button>
-        <button @click="$emit('goToCategory', 'aide-management')" class="action-btn aide">
+        <button @click="$emit('goToCategory', 'aide-management')" class="admin-action-btn warning" style="min-width: 160px; max-width: 160px; height: 60px; flex-direction: column; gap: 8px;">
           <span class="action-icon">🤝</span>
           <span>Aide Management</span>
         </button>
-        <button @click="$emit('goToCategory', 'data-integration')" class="action-btn data">
+        <button @click="$emit('goToCategory', 'data-integration')" class="admin-action-btn info" style="min-width: 160px; max-width: 160px; height: 60px; flex-direction: column; gap: 8px;">
           <span class="action-icon">📊</span>
           <span>Data & Integration</span>
         </button>

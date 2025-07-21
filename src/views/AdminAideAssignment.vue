@@ -99,7 +99,6 @@ import { useAuthStore } from '@/store/authStore'
 import { getDisplayValue } from '@/utils/studentUtils'
 import useAideAssignment from '@/composables/useAideAssignment.js'
 import { useAppSettings } from '@/composables/useAppSettings'
-import { usePeriodLabels } from '@/composables/usePeriodLabels'
 
 const router = useRouter()
 const { users: userMap, userList, fetchUsers } = useUsers()
@@ -107,7 +106,6 @@ const { students, fetchStudents } = useStudents()
 const authStore = useAuthStore()
 const { aideAssignment, loadAideAssignments, saveAllAideAssignments } = useAideAssignment()
 const { appSettings, loadAppSettings } = useAppSettings()
-const { labels: periodLabels } = usePeriodLabels()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -126,8 +124,10 @@ const teachers = computed(() => {
 })
 
 const periods = computed(() => {
-  // Use period labels from composable
-  return periodLabels.value
+  // Use numeric periods (1, 2, 3, 4, 5, 6, 7) for aide assignment keys
+  // This ensures aide assignments are saved with numeric period keys, not labels
+  const numPeriods = appSettings.value?.numPeriods || 7
+  return Array.from({ length: numPeriods }, (_, i) => i + 1)
 })
 
 function getAideId(aide) {

@@ -118,43 +118,8 @@ export function useBaseRoleView(studentData, filterData) {
 
   // Basic student data access with standardized filtering
   const visibleStudents = computed(() => {
-    const userId = currentUser.value?.uid
-    const students = filteredStudents.value
-    const providerView = currentFilters.providerView || 'all'
-    const userRole = currentUser.value?.role
-
-    console.log('🔍 BASE ROLE DEBUG: visibleStudents computed called')
-    console.log('🔍 BASE ROLE DEBUG: userId:', userId)
-    console.log('🔍 BASE ROLE DEBUG: userRole:', userRole)
-    console.log('🔍 BASE ROLE DEBUG: students:', students ? students.length : 'null/undefined')
-    console.log('🔍 BASE ROLE DEBUG: providerView:', providerView)
-
-    // For roles that should have broad access, bypass userId check when students are available
-    const broadAccessRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM']
-    if (broadAccessRoles.includes(userRole)) {
-      if (!students) {
-        console.log('🔍 BASE ROLE DEBUG: Broad access user but no students - returning empty array')
-        return []
-      }
-      console.log('🔍 BASE ROLE DEBUG: Broad access user - returning all students:', students.length)
-      return students
-    }
-
-    // For other roles, still require userId but add better error handling
-    if (!userId) {
-      console.log('🔍 BASE ROLE DEBUG: No userId for role:', userRole, '- returning empty array')
-      return []
-    }
-
-    if (!students) {
-      console.log('🔍 BASE ROLE DEBUG: No students available - returning empty array')
-      return []
-    }
-
-    // Don't apply automatic filtering - let each role handle their own visibility rules
-    // The role-specific views will handle filtering based on their requirements
-    console.log('🔍 BASE ROLE DEBUG: Returning students for role:', userRole, '- count:', students.length)
-    return students
+    // Return filtered students directly; roles and filters govern visibility
+    return filteredStudents.value || []
   })
 
   // Basic student info formatting
@@ -279,11 +244,12 @@ export function useBaseRoleView(studentData, filterData) {
     return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
   })
 
-  // Check if user can access filters
+  // Check if user can access filters - only specific admin roles
   const canAccessFilters = computed(() => {
     const role = currentUser.value?.role
-    // All roles except paraeducator can access filters
-    return role !== 'paraeducator'
+    // Only admin, administrator, administrator_504_CM, and sped_chair can access filters
+    // BUT also allow other roles to see students (just not the filter UI)
+    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
   })
 
   // Auto-switch to list view when class view becomes disabled

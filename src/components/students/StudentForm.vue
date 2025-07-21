@@ -49,6 +49,7 @@
           :on-file-change="onFileChange"
           :remove-bip-file="removeBipFile"
           :remove-ataglance-file="removeAtaglanceFile"
+          @loading-change="onFileLoadingChange"
         />
 
         <!-- Accommodations -->
@@ -66,8 +67,8 @@
           <button type="button" @click="$emit('close')" class="btn btn-secondary">
             Cancel
           </button>
-          <button type="submit" class="btn btn-primary" :disabled="isSaving">
-            {{ isSaving ? 'Saving...' : (mode === 'edit' ? 'Save' : 'Add Student') }}
+          <button type="submit" class="btn btn-primary" :disabled="isFormBusy">
+            {{ saveButtonText }}
           </button>
         </footer>
       </form>
@@ -76,6 +77,7 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useStudentForm } from './form/useStudentForm.js'
 import StudentBasicInfo from './form/StudentBasicInfo.vue'
 import StudentSchedule from './form/StudentSchedule.vue'
@@ -128,6 +130,30 @@ const {
   handleSubmit,
   validateForm
 } = useStudentForm(props, emit)
+
+// File loading state
+const isLoadingFiles = ref(false)
+
+// Combined loading state
+const isFormBusy = computed(() => {
+  return isSaving.value || isLoadingFiles.value
+})
+
+// Loading button text
+const saveButtonText = computed(() => {
+  if (isLoadingFiles.value) {
+    return 'Loading files...'
+  } else if (isSaving.value) {
+    return 'Saving...'
+  } else {
+    return mode === 'edit' ? 'Save' : 'Add Student'
+  }
+})
+
+// Handle file loading changes from StudentDocuments
+const onFileLoadingChange = (loading) => {
+  isLoadingFiles.value = loading
+}
 </script>
 
 <style scoped>

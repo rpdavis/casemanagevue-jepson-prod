@@ -38,15 +38,17 @@ export default function usePdfHandler() {
     try {
       const pdfBlob = await securePdfHandler.downloadAndDecryptPdf(secureFileName, studentId)
       
-      // Create download link
+      // Create blob URL and open in new tab
       const url = window.URL.createObjectURL(pdfBlob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = originalFileName || 'document.pdf'
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      
+      // Open PDF in new tab
+      const newWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      
+      // Clean up the blob URL after a delay to ensure it's loaded
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url)
+      }, 5000)
+      
     } catch (e) {
       error.value = e.message
       throw e
