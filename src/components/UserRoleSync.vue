@@ -1,6 +1,6 @@
 <template>
   <div class="user-role-sync">
-    <h3>User Role Sync</h3>
+    <h3>🔍 User Role Debug</h3>
     
     <div v-if="authStore.isLoading" class="loading">
       Loading authentication state...
@@ -12,20 +12,55 @@
     </div>
     
     <div v-else class="authenticated">
-      <p><strong>Current User ID:</strong> {{ authStore.currentUser.uid }}</p>
-      <p><strong>Current Role:</strong> {{ authStore.currentUser.role || 'Unknown' }}</p>
-      <p><strong>Email:</strong> {{ authStore.currentUser.email }}</p>
+      <div class="user-info">
+        <h4>👤 User Information</h4>
+        <p><strong>UID:</strong> {{ authStore.currentUser.uid }}</p>
+        <p><strong>Email:</strong> {{ authStore.currentUser.email }}</p>
+        <p><strong>Role (from Firestore):</strong> {{ authStore.currentUser.role || 'Unknown' }}</p>
+        <p><strong>Name:</strong> {{ authStore.currentUser.name || 'Unknown' }}</p>
+      </div>
       
-      <button 
-        @click="triggerSync" 
-        :disabled="isTriggering"
-        class="sync-btn"
-      >
-        {{ isTriggering ? 'Triggering...' : 'Trigger Claims Sync' }}
-      </button>
+      <div class="token-info" v-if="tokenInfo">
+        <h4>🔑 Token Information</h4>
+        <p><strong>Token Role:</strong> {{ tokenInfo.role || 'None' }}</p>
+        <p><strong>Token Claims:</strong></p>
+        <pre>{{ JSON.stringify(tokenInfo, null, 2) }}</pre>
+      </div>
       
-      <div v-if="message" :class="['message', messageType]">
-        {{ message }}
+      <div class="action-buttons">
+        <button 
+          @click="checkToken" 
+          :disabled="isChecking"
+          class="btn btn-primary"
+        >
+          {{ isChecking ? '🔍 Checking...' : '🔍 Check Token Claims' }}
+        </button>
+        
+        <button 
+          @click="triggerSync" 
+          :disabled="isTriggering"
+          class="btn btn-warning"
+        >
+          {{ isTriggering ? '🔄 Syncing...' : '🔄 Force Sync Claims' }}
+        </button>
+        
+        <button 
+          @click="refreshToken" 
+          :disabled="isRefreshing"
+          class="btn btn-info"
+        >
+          {{ isRefreshing ? '🔄 Refreshing...' : '🔄 Refresh Token' }}
+        </button>
+      </div>
+      
+      <div v-if="error" class="error">
+        <h4>❌ Error</h4>
+        <p>{{ error }}</p>
+      </div>
+      
+      <div v-if="success" class="success">
+        <h4>✅ Success</h4>
+        <p>{{ success }}</p>
       </div>
     </div>
   </div>
@@ -33,122 +68,175 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useAuthStore } from '../store/authStore'
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { useAuthStore } from '@/store/authStore'
+import { getIdToken } from 'firebase/auth'
+import { auth } from '@/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { functions } from '@/firebase'
 
 const authStore = useAuthStore()
-
+const tokenInfo = ref(null)
+const error = ref('')
+const success = ref('')
+const isChecking = ref(false)
 const isTriggering = ref(false)
-const message = ref('')
-const messageType = ref('info')
+const isRefreshing = ref(false)
+
+const checkToken = async () => {
+  isChecking.value = true
+  error.value = ''
+  success.value = ''
+  
+  try {
+    if (!auth.currentUser) {
+      throw new Error('No user authenticated')
+    }
+    
+    const token = await getIdToken(auth.currentUser, true)
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    
+    tokenInfo.value = {
+      role: payload.role,
+      email: payload.email,
+      email_verified: payload.email_verified,
+      auth_time: new Date(payload.auth_time * 1000).toISOString(),
+      iat: new Date(payload.iat * 1000).toISOString(),
+      exp: new Date(payload.exp * 1000).toISOString(),
+      full_payload: payload
+    }
+    
+    success.value = 'Token claims retrieved successfully'
+    console.log('Token payload:', payload)
+  } catch (err) {
+    error.value = `Error checking token: ${err.message}`
+    console.error('Error checking token:', err)
+  } finally {
+    isChecking.value = false
+  }
+}
 
 const triggerSync = async () => {
-  if (!authStore.currentUser?.uid) {
-    message.value = 'No user logged in'
-    messageType.value = 'error'
-    return
-  }
-
   isTriggering.value = true
-  message.value = 'Triggering sync...'
-  messageType.value = 'info'
-
+  error.value = ''
+  success.value = ''
+  
   try {
-    const functions = getFunctions()
-    const triggerSyncFunction = httpsCallable(functions, 'triggerUserClaimsSync')
+    const syncUserClaims = httpsCallable(functions, 'syncUserClaims')
+    const result = await syncUserClaims()
     
-    const result = await triggerSyncFunction({
-      userId: authStore.currentUser.uid
-    })
+    success.value = 'User claims synced successfully'
+    console.log('Sync result:', result)
     
-    message.value = result.data.message
-    messageType.value = 'success'
-    
-    // Wait a moment for the sync to complete
-    setTimeout(() => {
-      message.value = 'Sync triggered! You may need to sign out and sign back in for changes to take effect.'
-      messageType.value = 'info'
-    }, 2000)
-    
-  } catch (error) {
-    console.error('Error triggering sync:', error)
-    message.value = `Error: ${error.message}`
-    messageType.value = 'error'
+    // Refresh the token to get updated claims
+    await refreshToken()
+  } catch (err) {
+    error.value = `Error syncing claims: ${err.message}`
+    console.error('Error syncing claims:', err)
   } finally {
     isTriggering.value = false
+  }
+}
+
+const refreshToken = async () => {
+  isRefreshing.value = true
+  error.value = ''
+  success.value = ''
+  
+  try {
+    if (!auth.currentUser) {
+      throw new Error('No user authenticated')
+    }
+    
+    await getIdToken(auth.currentUser, true)
+    success.value = 'Token refreshed successfully'
+    
+    // Re-check token claims
+    await checkToken()
+  } catch (err) {
+    error.value = `Error refreshing token: ${err.message}`
+    console.error('Error refreshing token:', err)
+  } finally {
+    isRefreshing.value = false
   }
 }
 </script>
 
 <style scoped>
 .user-role-sync {
-  padding: 1rem;
-  border: 1px solid #ddd;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.user-info, .token-info {
+  background: #f8f9fa;
+  padding: 15px;
   border-radius: 8px;
-  margin: 1rem 0;
-  background: #f9f9f9;
+  margin-bottom: 20px;
 }
 
-.loading {
-  color: #666;
-  font-style: italic;
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-.not-authenticated {
-  color: #721c24;
-  background: #f8d7da;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #f5c6cb;
-}
-
-.authenticated {
-  background: #d4edda;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #c3e6cb;
-}
-
-.sync-btn {
-  background: #007bff;
-  color: white;
+.btn {
+  padding: 10px 20px;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: 5px;
   cursor: pointer;
-  margin: 0.5rem 0;
+  font-weight: bold;
 }
 
-.sync-btn:disabled {
-  background: #ccc;
+.btn:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.sync-btn:hover:not(:disabled) {
-  background: #0056b3;
+.btn-primary {
+  background: #007bff;
+  color: white;
 }
 
-.message {
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin: 0.5rem 0;
+.btn-warning {
+  background: #ffc107;
+  color: #212529;
 }
 
-.message.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+.btn-info {
+  background: #17a2b8;
+  color: white;
 }
 
-.message.error {
+.error {
   background: #f8d7da;
   color: #721c24;
+  padding: 15px;
+  border-radius: 8px;
   border: 1px solid #f5c6cb;
 }
 
-.message.info {
-  background: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
+.success {
+  background: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #c3e6cb;
+}
+
+pre {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+
+.loading, .not-authenticated {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
 }
 </style> 

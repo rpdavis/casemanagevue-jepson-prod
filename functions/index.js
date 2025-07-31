@@ -27,6 +27,24 @@ const adminAuth = getAuth();
 // Import token removal functions
 const { removeDownloadTokens, removeDownloadTokensOnFinalize, removeDownloadTokensOnMetadata } = require("./remove-tokens");
 
+// Import teacher feedback functions
+const teacherFeedbackFunctions = require("./teacherFeedback/index");
+
+// Import test functions
+const { testSchools } = require("./test-schools");
+
+// Import setup functions
+const { setupSharedDrive } = require("./setup-shared-drive");
+
+// Import test functions
+const { testSharedDriveAccess } = require("./test-shared-drive-access");
+
+// Import Shared Drive management functions
+const { createSharedDrive, updateSharedDriveId } = require("./create-shared-drive");
+
+// Import debug function
+const { debugSharedDriveAccess } = require("./debug-shared-drive-access");
+
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VALID_ROLES = [
   "admin",
@@ -52,6 +70,8 @@ function requireAuth(request) {
     throw new HttpsError("unauthenticated", "Authentication required");
   }
 }
+
+
 
 function requireRole(request, allowedRoles) {
   requireAuth(request);
@@ -109,6 +129,12 @@ function checkSecurityThreats(input) {
   }
 }
 
+// Extract form ID from Google Form URL
+function extractFormId(url) {
+  const match = url.match(/\/forms\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+}
+
 // Google Auth Helper
 const getGoogleAuth = () => {
   const credentials = process.env.GOOGLE_KEY ? 
@@ -118,12 +144,16 @@ const getGoogleAuth = () => {
   return new google.auth.GoogleAuth({
     credentials,
     scopes: [
-      "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/documents",
+      "https://www.googleapis.com/auth/drive",
       "https://www.googleapis.com/auth/forms.responses.readonly",
       "https://www.googleapis.com/auth/gmail.send"
     ],
   });
 };
+
+
 
 
 // ─── USER MANAGEMENT FUNCTIONS ────────────────────────────────────────────────
@@ -394,219 +424,21 @@ exports.getAeriesToken = onCall({
 });
 
 // ─── TEACHER FEEDBACK FUNCTIONS ──────────────────────────────────────────────
-exports.sendTeacherFeedbackForm = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
-  requireRole(request, ["case_manager"]);
+// Imported from modular teacherFeedback/index.js
+// Remove unused teacher feedback function exports
+// exports.createCaseManagerFeedbackSystem = teacherFeedbackFunctions.createCaseManagerFeedbackSystem;
+exports.createFeedbackFormSheet = teacherFeedbackFunctions.createFeedbackFormSheet;
+exports.createFeedbackFormSheetWithUserAuth = teacherFeedbackFunctions.createFeedbackFormSheetWithUserAuth;
+// exports.sendTeacherFeedbackForm = teacherFeedbackFunctions.sendTeacherFeedbackForm; // No longer used
+// exports.getCaseManagerFeedbackSystem = teacherFeedbackFunctions.getCaseManagerFeedbackSystem;
+// exports.syncFormResponses = teacherFeedbackFunctions.syncFormResponses;
+// exports.autoSyncFormResponses = teacherFeedbackFunctions.autoSyncFormResponses;
+// exports.generateFeedbackDocument = teacherFeedbackFunctions.generateFeedbackDocument;
+exports.checkServiceAccountStorage = teacherFeedbackFunctions.checkServiceAccountStorage;
+// exports.updateCaseManagerDocument = teacherFeedbackFunctions.updateCaseManagerDocument;
+// exports.getCaseManagerResources = teacherFeedbackFunctions.getCaseManagerResources;
 
-  const { formUrl, studentId, teacherEmails, formTitle, customMessage } = request.data;
-  
-  if (!formUrl || !studentId || !teacherEmails?.length) {
-    throw new HttpsError("invalid-argument", "Missing required fields");
-  }
 
-  try {
-    // Get student data
-    const studentDoc = await db.collection("students").doc(studentId).get();
-    if (!studentDoc.exists) {
-      throw new HttpsError("not-found", "Student not found");
-    }
-    const student = studentDoc.data();
-
-    // Prepare email
-    const studentName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-    const caseManager = request.auth.token.name || request.auth.token.email;
-    
-    const subject = formTitle || `Teacher Feedback Request - ${studentName}`;
-    const message = customMessage || 
-`Dear Teacher,
-
-Please provide feedback for ${studentName} (Grade ${student.grade || "N/A"}):
-
-${formUrl}
-
-Thank you,
-${caseManager}
-Case Manager`.trim();
-
-    // Send emails via Gmail API
-    const auth = getGoogleAuth();
-    const gmail = google.gmail({ version: "v1", auth: await auth.getClient() });
-
-    const results = await Promise.allSettled(
-      teacherEmails.map(email => {
-        const raw = [
-          `To: ${email}`,
-          `Subject: ${subject}`,
-          "Content-Type: text/plain; charset=UTF-8",
-          "",
-          message
-        ].join("\n");
-
-        return gmail.users.messages.send({
-          userId: "me",
-          requestBody: {
-            raw: Buffer.from(raw).toString("base64")
-              .replace(/\+/g, "-")
-              .replace(/\//g, "_")
-              .replace(/=+$/, "")
-          }
-        });
-      })
-    );
-
-    // Log results
-    const successful = results.filter(r => r.status === "fulfilled").length;
-    await db.collection("feedbackSendLog").add({
-      studentId,
-      studentName,
-      caseManagerId: request.auth.uid,
-      caseManager,
-      formUrl,
-      teacherEmails,
-      successful,
-      failed: results.length - successful,
-      sentAt: new Date().toISOString()
-    });
-
-    return {
-      success: true,
-      sent: successful,
-      failed: results.length - successful
-    };
-
-  } catch (error) {
-    console.error("Feedback form error:", error);
-    throw new HttpsError("internal", "Failed to send feedback forms");
-  }
-});
-
-// ─── MANUAL SYNC FUNCTION ────────────────────────────────────────────────────
-exports.syncFormResponses = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
-  requireRole(request, ["case_manager", "admin", "sped_chair"]);
-  
-  const { spreadsheetId, sheetName = "Form Responses 1" } = request.data;
-  
-  if (!spreadsheetId) {
-    throw new HttpsError("invalid-argument", "Spreadsheet ID required");
-  }
-
-  try {
-    const auth = getGoogleAuth();
-    const sheets = google.sheets({ version: "v4", auth: await auth.getClient() });
-
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${sheetName}!A:Z`
-    });
-
-    const rows = response.data.values || [];
-    if (rows.length <= 1) {
-      return { success: true, message: "No responses found", synced: 0 };
-    }
-
-    const batch = db.batch();
-    const [headers, ...dataRows] = rows;
-    let syncedCount = 0;
-
-    dataRows.forEach((row, index) => {
-      if (!row.length) return;
-      
-      const docRef = db.collection("feedbackResponses").doc(`${spreadsheetId}_row_${index + 2}`);
-      const data = headers.reduce((obj, header, i) => ({ 
-        ...obj, 
-        [header]: row[i] || "" 
-      }), {
-        spreadsheetId,
-        rowNumber: index + 2,
-        syncedAt: new Date().toISOString(),
-        syncedBy: request.auth.uid
-      });
-
-      batch.set(docRef, data, { merge: true });
-      syncedCount++;
-    });
-
-    await batch.commit();
-
-    return {
-      success: true,
-      message: `Successfully synced ${syncedCount} responses`,
-      synced: syncedCount
-    };
-
-  } catch (error) {
-    console.error("Manual sync error:", error);
-    throw new HttpsError("internal", "Failed to sync responses");
-  }
-});
-
-// ─── SCHEDULED FUNCTIONS ─────────────────────────────────────────────────────
-exports.autoSyncFormResponses = onSchedule({
-  schedule: "every 30 minutes",
-  region: "us-central1"
-}, async (event) => {
-  try {
-    const formsSnapshot = await db.collection("feedbackForms")
-      .where("active", "==", true)
-      .get();
-
-    if (formsSnapshot.empty) return;
-
-    const auth = getGoogleAuth();
-    const sheets = google.sheets({ version: "v4", auth: await auth.getClient() });
-
-    for (const formDoc of formsSnapshot.docs) {
-      const { responseSpreadsheetId, title } = formDoc.data();
-      if (!responseSpreadsheetId) continue;
-
-      try {
-        const response = await sheets.spreadsheets.values.get({
-          spreadsheetId: responseSpreadsheetId,
-          range: "Form Responses 1!A:Z"
-        });
-
-        const rows = response.data.values || [];
-        if (rows.length <= 1) continue;
-
-        const batch = db.batch();
-        const [headers, ...dataRows] = rows;
-
-        dataRows.forEach((row, index) => {
-          if (!row.length) return;
-          
-          const docRef = db.collection("feedbackResponses").doc(`${responseSpreadsheetId}_row_${index + 2}`);
-          const data = headers.reduce((obj, header, i) => ({ 
-            ...obj, 
-            [header]: row[i] || "" 
-          }), {
-            spreadsheetId,
-            formId: formDoc.id,
-            formTitle: title,
-            rowNumber: index + 2,
-            syncedAt: new Date().toISOString()
-          });
-
-          batch.set(docRef, data, { merge: true });
-        });
-
-        await batch.commit();
-        console.log(`Synced ${dataRows.length} responses for ${title}`);
-
-      } catch (error) {
-        console.error(`Sync failed for ${title}:`, error);
-      }
-    }
-  } catch (error) {
-    console.error("Auto-sync error:", error);
-  }
-});
-
-// ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
 exports.getStudentFeedback = onCall({
   region: "us-central1",
   maxInstances: 10
@@ -634,17 +466,19 @@ exports.getStudentFeedback = onCall({
   }
 });
 
-exports.healthCheck = functions.https.onCall(async (data, context) => {
+exports.healthCheck = onCall({
+  region: "us-central1"
+}, async (request) => {
   try {
     // Simple response to verify function is working
     return {
       status: 'ok',
-      timestamp: admin.firestore.Timestamp.now(),
+      timestamp: new Date().toISOString(),
       message: 'Cloud Functions are operational'
     };
   } catch (error) {
     console.error('Health check failed:', error);
-    throw new functions.https.HttpsError('internal', 'Health check failed');
+    throw new HttpsError('internal', 'Health check failed');
   }
 });
 
@@ -826,3 +660,194 @@ exports.downloadStudentFile = onRequest(
   { region: 'us-central1', allowUnauthenticated: false },
   downloadApp
 );
+
+// ─── STUDENT STAFF IDS MAINTENANCE ───────────────────────────────────────────
+/**
+ * Cloud Function to maintain staffIds array on student documents
+ * Triggers on any write to students/{studentId} and computes the staffIds array
+ * based on case manager, schedule teachers, and service providers
+ */
+exports.updateStudentStaffIds = onDocumentWritten({
+  document: "students/{studentId}",
+  region: "us-central1"
+}, async (event) => {
+  const studentId = event.params.studentId;
+  const beforeData = event.data?.before?.data();
+  const afterData = event.data?.after?.data();
+  
+  // If document was deleted, nothing to do
+  if (!afterData) {
+    console.log(`Student ${studentId} deleted, skipping staffIds update`);
+    return null;
+  }
+  
+  // Get existing staffIds to check if update is needed
+  const existingStaffIds = afterData.app?.staffIds || [];
+  
+  const staffIds = new Set();
+  
+  // Add case manager
+  const caseManagerId = afterData.app?.studentData?.caseManagerId;
+  if (caseManagerId) {
+    staffIds.add(caseManagerId);
+    console.log(`Added case manager: ${caseManagerId}`);
+  }
+  
+  // Add teachers from schedule (including co-teaching case managers)
+  const schedule = afterData.app?.schedule?.periods || {};
+  Object.entries(schedule).forEach(([period, data]) => {
+    if (typeof data === 'string' && data) {
+      // Simple string format (legacy)
+      staffIds.add(data);
+      console.log(`Added teacher from period ${period}: ${data}`);
+    } else if (typeof data === 'object' && data) {
+      // Object format with potential co-teaching
+      if (data.teacherId) {
+        staffIds.add(data.teacherId);
+        console.log(`Added teacher from period ${period}: ${data.teacherId}`);
+      }
+      if (data.coTeaching?.caseManagerId) {
+        staffIds.add(data.coTeaching.caseManagerId);
+        console.log(`Added co-teaching CM from period ${period}: ${data.coTeaching.caseManagerId}`);
+      }
+    }
+  });
+  
+  // Add service providers
+  const providers = afterData.app?.providers || {};
+  Object.entries(providers).forEach(([providerType, providerId]) => {
+    if (providerId) {
+      staffIds.add(providerId);
+      console.log(`Added ${providerType} provider: ${providerId}`);
+    }
+  });
+  
+  // Convert Set to array
+  const staffIdsArray = Array.from(staffIds).sort();
+  
+  // Check if staffIds actually changed
+  const existingSorted = [...existingStaffIds].sort();
+  const hasChanged = JSON.stringify(existingSorted) !== JSON.stringify(staffIdsArray);
+  
+  if (!hasChanged) {
+    console.log(`No changes to staffIds for student ${studentId}, skipping update`);
+    return null;
+  }
+  
+  console.log(`Updating student ${studentId} with ${staffIdsArray.length} staff members`);
+  
+  try {
+    await db
+      .collection('students')
+      .doc(studentId)
+      .update({
+        'app.staffIds': staffIdsArray,
+        'app.lastStaffIdsUpdate': FieldValue.serverTimestamp()
+      });
+    
+    console.log(`Successfully updated staffIds for student ${studentId}`);
+    return { success: true, staffCount: staffIdsArray.length };
+  } catch (error) {
+    console.error(`Error updating staffIds for student ${studentId}:`, error);
+    throw error;
+  }
+});
+
+// Cloud Function: Sync paraeducator studentIds when a student document changes
+exports.syncParaeducatorStudentAssignments = onDocumentWritten({
+  document: 'students/{studentId}',
+  region: 'us-central1'
+}, async (event) => {
+  const studentId = event.params.studentId;
+  const afterData = event.data.after?.data();
+  const schedule = afterData?.app?.schedule?.periods || {};
+
+  // Read all aideSchedules docs with admin privileges
+  const aideSchedulesSnap = await db.collection('aideSchedules').get();
+  for (const docSnap of aideSchedulesSnap.docs) {
+    const aideId = docSnap.id;
+    const aideData = docSnap.data() || {};
+    let include = false;
+
+    // Direct assignment
+    const direct = Array.isArray(aideData.directAssignment)
+      ? aideData.directAssignment
+      : (aideData.directAssignment ? [aideData.directAssignment] : []);
+    if (direct.includes(studentId)) include = true;
+
+    // Class assignments (co-teach included)
+    if (!include && aideData.classAssignment) {
+      for (const [period, teacherIds] of Object.entries(aideData.classAssignment)) {
+        const arr = Array.isArray(teacherIds) ? teacherIds : [teacherIds];
+        const pd = schedule[period];
+        let teacherId;
+        if (typeof pd === 'string') teacherId = pd;
+        else if (pd && typeof pd === 'object') teacherId = pd.teacherId;
+        else continue;
+        if (arr.includes(teacherId)) { include = true; break; }
+      }
+    }
+
+    const docRef = db.doc(`aideSchedules/${aideId}`);
+    if (include) {
+      await docRef.update({ studentIds: FieldValue.arrayUnion(studentId) });
+    } else {
+      await docRef.update({ studentIds: FieldValue.arrayRemove(studentId) });
+    }
+  }
+});
+
+// Cloud Function: Rebuild paraeducator studentIds when an aideSchedules document changes
+exports.rebuildParaeducatorStudentIds = onDocumentWritten({
+  document: 'aideSchedules/{aideId}',
+  region: 'us-central1'
+}, async (event) => {
+  const aideId = event.params.aideId;
+  const data = event.data.after?.data() || {};
+  const direct = Array.isArray(data.directAssignment)
+    ? data.directAssignment
+    : (data.directAssignment ? [data.directAssignment] : []);
+  const classAssign = data.classAssignment || {};
+  const accessible = new Set(direct.filter(Boolean));
+
+  // Fetch all students (server-side)
+  const studentsSnap = await db.collection('students').get();
+  for (const sDoc of studentsSnap.docs) {
+    const student = { id: sDoc.id, ...sDoc.data() };
+    const plan = student.app?.studentData?.plan;
+    if (plan !== 'IEP' && plan !== '504') continue;
+    const schedule = student.app?.schedule?.periods || {};
+    for (const [period, teacherIds] of Object.entries(classAssign)) {
+      const arr = Array.isArray(teacherIds) ? teacherIds : [teacherIds];
+      const pd = schedule[period];
+      let teacherId;
+      if (typeof pd === 'string') teacherId = pd;
+      else if (pd && typeof pd === 'object') teacherId = pd.teacherId;
+      else continue;
+      if (arr.includes(teacherId)) { accessible.add(student.id); break; }
+    }
+  }
+
+  const docRef = db.doc(`aideSchedules/${aideId}`);
+  await docRef.update({ studentIds: Array.from(accessible) });
+});
+
+// Test function to check schools collection
+exports.testSchools = testSchools;
+
+// Setup function for Shared Drive
+exports.setupSharedDrive = setupSharedDrive;
+
+// Test function for Shared Drive access
+exports.testSharedDriveAccess = testSharedDriveAccess;
+
+// Shared Drive management functions
+exports.createSharedDrive = createSharedDrive;
+exports.updateSharedDriveId = updateSharedDriveId;
+
+// Debug function for Shared Drive access
+exports.debugSharedDriveAccess = debugSharedDriveAccess;
+
+// Export all teacher feedback functions
+Object.assign(exports, teacherFeedbackFunctions);
+

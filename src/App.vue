@@ -18,8 +18,12 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import UserRoleSwitcher from '@/components/UserRoleSwitcher.vue'
 import DebugAccessInfo from '@/components/DebugAccessInfo.vue'
 import SessionTimeoutDialog from '@/components/SessionTimeoutDialog.vue'
+import { useThemeInitializer } from '@/composables/useThemeInitializer'
 
 const showDebugRoleSwitcher = ref(false)
+
+// Initialize theme
+useThemeInitializer()
 
 // Keyboard shortcut to show/hide debug role switcher: Ctrl+Shift+D
 const handleKeydown = (event) => {

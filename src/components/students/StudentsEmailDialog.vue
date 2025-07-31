@@ -166,25 +166,68 @@ function sendEmail() {
     alert('No email addresses found for the selected recipients.')
     return
   }
-  // Compose subject and body
-  const initials = ((student.firstName?.[0] || student.first_name?.[0] || '') + (student.lastName?.[0] || student.last_name?.[0] || '')).toUpperCase()
+  
+  // Debug student data
+  console.log('🔍 Student data for email:', {
+    student: student,
+    firstName: student.firstName,
+    first_name: student.first_name,
+    lastName: student.lastName,
+    last_name: student.last_name,
+    appStudentData: student.app?.studentData
+  })
+  
+  // Compose subject and body - try multiple field name patterns
+  const firstName = student.firstName || 
+                   student.first_name || 
+                   student.app?.studentData?.firstName ||
+                   student.app?.firstName ||
+                   ''
+  const lastName = student.lastName || 
+                  student.last_name || 
+                  student.app?.studentData?.lastName ||
+                  student.app?.lastName ||
+                  ''
+  
+  console.log('🔍 Extracted names:', { firstName, lastName })
+  
+  const fullName = `${firstName} ${lastName}`.trim() || 'Student'
+  const initials = ((firstName?.[0] || '') + (lastName?.[0] || '')).toUpperCase() || 'ST'
+  
+  console.log('🔍 Final values:', { fullName, initials })
+  
   const subject = `${initials} - Student Update`
   let body = ''
   if (includeDocs.value) {
-    body += `Hi team!\n\nBelow are links to ${(student.firstName || student.first_name || '')} ${(student.lastName || student.last_name || '')}'s updated documents:\n\n`
-    // Check both nested and legacy structures for document URLs
+    body += `Hi team!\n\n${fullName}'s updated documents are available in the CaseManage app.\n\n`
+    
+    // Check what documents are available
     const ataglanceUrl = student.app?.documents?.ataglancePdfUrl || student.ataglancePdfUrl || student.ataglance_pdf_url
     const bipUrl = student.app?.documents?.bipPdfUrl || student.bipPdfUrl || student.bip_pdf_url
     
-    if (ataglanceUrl) {
-      body += `At-A-Glance: ${ataglanceUrl}\n`
-    }
-    if (bipUrl) {
-      body += `BIP:         ${bipUrl}\n`
+    if (ataglanceUrl || bipUrl) {
+      body += `Available documents:\n`
+      if (ataglanceUrl) {
+        body += `• At-A-Glance\n`
+      }
+      if (bipUrl) {
+        body += `• BIP (Behavior Intervention Plan)\n`
+      }
+      body += `\nTo access the documents:\n`
+      body += `Log into the CaseManage app: ${window.location.origin}\n`
+      body += `Navigate to the student's record to view their documents.\n\n`
+      body += `The documents require authentication to view for security purposes.\n`
+    } else {
+      body += `No documents are currently available for ${fullName}.\n\n`
+      body += `If documents are added, you can access them by logging into:\n`
+      body += `${window.location.origin}\n`
     }
   } else {
     body = 'See attached.'
   }
+  
+  console.log('🔍 Email composition:', { subject, body })
+  
   const gmailUrl =
     `https://mail.google.com/mail/?view=cm&fs=1` +
     `&to=${encodeURIComponent(emails)}` +

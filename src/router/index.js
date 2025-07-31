@@ -10,6 +10,7 @@ import AideScheduleView from '@/views/AideScheduleView.vue';
 import StudentsView from '@/views/StudentsView.vue';
 import AdminAideSchedule from '@/views/AdminAideSchedule.vue';
 import AdminBackupRestore from '@/views/AdminBackupRestore.vue';
+import TestingView from '@/views/TestingView.vue';
 import { setupGuards } from './guards';
 import { STUDENT_ACCESS_ROLES, ADMIN_ONLY } from '@/config/roles';
 
@@ -95,13 +96,12 @@ const routes = [
   {
     path: '/testing',
     name: 'Testing',
-    component: () => import('@/views/TestingView.vue'),
+    component: TestingView,
     meta: {
       requiresAuth: true,
       allowedRoles: ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'],
     },
-  }
-  // ... add other routes here with their own meta fields
+  },
 ];
 
 const router = createRouter({

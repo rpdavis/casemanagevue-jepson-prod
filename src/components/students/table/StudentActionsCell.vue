@@ -9,7 +9,7 @@
         title="Edit Student"
       >✏️</button>
       <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
-      <button v-if="currentUser?.role === 'case_manager'" 
+      <button v-if="canSendFeedback" 
               class="teacher-feedback-btn" 
               @click="$emit('teacher-feedback', student.id)" 
               title="Send Teacher Feedback Form">📝</button>
@@ -31,6 +31,10 @@ const props = defineProps({
   currentUser: {
     type: Object,
     required: false
+  },
+  studentData: {
+    type: Object,
+    required: false
   }
 })
 
@@ -38,9 +42,10 @@ const emit = defineEmits(['edit', 'email', 'teacher-feedback'])
 
 // Determine if current user can edit this student
 const canEditStudent = computed(() => {
-  if (!props.currentUser?.role) return false
+  if (!props.currentUser?.role || !props.student) return false
   
   const role = props.currentUser.role
+  const userId = props.currentUser.uid
   
   // Hide edit button for paraeducators and teachers
   if (role === 'paraeducator' || role === 'teacher') {
@@ -49,13 +54,72 @@ const canEditStudent = computed(() => {
   
   // Case managers can only edit students in their own caseload
   if (role === 'case_manager') {
-    return props.student.app?.studentData?.caseManagerId === props.currentUser.uid
+    return props.student.app?.studentData?.caseManagerId === userId
   }
   
   // Admin roles (admin, administrator, sped_chair, administrator_504_CM, service_provider) can edit all students
   const adminRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM', 'service_provider']
   return adminRoles.includes(role)
 })
+
+// Determine if current user can send feedback forms for this student
+const canSendFeedback = computed(() => {
+  if (!props.currentUser?.role || !props.student || !props.studentData) return false
+  
+  const userId = props.currentUser.uid
+  const role = props.currentUser.role
+  
+  // Case managers can send feedback for students in their caseload
+  if (role === 'case_manager') {
+    return props.studentData.getCaseManagerId(props.student) === userId
+  }
+  
+  // SPED Chair can send feedback for:
+  // 1. Students they case manage
+  // 2. Students they teach
+  // 3. All IEP students
+  if (role === 'sped_chair') {
+    const isCaseManager = props.studentData.getCaseManagerId(props.student) === userId
+    const isTeacher = isUserTeacherOfStudent(userId, props.student, props.studentData)
+    const hasIEP = props.student.app?.studentData?.plan === 'IEP' || props.student.plan === 'IEP'
+    
+    return isCaseManager || isTeacher || hasIEP
+  }
+  
+  // 504 Administrator can send feedback for:
+  // 1. Students they case manage
+  // 2. Students with IEP or 504 plans
+  if (role === 'administrator_504_CM') {
+    const isCaseManager = props.studentData.getCaseManagerId(props.student) === userId
+    const plan = props.student.app?.studentData?.plan || props.student.plan
+    const hasIEPor504 = plan === 'IEP' || plan === '504'
+    
+    return isCaseManager || hasIEPor504
+  }
+  
+  // Admin and Administrator can send feedback for all students
+  if (role === 'admin' || role === 'administrator') {
+    return true
+  }
+  
+  return false
+})
+
+// Helper function to check if user is a teacher of the student
+const isUserTeacherOfStudent = (userId, student, studentData) => {
+  const schedule = studentData.getSchedule(student)
+  if (!schedule) return false
+  
+  return Object.values(schedule).some(periodData => {
+    if (typeof periodData === 'string') {
+      return periodData === userId
+    } else if (periodData && typeof periodData === 'object') {
+      return periodData.teacherId === userId || 
+             periodData.coTeaching?.caseManagerId === userId
+    }
+    return false
+  })
+}
 
 function formatDate(timestamp, shortFormat = false) {
   if (!timestamp?.seconds) return '';

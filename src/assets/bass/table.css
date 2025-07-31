@@ -90,12 +90,7 @@
   font-weight: 600;
 }
 
-.flag-critical { background: #ffebee; color: #c62828; }
-.flag-high { background: #fff3e0; color: #ef6c00; }
-.flag-medium { background: #fff8e1; color: #f57f17; }
-.flag-mid { background: #f9fbe7; color: #827717; }
-.flag-low { background: #f1f8e9; color: #558b2f; }
-.flag-prep { background: #e8f5e8; color: #2e7d32; }
+/* Flag classes moved to src/assets/styles/components/tables.css */
 
 .badge {
   display: inline-block;

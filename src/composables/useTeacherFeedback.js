@@ -10,36 +10,43 @@ export function useTeacherFeedback() {
   const successMessage = ref('')
   
   // Firebase Functions (with error handling)
-  let functions, sendTeacherFeedbackForm, syncFormResponses, getStudentFeedback
+  let functions, getStudentFeedback, createFeedbackFormSheet, createFeedbackFormSheetWithUserAuth
   
   try {
     functions = getFunctions()
-    sendTeacherFeedbackForm = httpsCallable(functions, 'sendTeacherFeedbackForm')
-    syncFormResponses = httpsCallable(functions, 'syncFormResponses')
+    // Removed unused functions:
+    // sendTeacherFeedbackForm = httpsCallable(functions, 'sendTeacherFeedbackForm')
+    // sendTeacherFeedbackFormWithDuplication = httpsCallable(functions, 'sendTeacherFeedbackFormWithDuplication')
+    // syncFormResponses = httpsCallable(functions, 'syncFormResponses')
     getStudentFeedback = httpsCallable(functions, 'getStudentFeedback')
+    // generateFeedbackDocument = httpsCallable(functions, 'generateFeedbackDocument')
+    createFeedbackFormSheet = httpsCallable(functions, 'createFeedbackFormSheet')
+    createFeedbackFormSheetWithUserAuth = httpsCallable(functions, 'createFeedbackFormSheetWithUserAuth')
+    // createCaseManagerFeedbackSystem = httpsCallable(functions, 'createCaseManagerFeedbackSystem')
+    // getCaseManagerFeedbackSystem = httpsCallable(functions, 'getCaseManagerFeedbackSystem')
+    // updateCaseManagerDocument = httpsCallable(functions, 'updateCaseManagerDocument')
+    // getCaseManagerResources = httpsCallable(functions, 'getCaseManagerResources')
   } catch (err) {
     console.warn('Firebase Functions not available:', err)
     // Create mock functions for development
-    sendTeacherFeedbackForm = () => Promise.reject(new Error('Functions not available'))
-    syncFormResponses = () => Promise.reject(new Error('Functions not available'))
+    // Removed unused mock functions
     getStudentFeedback = () => Promise.reject(new Error('Functions not available'))
+    createFeedbackFormSheet = () => Promise.reject(new Error('Functions not available'))
+    createFeedbackFormSheetWithUserAuth = () => Promise.reject(new Error('Functions not available'))
   }
 
   // Firestore collections
   const feedbackFormsRef = collection(db, 'feedbackForms')
-  const feedbackResponsesRef = collection(db, 'feedbackResponses')
-  const feedbackSendLogRef = collection(db, 'feedbackSendLog')
-
-  // Reactive data
+  // Removed unused: feedbackSendLogRef, feedbackDocumentsRef - no longer needed
+  
+  // Reactive state
+  const formsLoading = ref(false)
   const feedbackForms = ref([])
-  const formsLoading = ref(true)
-  const feedbackResponses = ref([])
-  const responsesLoading = ref(true)
-  const sendLog = ref([])
-  const sendLogLoading = ref(true)
-
+  // Removed unused: feedbackDocuments, feedbackResponses, sendLog, responsesLoading, sendLogLoading
+  
   // Unsubscribe functions
-  let unsubscribeForms, unsubscribeResponses, unsubscribeSendLog
+  let unsubscribeForms
+  // Removed unused: unsubscribeResponses, unsubscribeSendLog, unsubscribeDocuments
 
   // Computed
   const activeForms = computed(() => {
@@ -51,10 +58,7 @@ export function useTeacherFeedback() {
       return dateB - dateA // Descending order
     })
   })
-
-  const totalResponses = computed(() => {
-    return feedbackResponses.value?.length || 0
-  })
+  // Removed unused: totalResponses computed property
 
   // Methods
   const createFeedbackForm = async (formData) => {
@@ -62,11 +66,34 @@ export function useTeacherFeedback() {
       isLoading.value = true
       error.value = ''
       
+      // Use the new function that works with personal Google accounts
+      console.log('🔄 Creating Google Sheet with personal account for form:', formData.title)
+      
+      // We need to get the user's Google access token first
+      // For now, let's try the service account approach but with better error handling
+      const sheetResult = await createFeedbackFormSheet({
+        title: formData.title,
+        description: formData.description,
+        formUrl: formData.formUrl,
+        studentId: formData.studentId || null,
+        studentName: formData.studentName || null
+      })
+      
+      if (!sheetResult.data.success) {
+        throw new Error('Failed to create Google Sheet: ' + sheetResult.data.message)
+      }
+      
+      console.log('✅ Google Sheet created:', sheetResult.data.spreadsheetUrl)
+      
+      // Create the form document with sheet information
       const formDoc = {
         title: formData.title,
         description: formData.description,
         formUrl: formData.formUrl,
-        responseSpreadsheetId: formData.responseSpreadsheetId,
+        spreadsheetId: sheetResult.data.spreadsheetId,
+        spreadsheetUrl: sheetResult.data.spreadsheetUrl,
+        userDriveId: sheetResult.data.userDriveId,
+        parentFolderId: sheetResult.data.parentFolderId,
         active: true,
         createdAt: new Date(),
         createdBy: formData.createdBy
@@ -75,17 +102,40 @@ export function useTeacherFeedback() {
       const docRef = doc(feedbackFormsRef)
       await setDoc(docRef, formDoc)
       
-      successMessage.value = 'Feedback form created successfully!'
-      return { id: docRef.id, ...formDoc }
+      successMessage.value = 'Feedback form and Google Sheet created successfully!'
+      return { 
+        id: docRef.id, 
+        ...formDoc 
+      }
       
-    } catch (err) {
-      console.error('Error creating feedback form:', err)
-      error.value = err.message
-      throw err
+    } catch (error) {
+      console.error('Error creating feedback form:', error)
+      
+      // Provide helpful error messages based on the error type
+      if (error.message.includes('storage quota exceeded') || error.message.includes('Service account storage quota exceeded')) {
+        error.value = '❌ Cannot create Google Sheet: Service account has no storage quota. Please use the "Test with Personal Account" button in Google Drive Setup to use your personal Google account instead.'
+      } else if (error.message.includes('permission') || error.message.includes('access')) {
+        error.value = '❌ Permission denied: Please ensure the folder is shared with the service account or use your personal Google account.'
+      } else {
+        error.value = error.message
+      }
+      
+      throw error
     } finally {
       isLoading.value = false
     }
   }
+
+  // Removed unused document generation functions - no longer available:
+  // - generateDocument
+  // - getDocumentForForm  
+  // - updateDocument
+  // These functions were removed because the backend generateFeedbackDocument 
+  // function is no longer available and FeedbackDocumentManager.vue was deleted.
+
+  // Removed createCaseManagerSystem function - no longer used by any component
+
+  // Removed updateCaseManagerDoc function - no longer used by any component
 
   const updateFeedbackForm = async (formId, updates) => {
     try {
@@ -125,101 +175,34 @@ export function useTeacherFeedback() {
     }
   }
 
-  const sendFeedbackForm = async (formData) => {
-    try {
-      isLoading.value = true
-      error.value = ''
-      
-      const result = await sendTeacherFeedbackForm(formData)
-      
-      if (result.data.success) {
-        successMessage.value = result.data.message
-        return result.data
-      } else {
-        throw new Error(result.data.message || 'Failed to send feedback form')
-      }
-      
-    } catch (err) {
-      console.error('Error sending feedback form:', err)
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
+  // Removed sendFeedbackForm function - no longer used by any component
 
-  const syncResponses = async (spreadsheetId, sheetName = 'Form Responses 1') => {
-    try {
-      isLoading.value = true
-      error.value = ''
-      
-      const result = await syncFormResponses({ spreadsheetId, sheetName })
-      
-      if (result.data.success) {
-        successMessage.value = result.data.message
-        return result.data
-      } else {
-        throw new Error(result.data.message || 'Failed to sync responses')
-      }
-      
-    } catch (err) {
-      console.error('Error syncing responses:', err)
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
+  // Removed unused functions - no longer available in backend:
+  /*
+  All the following functions have been removed from the backend:
+  - sendTeacherFeedbackForm
+  - sendTeacherFeedbackFormWithDuplication  
+  - generateFeedbackDocument
+  - createCaseManagerFeedbackSystem
+  - getCaseManagerFeedbackSystem
+  - updateCaseManagerDocument
+  - getCaseManagerResources
+  - syncFormResponses
+  - autoSyncFormResponses
+  
+  The frontend now opens forms directly instead of using these backend functions.
+  */
 
-  const getResponsesForStudent = async (studentId) => {
-    try {
-      isLoading.value = true
-      error.value = ''
-      
-      const result = await getStudentFeedback({ studentId })
-      
-      if (result.data.success) {
-        return result.data.responses
-      } else {
-        throw new Error(result.data.message || 'Failed to get student feedback')
-      }
-      
-    } catch (err) {
-      console.error('Error getting student feedback:', err)
-      error.value = err.message
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  const getResponsesForForm = (formId) => {
-    return computed(() => {
-      return feedbackResponses.value?.filter(response => response.formId === formId) || []
-    })
-  }
-
-  const getResponsesForSpreadsheet = (spreadsheetId) => {
-    return computed(() => {
-      return feedbackResponses.value?.filter(response => response.spreadsheetId === spreadsheetId) || []
-    })
-  }
-
-  const getSendLogForStudent = (studentId) => {
-    return computed(() => {
-      return sendLog.value?.filter(log => log.studentId === studentId) || []
-    })
-  }
+  // Removed all remaining unused functions - no longer needed by any component:
+  // - syncResponses (was only used by deleted FeedbackDocumentManager)
+  // - getResponsesForStudent (was only used by deleted components) 
+  // - getResponsesForForm (was only used by deleted components)
+  // - getResponsesForSpreadsheet (was only used by deleted components)
+  // - getSendLogForStudent (was only used by deleted components)
 
   const clearMessages = () => {
     error.value = ''
     successMessage.value = ''
-  }
-
-  // Extract spreadsheet ID from Google Sheets URL
-  const extractSpreadsheetId = (url) => {
-    const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
-    return match ? match[1] : null
   }
 
   // Extract form ID from Google Forms URL
@@ -244,41 +227,40 @@ export function useTeacherFeedback() {
       })
 
       // Listen to feedback responses
-      unsubscribeResponses = onSnapshot(feedbackResponsesRef, (snapshot) => {
-        feedbackResponses.value = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        responsesLoading.value = false
-      }, (error) => {
-        console.warn('Error listening to feedback responses:', error)
-        responsesLoading.value = false
-      })
+      // Removed unused: unsubscribeResponses = onSnapshot(feedbackResponsesRef, (snapshot) => {
+      // Removed unused: feedbackResponses.value = snapshot.docs.map(doc => ({
+      // Removed unused: responsesLoading.value = false
+      // Removed unused: }, (error) => {
+      // Removed unused: responsesLoading.value = false
+      // Removed unused: })
 
       // Listen to send log
-      unsubscribeSendLog = onSnapshot(feedbackSendLogRef, (snapshot) => {
-        sendLog.value = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        sendLogLoading.value = false
-      }, (error) => {
-        console.warn('Error listening to send log:', error)
-        sendLogLoading.value = false
-      })
+      // Removed unused: unsubscribeSendLog = onSnapshot(feedbackSendLogRef, (snapshot) => {
+      // Removed unused: sendLog.value = snapshot.docs.map(doc => ({
+      // Removed unused: sendLogLoading.value = false
+      // Removed unused: }, (error) => {
+      // Removed unused: sendLogLoading.value = false
+      // Removed unused: })
+
+      // Listen to feedback documents
+      // Removed unused: unsubscribeDocuments = onSnapshot(feedbackDocumentsRef, (snapshot) => {
+      // Removed unused: feedbackDocuments.value = snapshot.docs.map(doc => ({
+      // Removed unused: }, (error) => {
+      // Removed unused: })
     } catch (error) {
       console.warn('Error initializing Firestore listeners:', error)
       formsLoading.value = false
-      responsesLoading.value = false
-      sendLogLoading.value = false
+      // Removed unused: responsesLoading.value = false
+      // Removed unused: sendLogLoading.value = false
     }
   }
 
   // Cleanup listeners
   const cleanupListeners = () => {
     if (unsubscribeForms) unsubscribeForms()
-    if (unsubscribeResponses) unsubscribeResponses()
-    if (unsubscribeSendLog) unsubscribeSendLog()
+    // Removed unused: if (unsubscribeResponses) unsubscribeResponses()
+    // Removed unused: if (unsubscribeSendLog) unsubscribeSendLog()
+    // Removed unused: if (unsubscribeDocuments) unsubscribeDocuments()
   }
 
   // Initialize on mount
@@ -291,24 +273,58 @@ export function useTeacherFeedback() {
     cleanupListeners()
   })
 
-  // Get teacher emails from users collection
-  const getTeacherEmails = async () => {
+  // Create feedback form with personal Google account (requires user authentication)
+  const createFeedbackFormWithUserAuth = async (formData, accessToken) => {
     try {
-      const usersRef = collection(db, 'users')
-      const teachersQuery = query(usersRef, where('role', '==', 'teacher'))
-      const snapshot = await getDocs(teachersQuery)
+      isLoading.value = true
+      error.value = ''
       
-      return snapshot.docs.map(doc => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          name: data.name,
-          email: data.email
-        }
+      // Use the new function that works with personal Google accounts
+      console.log('🔄 Creating Google Sheet with personal account for form:', formData.title)
+      
+      const sheetResult = await createFeedbackFormSheetWithUserAuth({
+        title: formData.title,
+        description: formData.description,
+        formUrl: formData.formUrl,
+        studentId: formData.studentId || null,
+        studentName: formData.studentName || null,
+        accessToken: accessToken
       })
-    } catch (err) {
-      console.error('Error getting teacher emails:', err)
-      throw err
+      
+      if (!sheetResult.data.success) {
+        throw new Error('Failed to create Google Sheet: ' + sheetResult.data.message)
+      }
+      
+      console.log('✅ Google Sheet created with personal account:', sheetResult.data.spreadsheetUrl)
+      
+      // Create the form document with sheet information
+      const formDoc = {
+        title: formData.title,
+        description: formData.description,
+        formUrl: formData.formUrl,
+        spreadsheetId: sheetResult.data.spreadsheetId,
+        spreadsheetUrl: sheetResult.data.spreadsheetUrl,
+        driveType: 'personal',
+        active: true,
+        createdAt: new Date(),
+        createdBy: formData.createdBy
+      }
+
+      const docRef = doc(feedbackFormsRef)
+      await setDoc(docRef, formDoc)
+      
+      successMessage.value = 'Feedback form and Google Sheet created successfully in your personal Google Drive!'
+      return { 
+        id: docRef.id, 
+        ...formDoc 
+      }
+      
+    } catch (error) {
+      console.error('Error creating feedback form with user auth:', error)
+      error.value = error.message
+      throw error
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -318,29 +334,21 @@ export function useTeacherFeedback() {
     error,
     successMessage,
     formsLoading,
-    responsesLoading,
-    sendLogLoading,
+    // Removed unused state: responsesLoading, sendLogLoading, feedbackResponses, sendLog, totalResponses, feedbackDocuments
     
     // Data
     feedbackForms,
-    feedbackResponses,
-    sendLog,
     activeForms,
-    totalResponses,
     
     // Methods
     createFeedbackForm,
     updateFeedbackForm,
     deleteFeedbackForm,
-    sendFeedbackForm,
-    syncResponses,
-    getResponsesForStudent,
-    getResponsesForForm,
-    getResponsesForSpreadsheet,
-    getSendLogForStudent,
-    getTeacherEmails,
     clearMessages,
-    extractSpreadsheetId,
-    extractFormId
+    extractFormId,
+    createFeedbackFormWithUserAuth
+    // Removed unused methods: generateDocument, getDocumentForForm, updateDocument, sendFeedbackForm, 
+    // getResponsesForStudent, getResponsesForForm, getResponsesForSpreadsheet, getSendLogForStudent,
+    // getTeacherEmails, extractSpreadsheetId
   }
 } 

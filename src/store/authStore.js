@@ -1,7 +1,7 @@
 // src/store/authStore.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth'
+import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, getIdToken } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { useRouter } from 'vue-router'
@@ -88,6 +88,21 @@ export const useAuthStore = defineStore('auth', () => {
     currentUser.value = user
   }
 
+  // Force refresh user token
+  const refreshToken = async () => {
+    if (auth.currentUser) {
+      try {
+        await getIdToken(auth.currentUser, true)
+        console.log('✅ Token refreshed successfully')
+        return true
+      } catch (error) {
+        console.error('❌ Error refreshing token:', error)
+        return false
+      }
+    }
+    return false
+  }
+
   // Computed property for user
   const user = computed(() => currentUser.value)
 
@@ -101,6 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     loginWithGoogle, 
     logout,
-    setUser
+    setUser,
+    refreshToken
   }
 })

@@ -141,12 +141,13 @@
           />
           
           <!-- Docs Cell -->
-          <DocumentsCell :student="student" :get-document-url="getDocumentUrl" />
+          <StudentDocsCell :student="student" :get-document-url="getDocumentUrl" />
           
           <!-- Actions Cell -->
           <ActionsCell
             :student="student"
             :current-user="currentUser"
+            :student-data="studentData"
             @edit="$emit('edit', student.id)"
             @email="$emit('email', student.id)"
             @teacher-feedback="$emit('teacher-feedback', student.id)"
@@ -162,7 +163,7 @@ import { ref, onMounted, watch } from 'vue'
 import { getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useStudentTable } from './table/useStudentTable.js'
 import './table/StudentTable.css'
-import DocumentsCell from './table/StudentDocsCell.vue'
+import StudentDocsCell from './table/StudentDocsCell.vue'
 import ActionsCell from './table/StudentActionsCell.vue'
 import ScheduleCell from './table/StudentScheduleCell.vue'
 import ServicesCell from './table/StudentServicesCell.vue'
@@ -178,6 +179,10 @@ const props = defineProps({
     default: () => ({})
   },
   currentUser: {
+    type: Object,
+    default: null
+  },
+  studentData: {
     type: Object,
     default: null
   },

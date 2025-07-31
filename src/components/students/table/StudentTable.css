@@ -157,7 +157,7 @@
   cursor: help;
 }
 
-/* Badges */
+/* Student Table Badges - Date-related badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -165,14 +165,29 @@
   padding: .2rem .6rem;
   border-radius: .25rem;
   background: #f5f5f5;
+  border-color: #8a8a8a;
   color: #333;
   box-shadow: inset 0 -1px 0 rgba(0,0,0,0.1);
   border-left-width: 8px;
   border-left-style: solid;
+  transition: all 0.2s ease;
+}
+
+/* Meeting badge specific styles */
+.badge-meeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.badge-meeting.date-set {
+  border-color: grey;
+  color: #333;
+  font-weight: 600;
 }
 
 /* Badge colors with left borders */
-.badge-review {
+/* .badge-review {
   border-left-color: #fb8c00;
 }
 
@@ -183,7 +198,7 @@
 .badge-meeting {
   border-left-color: #43a047;
   background-color: #e2efff;
-}
+} */
 
 .badge-direct {
   background-color: #ffebee;
@@ -191,39 +206,60 @@
   border-left-color: #f44336;
 }
 
-/* Urgency flag classes for badges */
-.badge.flag-critical { 
-  border-left-color: #e53935; 
-  background: #ffc1bf; 
+/* Badge-specific flag classes for student table */
+.badge.flag-critical,
+.badge.flag-high,
+.badge.flag-medium {
+
+  border-left-style: solid;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
 
-.badge.flag-high { 
-  border-left-color: #e53935; 
+.badge.flag-critical {
+  background: #ffebee;
+  color: #d32f2f;
+  border-left-color: #f44336;
 }
 
-.badge.flag-medium { 
-  border-left-color: #fb8c00; 
+.badge.flag-high {
+  background: #fff3e0;
+  color: #f57c00;
+  border-left-color: #ff9800;
 }
 
-.badge.flag-mid { 
-  border-left-color: #fdd835; 
+.badge.flag-medium {
+  background: #fff8e1;
+  color: #fbc02d;
+  border-left-color: #ffc107;
 }
 
-.badge.flag-low { 
-  border-left-color: #d0df30; 
+.badge.flag-mid,
+.badge.flag-low,
+.badge.flag-prep,
+.badge.flag-prep-reeval {
+  background: transparent;
+  color: #666;
 }
 
-.badge.flag-prep { 
-  border-left-color: #43a047; 
+.badge.flag-mid {
+  border-left-color: #8bc34a;
 }
 
-.badge.flag-prep-reeval { 
-  border-left-color: #35d2e5; 
+.badge.flag-low {
+  border-left-color: #4caf50;
+}
+
+.badge.flag-prep {
+  border-left-color: #2196f3;
+}
+
+.badge.flag-prep-reeval {
+  border-left-color: #9c27b0;
 }
 
 /* Meeting date set state */
 .badge.badge-meeting.date-set {
-  background: #eef7ee;
+  
 }
 
 /* Hover tooltips for date badges */
@@ -247,15 +283,15 @@
 }
 
 .plan-review:hover::after {
-  content: "Plan Review Due";
+  content: "Plan Review Due"!important;
 }
 
 .reeval-due:hover::after {
-  content: "Reevaluation Due";
+  content: "Reevaluation Due"!important;
 }
 
 .meeting-date:hover::after {
-  content: "Meeting Date";
+  content: "Meeting Date"!important;
 }
 
 /* Flag overlays */
@@ -398,40 +434,47 @@
   margin-right: 4px;
 }
 
-/* Urgency classes for dates */
-.flag-critical {
-  background-color: #ffebee !important;
+/* Student Table Flag Classes - Urgency levels for dates */
+.flag-critical { 
+  background: #ffebee !important; 
   color: #d32f2f !important;
+  border-left-color: #f44336 !important;
 }
 
-.flag-high {
-  background-color: #fff3e0 !important;
+.flag-high { 
+  background: #fff3e0 !important;
   color: #f57c00 !important;
+  border-left-color: #ff9800 !important;
 }
 
-.flag-medium {
-  background-color: #fff8e1 !important;
+.flag-medium { 
+  background: #fff8e1 !important;
   color: #fbc02d !important;
+  border-left-color: #ffc107 !important;
 }
 
-.flag-mid {
-  background-color: #f1f8e9 !important;
+.flag-mid { 
+ 
   color: #689f38 !important;
+  border-left-color: #8bc34a !important;
 }
 
-.flag-low {
-  background-color: #e8f5e8 !important;
+.flag-low { 
+  
   color: #388e3c !important;
+  border-left-color: #4caf50 !important;
 }
 
-.flag-prep {
-  background-color: #e3f2fd !important;
+.flag-prep { 
+  
   color: #1976d2 !important;
+  border-left-color: #2196f3 !important;
 }
 
-.flag-prep-reeval {
-  background-color: #f3e5f5 !important;
-  color: #7b1fa2 !important;
+.flag-prep-reeval { 
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
+  border-left-color: #2196f3 !important;
 } 
 .period-assignment {
   display: flex;

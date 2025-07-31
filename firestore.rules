@@ -24,7 +24,7 @@ service cloud.firestore {
     
     // ─── AUTH & ROLE HELPERS ─────────────────────────────────────────────────
     function isAuth() { 
-      return request.auth != null; 
+      return request.auth != null;
     }
     
     function uid() { 
@@ -48,7 +48,15 @@ service cloud.firestore {
       return role() == 'administrator_504_CM'; 
     }
     
-    function isAnyAdmin() { 
+    function isSpedChair() {
+      return role() == 'sped_chair';
+    }
+    
+    function isAdministrator504() {
+      return role() == 'administrator_504_CM';
+    }
+    
+    function isAnyAdmin() {
       return isSuperAdmin() || isAdministrator() || isAdmin504(); 
     }
     
@@ -113,7 +121,7 @@ service cloud.firestore {
       let sched = get(/databases/$(database)/documents/aideSchedules/$(uid())).data;
       return sched.studentIds != null && studentId in sched.studentIds;
     }
-    
+
     // Combined read access for a student document - use resource.data instead of get()
     function canReadStudent(studentId) {
       let doc = resource.data;
@@ -235,6 +243,12 @@ service cloud.firestore {
       allow write: if isAuth() && isAnyAdmin(); // Only admins can change security settings
     }
     
+    // Theme settings - All users can read, admins can write
+    match /app_settings/theme {
+      allow read: if isAuth() && hasValidRole(); // All users need to read theme settings
+      allow write: if isAuth() && isAnyAdmin(); // Only admins can change theme settings
+    }
+    
     // Aide schedules - Admin and paraeducator access
     match /aideSchedules/{aideId} {
       allow read: if isAuth() && (isAnyAdmin() || isOwner(aideId));
@@ -264,6 +278,29 @@ service cloud.firestore {
     match /feedbackSendLog/{logId} {
       allow read: if isAuth() && (isAnyAdmin() || isCaseManager());
       allow write: if false; // Only Cloud Functions
+    }
+    
+    // Feedback documents - Admin roles and case managers can access documents
+    match /feedbackDocuments/{documentId} {
+      allow read: if isAuth() && (
+        isAnyAdmin() || 
+        isCaseManager() || 
+        isSpedChair() || 
+        isAdministrator504()
+      );
+      allow create: if isAuth() && (
+        isAnyAdmin() || 
+        isCaseManager() || 
+        isSpedChair() || 
+        isAdministrator504()
+      );
+      allow update: if isAuth() && (
+        isAnyAdmin() || 
+        isCaseManager() || 
+        isSpedChair() || 
+        isAdministrator504()
+      );
+      allow delete: if isAuth() && isAnyAdmin();
     }
     
     // Testing collection

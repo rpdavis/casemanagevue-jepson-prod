@@ -63,6 +63,7 @@ export function useStudentTable(props) {
     })
   }
 
+  // General date urgency (for meeting and review dates)
   const getDateUrgencyClass = (dateStr) => {
     if (!dateStr) return ''
     const today = new Date()
@@ -74,6 +75,20 @@ export function useStudentTable(props) {
     if (daysDiff <= 21) return 'flag-mid'
     if (daysDiff <= 28) return 'flag-low'
     if (daysDiff <= 35) return 'flag-prep'
+    return ''
+  }
+
+  // Reevaluation-specific urgency (includes flag-prep-reeval)
+  const getReevalDateUrgencyClass = (dateStr) => {
+    if (!dateStr) return ''
+    const today = new Date()
+    const target = new Date(dateStr)
+    const daysDiff = Math.ceil((target - today) / (1000 * 60 * 60 * 24))
+    if (daysDiff <= 0)  return 'flag-critical'
+    if (daysDiff <= 7)  return 'flag-high'
+    if (daysDiff <= 14) return 'flag-medium'
+    if (daysDiff <= 21) return 'flag-mid'
+    if (daysDiff <= 28) return 'flag-low'
     if (daysDiff <= 60) return 'flag-prep-reeval'
     return ''
   }
@@ -87,7 +102,7 @@ export function useStudentTable(props) {
   }
 
   const getReevalUrgencyClass = (student) => {
-    return getDateUrgencyClass(getDisplayValue(student, 'reevalDate'))
+    return getReevalDateUrgencyClass(getDisplayValue(student, 'reevalDate'))
   }
 
   // Student data extraction functions
@@ -229,8 +244,18 @@ export function useStudentTable(props) {
     // Extract co-teaching services from schedule
     const coTeachingServices = getCoTeachingServices(student)
     
-    // Combine regular services with co-teaching services
-    const allServices = [...services, ...coTeachingServices]
+    // Check which co-teaching services are already in the services array
+    const existingCoTeachServices = services.filter(service => 
+      service && service.startsWith && service.startsWith('Co-teach:')
+    )
+    
+    // Only add co-teaching services that aren't already in the services array
+    const newCoTeachServices = coTeachingServices.filter(coTeachService => 
+      !existingCoTeachServices.includes(coTeachService)
+    )
+    
+    // Combine regular services with only new co-teaching services
+    const allServices = [...services, ...newCoTeachServices]
     
     // If app settings are still loading, show all services
     if (appSettingsLoading.value) {

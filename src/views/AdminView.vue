@@ -130,6 +130,11 @@
         <AppSettings />
       </div>
 
+      <!-- Theme Customization Tab -->
+      <div v-if="activeTab === 'theme'" class="admin-section">
+        <ThemeManager />
+      </div>
+
       <!-- Testing Links Tab -->
       <div v-if="activeTab === 'testing-links'" class="admin-section">
         <TestingLinks :students="students" :userMap="userMap" />
@@ -201,6 +206,7 @@ import SecurityControlCenter from '@/components/SecurityControlCenter.vue'
 
 import ComponentHealthDashboard from '@/components/ComponentHealthDashboard.vue'
 import AdminPermissionsMatrix from '@/components/AdminPermissionsMatrix.vue'
+import ThemeManager from '@/components/ThemeManager.vue'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
@@ -228,7 +234,8 @@ export default {
     DebugEncryption,
     SecurityControlCenter,
     ComponentHealthDashboard,
-    AdminPermissionsMatrix
+    AdminPermissionsMatrix,
+    ThemeManager
   },
   setup() {
     const router = useRouter()
@@ -275,6 +282,7 @@ export default {
       { key: 'backup-restore', label: 'Backup & Restore', category: 'data-integration' },
       { key: 'permissions', label: 'Permissions', category: 'system-config' },
       { key: 'settings', label: 'App Settings', category: 'system-config' },
+      { key: 'theme', label: 'Theme Customization', category: 'system-config' },
       { key: 'iep-security', label: 'IEP Security', category: 'system-config' },
       { key: 'security', label: 'Security Controls', category: 'system-config' },
       { key: 'component-health', label: 'Component Debug', category: 'monitoring' }

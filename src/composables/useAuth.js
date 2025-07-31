@@ -57,5 +57,8 @@ export function useAuth() {
     });
   });
 
-  return { currentUser, waitForAuthInit };
+  return {
+    currentUser,
+    waitForAuthInit
+  };
 }
