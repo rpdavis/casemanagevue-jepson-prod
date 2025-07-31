@@ -281,7 +281,7 @@ import { computed, ref, watch } from 'vue'
 // Composables
 import { useStudentData } from '@/composables/useStudentData.js'
 import { useStudentFilters } from '@/composables/useStudentFilters.js'
-import { useRoleBasedView } from '@/composables/roles/useRoleBasedView.js'
+import { useUnifiedRoleView } from '@/composables/roles/useUnifiedRoleView.js'
 import { useStudentViews } from '@/composables/useStudentViews.js'
 import { useStudentNavActions } from '@/composables/useStudentNavActions.js'
 import { useStudentQueries } from '@/composables/useStudentQueries.js'
@@ -298,7 +298,7 @@ import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.v
 // Initialize composables
 const studentData = useStudentData()
 const filterData = useStudentFilters(studentData)
-const roleView = useRoleBasedView(studentData, filterData)
+  const roleView = useUnifiedRoleView(studentData, filterData)
 const navActions = useStudentNavActions(studentData)
 
 // Extract data from composables

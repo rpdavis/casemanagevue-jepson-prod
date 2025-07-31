@@ -3,9 +3,9 @@ import { useBaseRoleView } from './useBaseRoleView'
 import { 
   RoleUtils, 
   PERMISSIONS, 
-  ACCESS_PATTERN_FUNCTIONS,
-  getDisplayValue 
+  ACCESS_PATTERN_FUNCTIONS
 } from './roleConfig'
+import { getDisplayValue } from '@/utils/studentUtils'
 
 /**
  * Unified Role View Composable

@@ -22,6 +22,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { RoleUtils } from '@/composables/roles/roleConfig'
 
 const props = defineProps({
   student: {
@@ -66,60 +67,15 @@ const canEditStudent = computed(() => {
 const canSendFeedback = computed(() => {
   if (!props.currentUser?.role || !props.student || !props.studentData) return false
   
-  const userId = props.currentUser.uid
-  const role = props.currentUser.role
-  
-  // Case managers can send feedback for students in their caseload
-  if (role === 'case_manager') {
-    return props.studentData.getCaseManagerId(props.student) === userId
-  }
-  
-  // SPED Chair can send feedback for:
-  // 1. Students they case manage
-  // 2. Students they teach
-  // 3. All IEP students
-  if (role === 'sped_chair') {
-    const isCaseManager = props.studentData.getCaseManagerId(props.student) === userId
-    const isTeacher = isUserTeacherOfStudent(userId, props.student, props.studentData)
-    const hasIEP = props.student.app?.studentData?.plan === 'IEP' || props.student.plan === 'IEP'
-    
-    return isCaseManager || isTeacher || hasIEP
-  }
-  
-  // 504 Administrator can send feedback for:
-  // 1. Students they case manage
-  // 2. Students with IEP or 504 plans
-  if (role === 'administrator_504_CM') {
-    const isCaseManager = props.studentData.getCaseManagerId(props.student) === userId
-    const plan = props.student.app?.studentData?.plan || props.student.plan
-    const hasIEPor504 = plan === 'IEP' || plan === '504'
-    
-    return isCaseManager || hasIEPor504
-  }
-  
-  // Admin and Administrator can send feedback for all students
-  if (role === 'admin' || role === 'administrator') {
-    return true
-  }
-  
-  return false
+  return RoleUtils.canSendFeedback(
+    props.currentUser.uid,
+    props.currentUser.role,
+    props.student,
+    props.studentData
+  )
 })
 
-// Helper function to check if user is a teacher of the student
-const isUserTeacherOfStudent = (userId, student, studentData) => {
-  const schedule = studentData.getSchedule(student)
-  if (!schedule) return false
-  
-  return Object.values(schedule).some(periodData => {
-    if (typeof periodData === 'string') {
-      return periodData === userId
-    } else if (periodData && typeof periodData === 'object') {
-      return periodData.teacherId === userId || 
-             periodData.coTeaching?.caseManagerId === userId
-    }
-    return false
-  })
-}
+// Helper function removed - now using centralized RoleUtils.canSendFeedback()
 
 function formatDate(timestamp, shortFormat = false) {
   if (!timestamp?.seconds) return '';
