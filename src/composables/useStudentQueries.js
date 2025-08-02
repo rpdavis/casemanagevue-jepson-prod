@@ -78,19 +78,55 @@ export function useStudentQueries() {
     }
   }
   
-  // Administrator_504_CM role - can view only IEP or 504 plan students
+  // Administrator_504_CM role - can view all students but only edit 504 plan students
   const getAdmin504Students = async () => {
-    console.log('🔍 504 Admin query: Loading only IEP and 504 students')
+    console.log('🔍 504 Admin query: Loading all students (edit restrictions applied at form level)')
     try {
       const q = query(
         collection(db, 'students'),
-        where('app.studentData.plan', 'in', ['IEP', '504'])
+        orderBy('app.studentData.lastName', 'asc')
       )
       const snapshot = await getDocs(q)
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     } catch (error) {
       console.error('🔴 504 Admin query error:', error)
-      return []
+      // Fallback without ordering
+      try {
+        const fallbackQuery = query(collection(db, 'students'))
+        const fallbackSnapshot = await getDocs(fallbackQuery)
+        return fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      } catch (fallbackError) {
+        console.error('🔴 504 Admin fallback query failed:', fallbackError)
+        return []
+      }
+    }
+  }
+  
+  // SPED Chair role - can view only IEP plan students
+  const getSpedChairStudents = async () => {
+    console.log('🔍 SPED Chair query: Loading only IEP students')
+    try {
+      const q = query(
+        collection(db, 'students'),
+        where('app.studentData.plan', '==', 'IEP'),
+        orderBy('app.studentData.lastName', 'asc')
+      )
+      const snapshot = await getDocs(q)
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    } catch (error) {
+      console.error('🔴 SPED Chair query error:', error)
+      // Fallback without ordering
+      try {
+        const fallbackQuery = query(
+          collection(db, 'students'),
+          where('app.studentData.plan', '==', 'IEP')
+        )
+        const fallbackSnapshot = await getDocs(fallbackQuery)
+        return fallbackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      } catch (fallbackError) {
+        console.error('🔴 SPED Chair fallback query failed:', fallbackError)
+        return []
+      }
     }
   }
   
@@ -373,17 +409,27 @@ export function useStudentQueries() {
       let studentData = []
       
       console.log('🔍 ROUTING to query based on role:', currentRole.value)
-      console.log('🔍 Available role cases: admin, administrator, sped_chair, administrator_504_CM, case_manager, teacher, service_provider, paraeducator')
+      console.log('🔍 Available role cases: admin, school_admin, staff_view, staff_edit, admin_504, sped_chair, case_manager, teacher, service_provider, paraeducator')
       
       // Route to appropriate query based on role
       switch (currentRole.value) {
         case 'admin':
+        case 'school_admin':
+        case 'staff_view':
+        case 'staff_edit':
+        // Legacy roles for backward compatibility
         case 'administrator':
-        case 'sped_chair':
           studentData = await getAdminStudents()
           break
+        case 'sped_chair':
+          // SPED Chair: Only see IEP students in table
+          studentData = await getSpedChairStudents()
+          break
+        case 'admin_504':
+        // Legacy role for backward compatibility
         case 'administrator_504_CM':
-          studentData = await getAdminStudents()
+          // 504 Coordinator: See all students, edit restrictions applied at form level
+          studentData = await getAdmin504Students()
           break
         case 'case_manager':
           console.log('🔍 CALLING getCaseManagerStudents with userId:', currentUserId.value)

@@ -59,7 +59,9 @@ const canEditStudent = computed(() => {
   }
   
   // Admin roles (admin, administrator, sped_chair, administrator_504_CM, service_provider) can edit all students
-  const adminRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM', 'service_provider']
+  const adminRoles = ['admin', 'school_admin', 'staff_edit', 'admin_504', 'sped_chair', 'service_provider',
+                   // Legacy roles for backward compatibility
+                   'administrator', 'administrator_504_CM']
   return adminRoles.includes(role)
 })
 

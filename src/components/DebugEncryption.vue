@@ -41,7 +41,27 @@
           </div>
         </div>
         <div class="status-row">
-          <div class="status-label">ENV Variable:</div>
+          <div class="status-label">VITE_ENABLE_ENCRYPTION:</div>
+          <div class="status-value">
+            <div v-if="status.isViteSet" class="env-value-set">
+              <span class="env-value" :class="{ 'true-value': status.viteEncryptionValue === 'true', 'false-value': status.viteEncryptionValue === 'false' }">
+                {{ status.viteEncryptionValue }}
+              </span>
+              <div class="env-guidance">
+                <span v-if="status.viteEncryptionValue === 'true'" class="dev-guidance">🔧 Development mode</span>
+                <span v-else-if="status.viteEncryptionValue === 'false'" class="prod-guidance">🚀 Production mode</span>
+              </div>
+            </div>
+            <div v-else class="env-value-not-set">
+              <span class="not-set">Not set</span>
+              <div class="env-guidance">
+                <span class="default-guidance">Defaults to enabled (secure)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="status-label">Legacy ENV:</div>
           <div class="status-value">
             {{ status.environmentVariable || 'Not set' }}
           </div>
@@ -258,5 +278,64 @@ const getFieldPreview = (fieldPath) => {
   padding: 4px 8px;
   border-radius: 3px;
   word-break: break-all;
+}
+
+/* Environment variable display styles */
+.env-value-set {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.env-value {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-block;
+  font-family: monospace;
+}
+
+.env-value.true-value {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.env-value.false-value {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.env-guidance {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+.dev-guidance {
+  color: #fd7e14;
+  font-weight: 500;
+}
+
+.prod-guidance {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.env-value-not-set {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.not-set {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.default-guidance {
+  color: #17a2b8;
+  font-size: 11px;
+  font-weight: 500;
 }
 </style> 

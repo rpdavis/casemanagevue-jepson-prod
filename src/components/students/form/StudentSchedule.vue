@@ -106,7 +106,7 @@ const availableCaseManagers = computed(() => {
   return caseManagers.filter(cm => 
     cm.id && 
     (cm.role === 'case_manager' || 
-     cm.role === 'administrator_504_CM' ||
+             cm.role === 'admin_504' || cm.role === 'administrator_504_CM' ||
      cm.role === 'sped_chair' ||
      (cm.roles && cm.roles.includes('case_manager')))
   )

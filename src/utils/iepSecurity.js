@@ -255,11 +255,17 @@ class IEPSecurityHandler {
 
   // Get encryption status details
   getEncryptionStatus() {
+    const viteEncryptionValue = import.meta.env.VITE_ENABLE_ENCRYPTION;
+    const isViteSet = viteEncryptionValue !== undefined;
+    
     return {
       enabled: this.encryptionEnabled,
       environment: process.env.NODE_ENV,
       keyAvailable: Boolean(this.encryptionKey),
-      environmentVariable: process.env.VUE_APP_ENABLE_ENCRYPTION
+      environmentVariable: process.env.VUE_APP_ENABLE_ENCRYPTION, // Legacy
+      viteEncryptionValue: isViteSet ? viteEncryptionValue : null,
+      isViteSet: isViteSet,
+      viteEncryptionEnabled: this.encryptionEnabled
     };
   }
 }

@@ -38,7 +38,7 @@ export default function useUsers() {
   const userRoles = computed(() => {
     return {
       teachers: userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role)),
-      caseManagers: userList.value.filter(u => ["case_manager", "sped_chair", "administrator_504_CM"].includes(u.role)),
+      caseManagers: userList.value.filter(u => ["case_manager", "sped_chair", "admin_504", "administrator_504_CM"].includes(u.role)),
       speech: userList.value.filter(u => u.provider === 'SLP'),
       ot: userList.value.filter(u => u.provider === 'OT'),
       mh: userList.value.filter(u => u.provider === 'MH'),
@@ -57,7 +57,7 @@ export default function useUsers() {
   })
 
   const caseManagers = computed(() => {
-    return userList.value.filter(u => ["case_manager", "sped_chair", "administrator_504_CM"].includes(u.role))
+    return userList.value.filter(u => ["case_manager", "sped_chair", "admin_504", "administrator_504_CM"].includes(u.role))
   })
 
   const teacherList = computed(() => {

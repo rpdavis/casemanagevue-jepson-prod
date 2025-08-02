@@ -23,27 +23,33 @@ export function useRoleBasedView(studentData, filterData) {
   // Role-specific permissions - delegated to unified system
   const canEditAllStudents = computed(() => {
     const userRole = currentUser.value?.role
-    return ['admin', 'sped_chair'].includes(userRole)
+    return ['admin', 'school_admin', 'staff_edit', 'sped_chair'].includes(userRole)
   })
   
   const canEditOwnStudents = computed(() => {
     const userRole = currentUser.value?.role
-    return ['case_manager', 'administrator_504_CM'].includes(userRole)
+    return ['case_manager', 'admin_504', 'administrator_504_CM'].includes(userRole)
   })
   
   const canViewAllStudents = computed(() => {
     const userRole = currentUser.value?.role
-    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)
+    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair',
+            // Legacy roles for backward compatibility
+            'administrator', 'administrator_504_CM'].includes(userRole)
   })
   
   const canManageUsers = computed(() => {
     const userRole = currentUser.value?.role
-    return ['admin', 'administrator', 'administrator_504_CM'].includes(userRole)
+    return ['admin', 'school_admin', 'admin_504',
+            // Legacy roles for backward compatibility
+            'administrator', 'administrator_504_CM'].includes(userRole)
   })
   
   const canManageAides = computed(() => {
     const userRole = currentUser.value?.role
-    return ['admin', 'administrator', 'sped_chair'].includes(userRole)
+    return ['admin', 'school_admin', 'admin_504', 'sped_chair',
+            // Legacy roles for backward compatibility
+            'administrator', 'administrator_504_CM'].includes(userRole)
   })
   
   // Testing permissions

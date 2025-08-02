@@ -51,14 +51,14 @@ class AuditLogger {
   }
 
   async logSystemAccess(action, details = {}) {
-    if (!this.enabled || !auth.currentUser) return
+    if (!this.enabled) return
 
     try {
       const logRef = doc(collection(db, 'auditLogs'))
       await setDoc(logRef, {
         type: 'system_access',
-        userId: auth.currentUser.uid,
-        userEmail: auth.currentUser.email,
+        userId: auth.currentUser?.uid || 'unknown',
+        userEmail: auth.currentUser?.email || 'unknown',
         action, // 'login', 'logout', 'failed_login', 'settings_change'
         details,
         timestamp: serverTimestamp(),

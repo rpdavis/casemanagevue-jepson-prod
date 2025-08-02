@@ -96,7 +96,9 @@ export function useStudentData() {
       
       // Load aide assignments based on user role and permissions
       const userRole = currentUser.value?.role
-      if (['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(userRole)) {
+      if (['admin', 'school_admin', 'admin_504', 'sped_chair',
+           // Legacy roles for backward compatibility
+           'administrator', 'administrator_504_CM'].includes(userRole)) {
         // Admin roles can load all aide assignments
         await loadAideAssignments()
       } else if (userRole === 'paraeducator' && currentUser.value.uid) {

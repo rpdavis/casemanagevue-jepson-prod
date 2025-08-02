@@ -3,7 +3,7 @@
     <div class="overview-header">
       <h2>📋 Permissions Overview</h2>
       <p class="overview-description">
-        This is an informational view showing the current role-based permissions that match your Firebase security rules and role-based view settings. These permissions are hard-coded for consistency and security.
+        This a summary of the role-based permissions These permissions are hard-coded for consistency and security.
       </p>
     </div>
 
@@ -11,7 +11,9 @@
     <div class="roles-summary">
       <div class="summary-card" v-for="role in roleData" :key="role.key">
         <div class="role-header" :class="role.key">
-          <div class="role-icon">{{ role.icon }}</div>
+          <div class="role-icon">
+            <component :is="role.icon" class="w-6 h-6" />
+          </div>
           <div class="role-info">
             <h3>{{ role.name }}</h3>
             <p>{{ role.description }}</p>
@@ -27,8 +29,8 @@
             <span class="stat-label">Admin Panel</span>
           </div>
           <div class="stat">
-            <span class="stat-number">{{ role.testingLevel }}</span>
-            <span class="stat-label">Testing Access</span>
+            <span class="stat-number">{{ role.studentAccessLevel }}</span>
+            <span class="stat-label">Student Access</span>
           </div>
         </div>
       </div>
@@ -46,14 +48,7 @@
           <thead>
             <tr>
               <th class="permission-column">Permission</th>
-              <th class="role-header admin">Admin</th>
-              <th class="role-header administrator">Administrator</th>
-              <th class="role-header administrator_504_CM">Admin 504/CM</th>
-              <th class="role-header sped_chair">SPED Chair</th>
-              <th class="role-header case_manager">Case Manager</th>
-              <th class="role-header teacher">Teacher</th>
-              <th class="role-header paraeducator">Paraeducator</th>
-              <th class="role-header service_provider">Service Provider</th>
+              <th v-for="roleKey in roles" :key="roleKey" :class="`role-header ${roleKey}`" :data-role="getShortRoleName(roleKey)"></th>
             </tr>
           </thead>
           <tbody>
@@ -63,9 +58,9 @@
                 <div class="permission-description">{{ permission.description }}</div>
                 <div class="permission-firebase">{{ permission.firebaseRule }}</div>
               </td>
-              <td v-for="role in roles" :key="role" class="permission-cell">
-                <span class="permission-indicator" :class="{ granted: hasPermission(role, permission.key) }">
-                  {{ hasPermission(role, permission.key) ? '✅' : '❌' }}
+              <td v-for="roleKey in roles" :key="roleKey" class="permission-cell">
+                <span class="permission-indicator" :class="{ granted: hasPermission(roleKey, permission.key) }">
+                  {{ hasPermission(roleKey, permission.key) ? '✅' : '❌' }}
                 </span>
               </td>
             </tr>
@@ -102,31 +97,46 @@
           <h4>👥 Users Collection</h4>
           <ul>
             <li><strong>Read:</strong> All authenticated users</li>
-            <li><strong>Write:</strong> Admin, Administrator, Administrator 504/CM only</li>
-            <li><strong>Delete:</strong> Admin, Administrator only</li>
+            <li><strong>Write:</strong> Admin, School Admin, 504 Coordinator, SPED Chair</li>
+            <li><strong>Delete:</strong> Admin, School Admin, 504 Coordinator, SPED Chair</li>
           </ul>
         </div>
         <div class="rule-card">
           <h4>🎓 Students Collection</h4>
           <ul>
             <li><strong>Read:</strong> All authenticated users (role-filtered)</li>
-            <li><strong>Write (All):</strong> Admin, Administrator, Administrator 504/CM, SPED Chair</li>
-            <li><strong>Write (Own Caseload):</strong> Case Manager</li>
-            <li><strong>Read-only:</strong> Teacher, Paraeducator, Service Provider</li>
+            <li><strong>Write (All):</strong> Admin, School Admin, Staff Edit, 504 Coordinator, SPED Chair</li>
+            <li><strong>Write (Own Caseload):</strong> Case Manager, Service Provider</li>
+            <li><strong>Delete:</strong> Admin, School Admin, SPED Chair, 504 Coordinator</li>
           </ul>
         </div>
         <div class="rule-card">
           <h4>⚙️ App Settings</h4>
           <ul>
             <li><strong>Read:</strong> All authenticated users</li>
-            <li><strong>Write:</strong> Admin, Administrator only</li>
+            <li><strong>Write:</strong> Admin, School Admin</li>
           </ul>
         </div>
         <div class="rule-card">
           <h4>📝 Audit Logs</h4>
           <ul>
-            <li><strong>Read:</strong> Admin, Administrator, SPED Chair</li>
+            <li><strong>Read:</strong> Admin, School Admin</li>
             <li><strong>Write:</strong> All authenticated users (own actions)</li>
+          </ul>
+        </div>
+        <div class="rule-card">
+          <h4>📝 Feedback Forms</h4>
+          <ul>
+            <li><strong>Read:</strong> Admin, School Admin, SPED Chair, 504 Coordinator, Case Manager</li>
+            <li><strong>Write:</strong> Admin, School Admin, SPED Chair, 504 Coordinator, Case Manager</li>
+            <li><strong>Delete:</strong> Admin, School Admin, SPED Chair, 504 Coordinator</li>
+          </ul>
+        </div>
+        <div class="rule-card">
+          <h4>💾 Backups</h4>
+          <ul>
+            <li><strong>Read/Write:</strong> Admin, School Admin</li>
+            <li><strong>Delete:</strong> Admin, School Admin</li>
           </ul>
         </div>
       </div>
@@ -136,215 +146,232 @@
 
 <script setup>
 import { computed } from 'vue'
+import { 
+  ShieldCheck, 
+  UserCog, 
+  UserSearch, 
+  UserPen, 
+  Settings, 
+  UserCheck, 
+  UserPlus, 
+  User, 
+  HelpCircle,
+  Stethoscope
+} from 'lucide-vue-next'
+import { 
+  VALID_ROLES,
+  PERMISSIONS_MATRIX, 
+  PERMISSION_ACTIONS,
+  ROLE_DESCRIPTIONS 
+} from '@/config/roles'
 
-// Hard-coded permissions that match Firebase rules and role-based views
-const ROLE_PERMISSIONS = {
-  admin: [
-    'view_users', 'edit_user', 'delete_user', 'manage_subjects', 'manage_roles',
-    'view_students', 'edit_student_all', 'admin_panel_full', 'testing_all',
-    'security_controls', 'backup_restore', 'system_config'
-  ],
-  administrator: [
-    'view_users', 'edit_user', 'delete_user', 'manage_subjects', 'manage_roles',
-    'view_students', 'edit_student_all', 'admin_panel_full', 'testing_all'
-  ],
-  administrator_504_CM: [
-    'view_users', 'edit_user', 'delete_user', 'manage_subjects', 'manage_roles',
-    'view_students', 'edit_student_all', 'admin_panel_limited'
-  ],
-  sped_chair: [
-    'view_users', 'view_students', 'edit_student_all', 'admin_panel_sped',
-    'security_monitoring', 'aide_management'
-  ],
-  case_manager: [
-    'view_users', 'view_students', 'edit_student_cm', 'testing_partial'
-  ],
-  teacher: [
-    'view_users', 'view_students', 'testing_partial'
-  ],
-  paraeducator: [
-    'view_users', 'view_students', 'aide_schedule'
-  ],
-  service_provider: [
-    'view_users', 'view_students'
-  ]
+// Use PERMISSIONS_MATRIX as the single source of truth for the matrix table
+// For the cards, we'll use PERMISSIONS_MATRIX directly to show actual permissions count
+const ROLE_PERMISSIONS = PERMISSIONS_MATRIX
+
+// Sort roles by permission count (most to least)
+const roles = computed(() => {
+  return VALID_ROLES.slice().sort((a, b) => {
+    const aPermissions = ROLE_PERMISSIONS[a]?.length || 0
+    const bPermissions = ROLE_PERMISSIONS[b]?.length || 0
+    return bPermissions - aPermissions // Descending order
+  })
+})
+
+// Icon mapping for roles
+const roleIcons = {
+  admin: ShieldCheck,
+  school_admin: UserCog,
+  staff_view: UserSearch,
+  staff_edit: UserPen,
+  admin_504: Settings,
+  sped_chair: UserCheck,
+  case_manager: UserPlus,
+  teacher: User,
+  paraeducator: HelpCircle,
+  service_provider: Stethoscope
 }
 
-const roles = ['admin', 'administrator', 'administrator_504_CM', 'sped_chair', 'case_manager', 'teacher', 'paraeducator', 'service_provider']
+// Generate role data dynamically from roles.js
+const roleData = computed(() => {
+  return roles.value.map(roleKey => {
+    const permissions = ROLE_PERMISSIONS[roleKey] || []
+    const hasAdminPanel = permissions.some(p => p.includes('admin_panel'))
+    
+    // Determine admin access level
+    let adminLevel = 'No Access'
+    let adminDescription = 'No admin panel access'
+    
+    if (permissions.includes('admin_panel_full')) {
+      adminLevel = 'Full Access'
+      adminDescription = 'All admin panel features including permissions management'
+    } else if (permissions.includes('admin_panel_school')) {
+      adminLevel = 'School Access'
+      adminDescription = 'School operations, users, aides, and students'
+    } else if (permissions.includes('admin_panel_limited')) {
+      adminLevel = 'Limited Access'
+      adminDescription = 'Student management, aide management, and 504-related functions'
+    } else if (permissions.includes('admin_panel_sped')) {
+      adminLevel = 'SPED Access'
+      adminDescription = 'SPED program management and aide oversight'
+    }
+    
+    // Determine student access level based on actual permissions and database query restrictions
+    let studentAccessLevel = 'Viewer'
+    
+    if (permissions.includes(PERMISSION_ACTIONS.EDIT_STUDENT_ALL)) {
+      // Roles that can edit ALL students without restrictions
+      if (roleKey === 'admin' || roleKey === 'school_admin') {
+        studentAccessLevel = 'Admin'
+      } else if (roleKey === 'staff_edit') {
+        // Staff Editor: Can edit all students but no admin panel access
+        studentAccessLevel = 'Editor'
+      } else if (roleKey === 'sped_chair') {
+        // SPED Chair: Can only see/edit IEP students (database filtered)
+        studentAccessLevel = 'Admin/CM'
+      } else if (roleKey === 'admin_504') {
+        // 504 Coordinator: Can see all students but focuses on 504 students
+        studentAccessLevel = 'Admin/CM'
+      }
+    } else if (permissions.includes(PERMISSION_ACTIONS.EDIT_STUDENT_CM)) {
+      if (roleKey === 'admin_504') {
+        // 504 Coordinator: Can see all students but only edit 504 students on caseload
+        studentAccessLevel = 'Admin/CM'
+      } else {
+        // Case managers and service providers: own caseload only
+        studentAccessLevel = 'CM'
+      }
+    }
+    
+    // Get role name from key (capitalize and format)
+    const roleName = roleKey === 'admin_504' ? '504 Coordinator' :
+                     roleKey === 'sped_chair' ? 'SPED Chair' :
+                     roleKey === 'school_admin' ? 'School Administrator' :
+                     roleKey === 'staff_view' ? 'Staff Viewer' :
+                     roleKey === 'staff_edit' ? 'Staff Editor' :
+                     roleKey === 'case_manager' ? 'Case Manager' :
+                     roleKey === 'service_provider' ? 'Service Provider' :
+                     roleKey.charAt(0).toUpperCase() + roleKey.slice(1)
+    
+    return {
+      key: roleKey,
+      name: roleName,
+      icon: roleIcons[roleKey] || User,
+      description: ROLE_DESCRIPTIONS[roleKey] || `${roleName} role`,
+      adminAccess: hasAdminPanel,
+      adminLevel,
+      adminDescription,
+      studentAccessLevel,
+      permissions
+    }
+  })
+})
 
-const roleData = [
-  {
-    key: 'admin',
-    name: 'Admin',
-    icon: '👑',
-    description: 'Full system access and control',
-    adminAccess: true,
-    adminLevel: 'Full Access',
-    adminDescription: 'All admin panel features including permissions management',
-    testingLevel: 'All',
-    permissions: ROLE_PERMISSIONS.admin
-  },
-  {
-    key: 'administrator',
-    name: 'Administrator',
-    icon: '👨‍💼',
-    description: 'Administrative management without system permissions',
-    adminAccess: true,
-    adminLevel: 'Full Access',
-    adminDescription: 'All admin panel features except permissions management',
-    testingLevel: 'All',
-    permissions: ROLE_PERMISSIONS.administrator
-  },
-  {
-    key: 'administrator_504_CM',
-    name: 'Administrator 504/CM',
-    icon: '📋',
-    description: '504 plan and case management administration',
-    adminAccess: true,
-    adminLevel: 'Limited Access',
-    adminDescription: 'Student management and 504-related functions',
-    testingLevel: 'None',
-    permissions: ROLE_PERMISSIONS.administrator_504_CM
-  },
-  {
-    key: 'sped_chair',
-    name: 'SPED Chair',
-    icon: '🎓',
-    description: 'Special education program oversight',
-    adminAccess: true,
-    adminLevel: 'SPED Access',
-    adminDescription: 'SPED program management and aide oversight',
-    testingLevel: 'None',
-    permissions: ROLE_PERMISSIONS.sped_chair
-  },
-  {
-    key: 'case_manager',
-    name: 'Case Manager',
-    icon: '👩‍🏫',
-    description: 'Individual student case management',
-    adminAccess: false,
-    testingLevel: 'Partial',
-    permissions: ROLE_PERMISSIONS.case_manager
-  },
-  {
-    key: 'teacher',
-    name: 'Teacher',
-    icon: '🍎',
-    description: 'Classroom teacher with student access',
-    adminAccess: false,
-    testingLevel: 'Partial',
-    permissions: ROLE_PERMISSIONS.teacher
-  },
-  {
-    key: 'paraeducator',
-    name: 'Paraeducator',
-    icon: '🤝',
-    description: 'Educational aide with schedule access',
-    adminAccess: false,
-    testingLevel: 'None',
-    permissions: ROLE_PERMISSIONS.paraeducator
-  },
-  {
-    key: 'service_provider',
-    name: 'Service Provider',
-    icon: '⚕️',
-    description: 'Related services provider',
-    adminAccess: false,
-    testingLevel: 'None',
-    permissions: ROLE_PERMISSIONS.service_provider
-  }
-]
+// Generate permissions list from actual PERMISSION_ACTIONS and sort by number of roles with access
+const permissionsList = computed(() => {
+  const basePermissions = [
+    {
+      key: PERMISSION_ACTIONS.VIEW_USERS,
+      name: 'View Users',
+      description: 'Can view user accounts and basic information',
+      firebaseRule: 'All authenticated users'
+    },
+    {
+      key: PERMISSION_ACTIONS.EDIT_USER,
+      name: 'Edit Users',
+      description: 'Can modify user accounts and profiles',
+      firebaseRule: 'Admin, School Admin, 504 Coordinator, SPED Chair'
+    },
+    {
+      key: PERMISSION_ACTIONS.DELETE_USER,
+      name: 'Delete Users',
+      description: 'Can remove user accounts',
+      firebaseRule: 'Admin, School Admin, 504 Coordinator, SPED Chair'
+    },
+    {
+      key: PERMISSION_ACTIONS.MANAGE_TEACHER_FEEDBACK,
+      name: 'Manage Teacher Feedback',
+      description: 'Can create and manage teacher feedback forms',
+      firebaseRule: 'Admin, School Admin, SPED Chair, 504 Coordinator, Case Manager'
+    },
+    {
+      key: PERMISSION_ACTIONS.MANAGE_IMPORTS,
+      name: 'Manage Data Imports',
+      description: 'Can import data from SEIS, Aeries, and other sources',
+      firebaseRule: 'Admin, School Admin'
+    },
+    {
+      key: PERMISSION_ACTIONS.MANAGE_BACKUPS,
+      name: 'Manage Backups',
+      description: 'Can create, restore, and manage database backups',
+      firebaseRule: 'Admin, School Admin'
+    },
+    {
+      key: PERMISSION_ACTIONS.VIEW_STUDENTS,
+      name: 'View Students',
+      description: 'Can view student records (role-filtered)',
+      firebaseRule: 'All authenticated users'
+    },
+    {
+      key: PERMISSION_ACTIONS.EDIT_STUDENT_CM,
+      name: 'Edit Own Caseload',
+      description: 'Can modify students on own caseload',
+      firebaseRule: 'Case Manager, Service Provider'
+    },
+    {
+      key: PERMISSION_ACTIONS.EDIT_STUDENT_ALL,
+      name: 'Edit All Students',
+      description: 'Can modify any student record',
+      firebaseRule: 'Admin, School Admin, Staff Edit, 504 Coordinator, SPED Chair'
+    },
+    {
+      key: PERMISSION_ACTIONS.ACCESS_ADMIN_PANEL,
+      name: 'Admin Panel Access',
+      description: 'Can access administrative functions',
+      firebaseRule: 'Admin, School Admin, SPED Chair, 504 Coordinator'
+    },
+    {
+      key: PERMISSION_ACTIONS.MANAGE_AIDES,
+      name: 'Aide Management',
+      description: 'Can manage aide assignments and schedules',
+      firebaseRule: 'Admin, School Admin, SPED Chair, 504 Coordinator'
+    },
+    {
+      key: PERMISSION_ACTIONS.MANAGE_SYSTEM_SETTINGS,
+      name: 'System Settings',
+      description: 'Can modify system-level configuration',
+      firebaseRule: 'Admin only'
+    }
+  ]
 
-const permissionsList = [
-  {
-    key: 'view_users',
-    name: 'View Users',
-    description: 'Can view user accounts and basic information',
-    firebaseRule: 'Authenticated users only'
-  },
-  {
-    key: 'edit_user',
-    name: 'Edit Users',
-    description: 'Can modify user accounts and roles',
-    firebaseRule: 'Admin, Administrator, Administrator 504/CM'
-  },
-  {
-    key: 'delete_user',
-    name: 'Delete Users',
-    description: 'Can remove user accounts',
-    firebaseRule: 'Admin, Administrator only'
-  },
-  {
-    key: 'view_students',
-    name: 'View Students',
-    description: 'Can view student records (role-filtered)',
-    firebaseRule: 'All authenticated users'
-  },
-  {
-    key: 'edit_student_all',
-    name: 'Edit All Students',
-    description: 'Can modify any student record',
-    firebaseRule: 'Admin, Administrator, Administrator 504/CM, SPED Chair'
-  },
-  {
-    key: 'edit_student_cm',
-    name: 'Edit Own Caseload',
-    description: 'Can modify students on own caseload',
-    firebaseRule: 'Case Manager (caseload validation)'
-  },
-  {
-    key: 'admin_panel_full',
-    name: 'Full Admin Panel',
-    description: 'Access to all admin panel features',
-    firebaseRule: 'Admin, Administrator'
-  },
-  {
-    key: 'admin_panel_limited',
-    name: 'Limited Admin Panel',
-    description: 'Access to student management features',
-    firebaseRule: 'Administrator 504/CM'
-  },
-  {
-    key: 'admin_panel_sped',
-    name: 'SPED Admin Panel',
-    description: 'Access to SPED program management',
-    firebaseRule: 'SPED Chair'
-  },
-  {
-    key: 'testing_all',
-    name: 'Full Testing Access',
-    description: 'Can access all students in testing view',
-    firebaseRule: 'Admin, Administrator'
-  },
-  {
-    key: 'testing_partial',
-    name: 'Partial Testing Access',
-    description: 'Can access assigned students in testing view',
-    firebaseRule: 'Case Manager, Teacher'
-  },
-  {
-    key: 'security_controls',
-    name: 'Security Controls',
-    description: 'Access to security monitoring and controls',
-    firebaseRule: 'Admin only'
-  },
-  {
-    key: 'aide_management',
-    name: 'Aide Management',
-    description: 'Can manage aide assignments and schedules',
-    firebaseRule: 'Admin, Administrator, SPED Chair'
-  },
-  {
-    key: 'aide_schedule',
-    name: 'Aide Schedule Access',
-    description: 'Can view own aide schedule',
-    firebaseRule: 'Paraeducator'
-  }
-]
+  // Sort permissions by number of roles that have access (most to least)
+  return basePermissions.sort((a, b) => {
+    const aCount = VALID_ROLES.filter(role => ROLE_PERMISSIONS[role]?.includes(a.key)).length
+    const bCount = VALID_ROLES.filter(role => ROLE_PERMISSIONS[role]?.includes(b.key)).length
+    return bCount - aCount // Descending order (most access first)
+  })
+})
 
 // Helper function to check if a role has a permission
 const hasPermission = (role, permission) => {
   return ROLE_PERMISSIONS[role]?.includes(permission) || false
+}
+
+// Helper function to get short role names for table headers
+const getShortRoleName = (roleKey) => {
+  const shortNames = {
+    admin: 'Admin',
+    school_admin: 'School Admin',
+    staff_view: 'Staff View',
+    staff_edit: 'Staff Edit',
+    admin_504: '504 Coord',
+    sped_chair: 'SPED Chair',
+    case_manager: 'Case Mgr',
+    teacher: 'Teacher',
+    service_provider: 'Service',
+    paraeducator: 'Para'
+  }
+  return shortNames[roleKey] || roleKey
 }
 </script>
 
@@ -387,35 +414,49 @@ const hasPermission = (role, permission) => {
 }
 
 .role-header {
-  display: flex;
+ display: flex;
   align-items: center;
   padding: 20px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
-.role-header.admin { background: linear-gradient(135deg, #ffd700 0%, #ffed4a 100%); }
-.role-header.administrator { background: linear-gradient(135deg, #007bff 0%, #4dabf7 100%); }
-.role-header.administrator_504_CM { background: linear-gradient(135deg, #28a745 0%, #51cf66 100%); }
-.role-header.sped_chair { background: linear-gradient(135deg, #6f42c1 0%, #9775fa 100%); }
-.role-header.case_manager { background: linear-gradient(135deg, #17a2b8 0%, #3bc9db 100%); }
-.role-header.teacher { background: linear-gradient(135deg, #fd7e14 0%, #ff922b 100%); }
-.role-header.paraeducator { background: linear-gradient(135deg, #20c997 0%, #38d9a9 100%); }
-.role-header.service_provider { background: linear-gradient(135deg, #e83e8c 0%, #f06292 100%); }
+
+/* Rainbow gradient colors - Admin stays grey, then purple to yellow */
+.role-header.admin { background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%); }
+.role-header.school_admin { background: linear-gradient(135deg, #6f42c1 0%, #9775fa 100%); } /* Purple */
+.role-header.staff_view { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); } /* Blue */
+.role-header.staff_edit { background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%); } /* Cyan */
+.role-header.admin_504 { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); } /* Green */
+.role-header.sped_chair { background: linear-gradient(135deg, #84cc16 0%, #a3e635 100%); } /* Lime */
+.role-header.case_manager { background: linear-gradient(135deg, #eab308 0%, #facc15 100%); } /* Yellow */
+.role-header.teacher { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); } /* Amber */
+.role-header.service_provider { background: linear-gradient(135deg, #ef4444 0%, #f87171 100%); } /* Red */
+.role-header.paraeducator { background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%); } /* Pink */
 
 .role-icon {
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   margin-right: 15px;
+}
+
+.role-icon svg {
+  width: 24px;
+  height: 24px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .role-info h3 {
   margin: 0 0 5px 0;
-  color: #2c3e50;
+  color: #ffffff;
   font-size: 18px;
 }
 
 .role-info p {
   margin: 0;
-  color: #666;
+  color: #f7f5f5;
   font-size: 14px;
 }
 
@@ -477,13 +518,15 @@ const hasPermission = (role, permission) => {
 }
 
 .matrix-table th {
-  background: #f8f9fa;
-  padding: 12px 8px;
+  background: #f8f9fa!important;
+  padding: 30px 8px;
+  font-size: 20px;
   text-align: left;
   font-weight: 600;
   color: #2c3e50;
-  border-bottom: 2px solid #e9ecef;
+  border: 1px solid #e9ecef;
   white-space: nowrap;
+  display: table-cell;
 }
 
 .permission-column {
@@ -491,9 +534,32 @@ const hasPermission = (role, permission) => {
   min-width: 200px;
 }
 
-.role-header {
+.matrix-table .role-header {
   text-align: center;
   width: 80px;
+  position: relative;
+  height: 60px;
+  vertical-align: bottom;
+  padding: 0;
+}
+.matrix-table td{
+  border:1px solid #dddede;
+}
+.matrix-table .role-header {
+  background: linear-gradient(135deg, transparent 40%, #f8f9fa 40%, #f8f9fa 60%, transparent 60%);
+}
+
+.matrix-table .role-header::after {
+  content: attr(data-role);
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-45deg);
+  transform-origin: center;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #2c3e50;
 }
 
 .permission-row {

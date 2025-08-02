@@ -211,8 +211,8 @@ const { currentUser } = useAuth()
 const userRole = computed(() => currentUser.value?.role || null)
 const isAdmin = computed(() => [
   'admin',
-  'administrator',
-  'administrator_504_CM',
+  'school_admin',
+  'admin_504',
   'sped_chair'
 ].includes(userRole.value))
 

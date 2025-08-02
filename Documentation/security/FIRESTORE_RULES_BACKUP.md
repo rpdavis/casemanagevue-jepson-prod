@@ -1,8 +1,37 @@
 # Firestore Rules Backup
 
-**Latest Update:** January 20, 2025 - Automatic Sheet Creation System
+**Latest Update:** January 20, 2025 - PERMISSIONS AUDIT & TEACHER FEEDBACK SECURITY UPDATE
 
-## Latest Update: Automatic Sheet Creation System
+## Latest Update: Permissions Audit & Teacher Feedback Security
+
+### Overview:
+Completed comprehensive permissions audit and updated teacher feedback security rules. Fixed SPED Chair permissions mismatch between roles.js and Firebase rules. Updated teacher feedback permissions to properly include all admin roles (admin, school_admin, sped_chair, admin_504) plus case managers.
+
+### Key Changes:
+
+#### 1. **SPED Chair Permissions Fixed**
+- **Added missing permissions:** `EDIT_USER`, `DELETE_USER` to match Firebase rules
+- **Firebase rules:** SPED Chair included in `isAnyAdmin()` function
+- **Business logic:** SPED Chair manages special education programs and needs user management access
+
+#### 2. **Teacher Feedback Permissions Corrected**
+- **Read/Write Access:** Admin, School Admin, SPED Chair, 504 Coordinator, Case Manager
+- **Delete Access:** Admin, School Admin, SPED Chair, 504 Coordinator
+- **Business justification:** 
+  - 504 Coordinators run meetings and act as case managers
+  - School Admins manage workspace accounts and need operational access
+  - Teacher feedback forms are operational documents, not confidential
+
+#### 3. **Case Manager Permissions Updated**
+- **Added:** `MANAGE_TEACHER_FEEDBACK` permission
+- **Justification:** Case managers work directly with teachers and need feedback form access
+
+#### 4. **Permissions Overview Accuracy**
+- Updated `PermissionsOverview.vue` to reflect actual Firebase rules
+- Fixed discrepancies between displayed permissions and actual rules
+- Ensured single source of truth between `roles.js` and Firebase rules
+
+## Previous Update: Automatic Sheet Creation System
 
 ### Overview:
 Implemented a comprehensive automatic Google Sheet creation system for feedback forms. This system creates organized sheets with multiple tabs (Summary, Template, and individual student tabs) when forms are created and used. Also includes enhanced student tab creation when feedback forms are sent.
@@ -289,7 +318,7 @@ Improved `hasStaffIdsFilter()` to search all WHERE clauses:
 }
 ```
 
-### Current Rules (331 lines):
+### Current Rules (340 lines):
 ```firestore
 rules_version = '2';
 
@@ -329,20 +358,32 @@ service cloud.firestore {
     }
     
     // Admin role checks
-    function isSuperAdmin() { 
-      return role() in ['admin', 'sped_chair']; 
+    function isAdmin() { 
+      return role() == 'admin'; 
     }
     
-    function isAdministrator() { 
-      return role() == 'administrator'; 
+    function isSchoolAdmin() { 
+      return role() == 'school_admin'; 
     }
     
     function isAdmin504() { 
-      return role() == 'administrator_504_CM'; 
+      return role() == 'admin_504'; 
+    }
+    
+    function isSpedChair() {
+      return role() == 'sped_chair';
+    }
+    
+    function isStaffView() {
+      return role() == 'staff_view';
+    }
+    
+    function isStaffEdit() {
+      return role() == 'staff_edit';
     }
     
     function isAnyAdmin() { 
-      return isSuperAdmin() || isAdministrator() || isAdmin504(); 
+      return isAdmin() || isSchoolAdmin() || isAdmin504() || isSpedChair(); 
     }
     
     // Staff role checks

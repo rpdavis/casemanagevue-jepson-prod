@@ -327,7 +327,18 @@ const addForm = async () => {
     provider.addScope('https://www.googleapis.com/auth/spreadsheets')
     
     // Sign in with popup to get Google Drive access
-    const result = await signInWithPopup(auth, provider)
+    // Note: This popup is necessary for Google Drive API access
+    // We'll handle COOP errors gracefully
+    let result
+    try {
+      result = await signInWithPopup(auth, provider)
+    } catch (popupError) {
+      if (popupError.code === 'auth/popup-closed-by-user' || 
+          popupError.message.includes('Cross-Origin-Opener-Policy')) {
+        throw new Error('❌ Authentication popup was blocked or closed. Please allow popups for this site and try again.')
+      }
+      throw popupError
+    }
     const credential = GoogleAuthProvider.credentialFromResult(result)
     const accessToken = credential.accessToken
     
@@ -355,6 +366,8 @@ const addForm = async () => {
       error.value = '❌ Authentication cancelled. Please try again and allow Google Drive access.'
     } else if (error.code === 'auth/popup-blocked') {
       error.value = '❌ Popup blocked. Please allow popups for this site and try again.'
+    } else if (error.message && error.message.includes('Cross-Origin-Opener-Policy')) {
+      error.value = '❌ Browser security policy blocked the authentication popup. Please try again or contact support.'
     } else {
       error.value = error.message || 'Failed to create feedback form'
     }
@@ -371,12 +384,12 @@ const closeCreateForm = () => {
 }
 
 const openForm = (form) => {
-  window.open(form.formUrl, '_blank')
+  window.open(form.formUrl, '_blank', 'noopener,noreferrer')
 }
 
 const editForm = async (form) => {
   // For now, just open the form URL for editing
-  window.open(form.formUrl, '_blank')
+  window.open(form.formUrl, '_blank', 'noopener,noreferrer')
 }
 
 const deleteForm = async (form) => {

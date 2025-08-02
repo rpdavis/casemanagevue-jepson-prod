@@ -219,13 +219,13 @@ export function useBaseRoleView(studentData, filterData) {
       return filters.providerView !== 'service_provider' && filters.teacher === 'all'
     }
     
-    // Sped chairs and administrator_504_CM can use class view ONLY in SP mode or when filtering by teacher
-    if (['sped_chair', 'administrator_504_CM'].includes(role)) {
+    // Sped chairs and admin_504 can use class view ONLY in SP mode or when filtering by teacher
+    if (['sped_chair', 'admin_504', 'administrator_504_CM'].includes(role)) {
       return filters.providerView !== 'service_provider' && filters.teacher === 'all'
     }
     
-    // Admin and administrator can use class view when filtering by teacher or paraeducator
-    if (['admin', 'administrator'].includes(role)) {
+    // Admin and staff roles can use class view when filtering by teacher or paraeducator
+    if (['admin', 'school_admin', 'staff_view', 'staff_edit', 'administrator'].includes(role)) {
       return filters.teacher === 'all' && filters.paraeducator === 'all'
     }
     
@@ -241,15 +241,18 @@ export function useBaseRoleView(studentData, filterData) {
   // Check if user has admin-level permissions
   const isAdminRole = computed(() => {
     const role = currentUser.value?.role
-    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
+    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair',
+            // Legacy roles for backward compatibility
+            'administrator', 'administrator_504_CM'].includes(role)
   })
 
   // Check if user can access filters - only specific admin roles
   const canAccessFilters = computed(() => {
     const role = currentUser.value?.role
-    // Only admin, administrator, administrator_504_CM, and sped_chair can access filters
-    // BUT also allow other roles to see students (just not the filter UI)
-    return ['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)
+    // Only admin roles can access filters - BUT also allow other roles to see students (just not the filter UI)
+    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair',
+            // Legacy roles for backward compatibility
+            'administrator', 'administrator_504_CM'].includes(role)
   })
 
   // Auto-switch to list view when class view becomes disabled

@@ -1,7 +1,8 @@
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { formatListFromText, getDisplayValue, getSourceValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { usePeriodLabels } from '@/composables/usePeriodLabels'
+import { auditLogger } from '@/utils/auditLogger'
 
 /**
  * Composable for StudentTable logic and data processing
@@ -17,6 +18,16 @@ export function useStudentTable(props) {
       console.log('StudentTable: Loading app settings...')
       await loadAppSettings()
       console.log('StudentTable: App settings loaded successfully')
+      
+      // Log student table access
+      if (props.studentData.students.value.length > 0) {
+        await auditLogger.logStudentAccess('table_view', 'view', {
+          studentCount: props.studentData.students.value.length,
+          viewType: 'student_table',
+          hasFilters: Object.keys(props.filterData.activeFilters.value || {}).length > 0
+        })
+      }
+      
     } catch (error) {
       console.error('StudentTable: Error loading app settings:', error)
     }

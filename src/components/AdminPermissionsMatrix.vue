@@ -8,16 +8,19 @@
     </div>
 
     <div class="matrix-container">
-      <table class="permissions-table">
+      <div v-if="isLoading" class="loading-state">
+        <p>Loading permissions...</p>
+      </div>
+      <table v-else class="permissions-table">
         <thead>
           <tr>
             <th class="page-column">Admin Panel Page</th>
-            <th class="role-column">Administrator</th>
-            <th class="role-column">Administrator 504/CM</th>
+            <th class="role-column">School Admin</th>
+            <th class="role-column">504 Coordinator</th>
             <th class="role-column">SPED Chair</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody v-if="isReady">
           <tr v-for="page in adminPages" :key="page.key" class="permission-row">
             <td class="page-info">
               <div class="page-name">{{ page.label }}</div>
@@ -25,30 +28,33 @@
               <div class="page-description">{{ page.description }}</div>
             </td>
             <td class="permission-cell">
-              <label class="permission-toggle">
+              <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'school_admin') }">
                 <input 
                   type="checkbox" 
-                  v-model="permissions[page.key].administrator"
-                  @change="updatePermissions(page.key, 'administrator', $event.target.checked)"
+                  v-model="permissions[page.key].school_admin"
+                  :disabled="isPageDisabledForRole(page.key, 'school_admin')"
+                  @change="updatePermissions(page.key, 'school_admin', $event.target.checked)"
                 />
                 <span class="toggle-slider"></span>
               </label>
             </td>
             <td class="permission-cell">
-              <label class="permission-toggle">
+              <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'admin_504') }">
                 <input 
                   type="checkbox" 
-                  v-model="permissions[page.key].administrator_504_CM"
-                  @change="updatePermissions(page.key, 'administrator_504_CM', $event.target.checked)"
+                  v-model="permissions[page.key].admin_504"
+                  :disabled="isPageDisabledForRole(page.key, 'admin_504')"
+                  @change="updatePermissions(page.key, 'admin_504', $event.target.checked)"
                 />
                 <span class="toggle-slider"></span>
               </label>
             </td>
             <td class="permission-cell">
-              <label class="permission-toggle">
+              <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'sped_chair') }">
                 <input 
                   type="checkbox" 
                   v-model="permissions[page.key].sped_chair"
+                  :disabled="isPageDisabledForRole(page.key, 'sped_chair')"
                   @change="updatePermissions(page.key, 'sped_chair', $event.target.checked)"
                 />
                 <span class="toggle-slider"></span>
@@ -57,17 +63,17 @@
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
 
     <div class="matrix-actions">
       <div class="bulk-actions">
         <h3>Bulk Actions</h3>
         <div class="bulk-buttons">
-          <button @click="grantAllToRole('administrator')" class="btn btn-success">
-            Grant All to Administrator
+          <button @click="grantAllToRole('school_admin')" class="btn btn-success">
+            Grant All to School Admin
           </button>
-          <button @click="grantAllToRole('administrator_504_CM')" class="btn btn-success">
-            Grant All to Administrator 504/CM
+          <button @click="grantAllToRole('admin_504')" class="btn btn-success">
+            Grant All to 504 Coordinator
           </button>
           <button @click="grantAllToRole('sped_chair')" class="btn btn-success">
             Grant All to SPED Chair
@@ -91,12 +97,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '@/firebase'
 
 // Save status
 const saveStatus = ref(null)
+const isLoading = ref(true)
+
+// Computed property to check if component is ready
+const isReady = computed(() => {
+  return !isLoading.value && adminPages.value.length > 0 && Object.keys(permissions).length > 0
+})
 
 // Admin pages configuration
 const adminPages = ref([
@@ -121,23 +133,28 @@ const adminPages = ref([
   { key: 'teacher-feedback', label: 'Teacher Feedback Forms', category: 'Data Integration', description: 'Manage teacher feedback system' },
   { key: 'backup-restore', label: 'Backup & Restore', category: 'Data Integration', description: 'Database backup and restore' },
   
-  // System Configuration
-  { key: 'permissions', label: 'Permissions', category: 'System Config', description: 'User role and permission management' },
-  { key: 'settings', label: 'App Settings', category: 'System Config', description: 'Global application settings' },
-  { key: 'iep-security', label: 'IEP Security', category: 'System Config', description: 'IEP data encryption and security' },
-  { key: 'security', label: 'Security Controls', category: 'System Config', description: 'Security monitoring and controls' },
+  // Settings (renamed from System Configuration)
+  { key: 'settings', label: 'App Settings', category: 'Settings', description: 'Global application settings' },
   
-  // System Monitoring
-  { key: 'component-health', label: 'Component Debug', category: 'System Monitoring', description: 'Component health and debugging' }
+  // Bulk Actions (new category for dangerous operations)
+  { key: 'delete-all-users', label: 'Delete All Users', category: 'Bulk Actions', description: 'Mass deletion of user accounts (dangerous operation)' },
+  { key: 'delete-all-students', label: 'Delete All Students', category: 'Bulk Actions', description: 'Mass deletion of student records (dangerous operation)' },
+  
+  // System (admin-only access - renamed from System Monitoring)
+  { key: 'permissions', label: 'Admin Panel Permissions', category: 'System', description: 'User role and permission management' },
+  { key: 'audit-logs', label: 'Audit Logs', category: 'System', description: 'View and search system audit logs' },
+  { key: 'iep-security', label: 'IEP Security', category: 'System', description: 'IEP data encryption and security' },
+  { key: 'security', label: 'Security Controls', category: 'System', description: 'Security monitoring and controls' },
+  { key: 'component-health', label: 'Component Debug', category: 'System', description: 'Component health and debugging' }
 ])
 
 // Permissions matrix - reactive object
 const permissions = reactive({})
 
-// Default permissions for each role
+// Default permissions for each role (based on Firebase rules and roles.js)
 const defaultPermissions = {
-  administrator: {
-    // Full access to user and student management, data integration, basic monitoring
+  school_admin: {
+    // School-level administration - as YOU specified
     dashboard: true,
     usersAdd: true,
     usersEdit: true,
@@ -145,69 +162,91 @@ const defaultPermissions = {
     addStudents: true,
     'aide-assignment': true,
     'aide-schedule': true,
-    'time-table': true,
-    seis: true,
-    aeries: true,
-    'testing-links': true,
-    'teacher-feedback': true,
-    'backup-restore': true,
-    permissions: false, // Can't modify permissions
-    settings: true,
-    'iep-security': false, // Limited security access
-    security: false, // Limited security access
-    'component-health': true
+    'time-table': true, // All admin roles get this
+    seis: false, // Default OFF as you requested
+    aeries: false, // Default OFF as you requested
+    'testing-links': true, // All admin roles get this
+    'teacher-feedback': true, // All admin roles get this
+    'backup-restore': true, // School admin only (as you specified)
+    settings: true, // Can access app settings
+    // Bulk Actions - dangerous operations
+    'delete-all-users': true, // School admin can delete all users
+    'delete-all-students': true, // School admin can delete all students
+    // System category - admin only
+    permissions: false,
+    'audit-logs': false,
+    'iep-security': false,
+    security: false,
+    'component-health': false
   },
-  administrator_504_CM: {
-    // Focus on student management and 504 plan related functions
+  admin_504: {
+    // 504 plan coordination - as YOU specified
     dashboard: true,
-    usersAdd: false, // Limited user management
-    usersEdit: true,
+    usersAdd: true, // Can add users
+    usersEdit: true, // Can edit users
     students: true,
     addStudents: true,
-    'aide-assignment': false, // Limited aide management
-    'aide-schedule': false,
-    'time-table': false,
-    seis: true,
-    aeries: true,
-    'testing-links': false, // Limited testing access
-    'teacher-feedback': true,
-    'backup-restore': false, // No backup access
-    permissions: false, // Can't modify permissions
+    'aide-assignment': true, // Can manage aides
+    'aide-schedule': true, // Can manage aides
+    'time-table': true, // All admin roles get this
+    seis: false, // Default OFF as you requested
+    aeries: false, // Default OFF as you requested
+    'testing-links': true, // All admin roles get this
+    'teacher-feedback': true, // All admin roles get this
+    'backup-restore': false, // School admin only (as you specified)
     settings: false, // Limited settings access
-    'iep-security': false, // No security access
+    // Bulk Actions - dangerous operations (limited access)
+    'delete-all-users': false, // 504 Coordinator cannot delete all users
+    'delete-all-students': false, // 504 Coordinator cannot delete all students
+    // System category - admin only
+    permissions: false,
+    'audit-logs': false,
+    'iep-security': false,
     security: false,
     'component-health': false
   },
   sped_chair: {
-    // Full SPED program management access
+    // SPED program management - as YOU specified
     dashboard: true,
-    usersAdd: false, // Limited user creation
-    usersEdit: true,
+    usersAdd: true, // SPED Chair CAN add users (as you requested)
+    usersEdit: true, // SPED Chair CAN edit users (as you requested)
     students: true,
     addStudents: true,
     'aide-assignment': true,
     'aide-schedule': true,
-    'time-table': true,
-    seis: true,
-    aeries: true,
-    'testing-links': true,
-    'teacher-feedback': true,
-    'backup-restore': true,
-    permissions: false, // Can't modify permissions
-    settings: true,
-    'iep-security': true, // Access to IEP security
-    security: true, // Security monitoring access
-    'component-health': true
+    'time-table': true, // All admin roles get this
+    seis: false, // Default OFF as you requested
+    aeries: false, // Default OFF as you requested
+    'testing-links': true, // All admin roles get this
+    'teacher-feedback': true, // SPED Chair manages this
+    'backup-restore': false, // School admin only (as you specified)
+    settings: false, // Limited settings access
+    // Bulk Actions - dangerous operations (no access)
+    'delete-all-users': false, // SPED Chair cannot delete all users
+    'delete-all-students': false, // SPED Chair cannot delete all students
+    // System category - admin only
+    permissions: false,
+    'audit-logs': false,
+    'iep-security': false,
+    security: false,
+    'component-health': false
   }
 }
 
 // Initialize permissions structure
 const initializePermissions = () => {
+  if (!adminPages.value || adminPages.value.length === 0) {
+    console.warn('adminPages not initialized yet')
+    return
+  }
+  
   adminPages.value.forEach(page => {
-    permissions[page.key] = {
-      administrator: defaultPermissions.administrator[page.key] || false,
-      administrator_504_CM: defaultPermissions.administrator_504_CM[page.key] || false,
-      sped_chair: defaultPermissions.sped_chair[page.key] || false
+    if (page && page.key) {
+      permissions[page.key] = {
+        school_admin: defaultPermissions.school_admin[page.key] || false,
+        admin_504: defaultPermissions.admin_504[page.key] || false,
+        sped_chair: defaultPermissions.sped_chair[page.key] || false
+      }
     }
   })
 }
@@ -222,10 +261,10 @@ const loadPermissions = async () => {
       const data = docSnap.data()
       // Merge loaded permissions with defaults
       adminPages.value.forEach(page => {
-        if (data[page.key]) {
+        if (page && page.key && data[page.key]) {
           permissions[page.key] = {
-            administrator: data[page.key].administrator ?? defaultPermissions.administrator[page.key],
-            administrator_504_CM: data[page.key].administrator_504_CM ?? defaultPermissions.administrator_504_CM[page.key],
+            school_admin: data[page.key].school_admin ?? defaultPermissions.school_admin[page.key],
+            admin_504: data[page.key].admin_504 ?? defaultPermissions.admin_504[page.key],
             sped_chair: data[page.key].sped_chair ?? defaultPermissions.sped_chair[page.key]
           }
         }
@@ -241,6 +280,8 @@ const loadPermissions = async () => {
     showSaveStatus('Error loading permissions', 'error')
     // Fall back to defaults
     initializePermissions()
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -258,14 +299,18 @@ const savePermissions = async () => {
 
 // Update individual permission
 const updatePermissions = async (pageKey, role, value) => {
-  permissions[pageKey][role] = value
-  await savePermissions()
+  if (permissions[pageKey]) {
+    permissions[pageKey][role] = value
+    await savePermissions()
+  }
 }
 
 // Bulk actions
 const grantAllToRole = async (role) => {
   adminPages.value.forEach(page => {
-    permissions[page.key][role] = true
+    if (page && page.key && permissions[page.key]) {
+      permissions[page.key][role] = true
+    }
   })
   await savePermissions()
   showSaveStatus(`All permissions granted to ${role}`, 'success')
@@ -273,9 +318,11 @@ const grantAllToRole = async (role) => {
 
 const revokeAllPermissions = async () => {
   adminPages.value.forEach(page => {
-    permissions[page.key].administrator = false
-    permissions[page.key].administrator_504_CM = false
-    permissions[page.key].sped_chair = false
+    if (page && page.key && permissions[page.key]) {
+      permissions[page.key].school_admin = false
+      permissions[page.key].admin_504 = false
+      permissions[page.key].sped_chair = false
+    }
   })
   await savePermissions()
   showSaveStatus('All permissions revoked', 'warning')
@@ -287,6 +334,37 @@ const resetToDefaults = async () => {
   showSaveStatus('Permissions reset to defaults', 'info')
 }
 
+// Check if a page should be disabled for a role (based on Firebase rules)
+const isPageDisabledForRole = (pageKey, role) => {
+  // System category pages - only admin can access these
+  const systemPages = ['permissions', 'iep-security', 'security', 'component-health']
+  if (systemPages.includes(pageKey)) {
+    return true // Always disabled for non-admin roles
+  }
+  
+  // Bulk Actions - dangerous operations (restricted access)
+  const bulkActionPages = ['delete-all-users', 'delete-all-students']
+  if (bulkActionPages.includes(pageKey)) {
+    // Only school_admin should have access to bulk delete operations by default
+    return role !== 'school_admin'
+  }
+  
+  // Role-specific restrictions based on Firebase rules and roles.js
+  if (role === 'admin_504') {
+    // 504 Coordinator restrictions (minimal - as YOU specified)
+    const restrictedFor504 = ['settings'] // Only settings restricted
+    return restrictedFor504.includes(pageKey)
+  }
+  
+  if (role === 'sped_chair') {
+    // SPED Chair restrictions (minimal - as YOU specified)
+    const restrictedForSped = ['settings'] // Only settings restricted
+    return restrictedForSped.includes(pageKey)
+  }
+  
+  return false // No restrictions for school_admin
+}
+
 // Show save status message
 const showSaveStatus = (message, type) => {
   saveStatus.value = { message, type }
@@ -296,9 +374,8 @@ const showSaveStatus = (message, type) => {
 }
 
 // Initialize on mount
-onMounted(() => {
-  initializePermissions()
-  loadPermissions()
+onMounted(async () => {
+  await loadPermissions()
 })
 </script>
 
@@ -323,6 +400,19 @@ onMounted(() => {
   color: #666;
   font-size: 16px;
   margin: 0;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.loading-state p {
+  color: #666;
+  font-size: 18px;
 }
 
 .matrix-container {
@@ -437,6 +527,20 @@ input:checked + .toggle-slider {
 
 input:checked + .toggle-slider:before {
   transform: translateX(26px);
+}
+
+.permission-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.permission-toggle.disabled .toggle-slider {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.permission-toggle.disabled input:checked + .toggle-slider {
+  background-color: #6c757d;
 }
 
 .matrix-actions {

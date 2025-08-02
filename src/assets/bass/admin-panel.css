@@ -479,13 +479,16 @@ width: 100%;
 .users-table th:nth-child(4), .users-table td:nth-child(4) { width: 20%; }
 .users-table th:nth-child(5), .users-table td:nth-child(5) {  }
 
-/* Column width overrides (editStudents) */
-.students-table th:nth-child(1), .students-table td:nth-child(1) { width: 17%; }
-.students-table th:nth-child(2), .students-table td:nth-child(2) { width: 17%; }
-.students-table th:nth-child(3), .students-table td:nth-child(3) { width: 17%; }
-.students-table th:nth-child(4), .students-table td:nth-child(4) { width: 4%; }
-.students-table th:nth-child(5), .students-table td:nth-child(5) { width: 16%; }
-.students-table th:nth-child(7), .students-table td:nth-child(7) { width: 10%; }
+/* Column width overrides (editStudents) - Updated for 9 columns */
+.students-table th:nth-child(1), .students-table td:nth-child(1) { width: 12%; } /* ID */
+.students-table th:nth-child(2), .students-table td:nth-child(2) { width: 15%; } /* First Name */
+.students-table th:nth-child(3), .students-table td:nth-child(3) { width: 15%; } /* Last Name */
+.students-table th:nth-child(4), .students-table td:nth-child(4) { width: 8%; }  /* Grade */
+.students-table th:nth-child(5), .students-table td:nth-child(5) { width: 8%; }  /* Plan */
+.students-table th:nth-child(6), .students-table td:nth-child(6) { width: 18%; } /* Case Manager */
+.students-table th:nth-child(7), .students-table td:nth-child(7) { width: 8%; }  /* staffIdArr */
+.students-table th:nth-child(8), .students-table td:nth-child(8) { width: 12%; } /* Date Added */
+.students-table th:nth-child(9), .students-table td:nth-child(9) { width: 4%; }  /* Actions */
 
 /* Outer wrapper - centers all content */
 .add-user-wrapper {

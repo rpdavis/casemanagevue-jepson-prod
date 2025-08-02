@@ -5,6 +5,7 @@ import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, getId
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { useRouter } from 'vue-router'
+import { auditLogger } from '@/utils/auditLogger'
 
 export const useAuthStore = defineStore('auth', () => {
   const currentUser = ref(null)
@@ -75,11 +76,25 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     try {
+      // Log logout before clearing user data
+      if (currentUser.value) {
+        await auditLogger.logSystemAccess('logout', {
+          userRole: currentUser.value.role,
+          success: true
+        })
+      }
+      
       await signOut(auth)
       currentUser.value = null
       router.push('/login')
     } catch (error) {
       console.error('❌ Logout error:', error)
+      
+      // Log logout error
+      await auditLogger.logSystemAccess('logout_error', {
+        error: error.message,
+        success: false
+      })
     }
   }
 

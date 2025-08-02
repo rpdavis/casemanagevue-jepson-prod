@@ -130,46 +130,7 @@
         <p v-else class="no-backups">No backups found</p>
       </div>
 
-      <!-- Schedule Normalization Section -->
-      <div class="section">
-        <h2>🔄 Schedule Period Normalization</h2>
-        <p class="description">
-          This tool normalizes all student schedule periods to use numeric format (1-7) and merges co-teaching data 
-          from string periods (P1, P2, etc.) into numeric periods.
-        </p>
-        
-        <div class="warning-box">
-          <strong>⚠️ Important:</strong> This operation will modify all student records. Make sure to backup first!
-        </div>
-        
-        <div class="admin-action-btns">
-          <button 
-            @click="startNormalization" 
-            :disabled="normalizationInProgress"
-            class="admin-action-btn primary" style="min-width: 220px; max-width: 220px;"
-          >
-            {{ normalizationInProgress ? 'Normalizing...' : 'Start Schedule Normalization' }}
-          </button>
-          <button @click="clearNormalizationLog" class="admin-action-btn secondary" style="min-width: 100px; max-width: 100px;">Clear Log</button>
-        </div>
-        
-        <div class="progress-section" v-if="normalizationProgress.total > 0">
-          <div class="progress-bar">
-            <div 
-              class="progress-fill" 
-              :style="{ width: (normalizationProgress.processed / normalizationProgress.total) * 100 + '%' }"
-            ></div>
-          </div>
-          <p class="progress-text">
-            Progress: {{ normalizationProgress.processed }}/{{ normalizationProgress.total }} processed, 
-            {{ normalizationProgress.updated }} updated
-          </p>
-        </div>
-        
-        <div class="log-container">
-          <pre class="log-output" ref="normalizationLogRef">{{ normalizationLog }}</pre>
-        </div>
-      </div>
+
     </div>
 
     <!-- Status Messages -->
@@ -182,7 +143,7 @@
 <script>
 import { ref, reactive, onMounted } from 'vue'
 import { db } from '@/firebase'
-import { collection, getDocs, doc, getDoc, setDoc, deleteDoc, query, orderBy, limit, updateDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc, deleteDoc, query, orderBy, limit } from 'firebase/firestore'
 
 export default {
   name: 'AdminBackupRestore',
@@ -192,7 +153,10 @@ export default {
       { id: 'students', name: 'Students' },
       { id: 'app_settings', name: 'App Settings' },
       { id: 'aideSchedules', name: 'Aide Schedules' },
-      { id: 'aideAssignments', name: 'Aide Assignments' }
+      { id: 'aideAssignments', name: 'Aide Assignments' },
+      { id: 'feedbackForms', name: 'Teacher Feedback Forms' },
+      { id: 'config', name: 'Configuration' },
+      { id: 'backups', name: 'Backups Metadata' }
     ])
 
     const selectedCollections = ref(['users', 'students', 'app_settings'])
@@ -215,6 +179,9 @@ export default {
     // Load existing backups
     const loadBackups = async () => {
       try {
+        console.log('🔍 DEBUG: Current user role:', currentUser.value?.role)
+        console.log('🔍 DEBUG: Current user:', currentUser.value)
+        
         const backupsRef = collection(db, 'backups')
         const q = query(backupsRef, orderBy('createdAt', 'desc'), limit(20))
         const snapshot = await getDocs(q)
@@ -222,8 +189,16 @@ export default {
           id: doc.id,
           ...doc.data()
         }))
+        
+        console.log('✅ DEBUG: Successfully loaded', backups.value.length, 'backups')
       } catch (error) {
-        console.error('Error loading backups:', error)
+        console.error('❌ DEBUG: Error loading backups:', error)
+        console.error('❌ DEBUG: Error details:', {
+          code: error.code,
+          message: error.message,
+          userRole: currentUser.value?.role,
+          userId: currentUser.value?.uid
+        })
         showStatus('Error loading backups', 'error')
       }
     }
@@ -377,7 +352,11 @@ export default {
       const link = document.createElement('a')
       link.href = url
       link.download = `${backup.name || 'backup'}.json`
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      document.body.appendChild(link)
       link.click()
+      document.body.removeChild(link)
       URL.revokeObjectURL(url)
     }
 
@@ -417,134 +396,7 @@ export default {
       }, 5000)
     }
 
-    // Schedule normalization state
-    const normalizationInProgress = ref(false)
-    const normalizationLog = ref('')
-    const normalizationLogRef = ref(null)
-    const normalizationProgress = ref({
-      total: 0,
-      processed: 0,
-      updated: 0
-    })
 
-    // Period mapping from various formats to numeric
-    const periodMap = {
-      '1': 1, 'P1': 1,
-      '2': 2, 'P2': 2,
-      '3': 3, 'P3': 3,
-      '4': 4, 'P4': 4,
-      '5': 5, 'P5': 5,
-      '6': 6, 'P6': 6,
-      '7': 7, 'SH': 7, 'F': 7
-    }
-
-    // Logging function for normalization
-    function logNormalization(message) {
-      const timestamp = new Date().toLocaleTimeString()
-      normalizationLog.value += `[${timestamp}] ${message}\n`
-      if (normalizationLogRef.value) {
-        normalizationLogRef.value.scrollTop = normalizationLogRef.value.scrollHeight
-      }
-    }
-
-    // Function to normalize schedule periods
-    function normalizeSchedule(rawSchedule) {
-      if (!rawSchedule || typeof rawSchedule !== 'object') return {}
-      
-      const normalized = {}
-      
-      Object.entries(rawSchedule).forEach(([key, value]) => {
-        const numericPeriod = periodMap[key]
-        if (numericPeriod && value) {
-          if (normalized[numericPeriod]) {
-            // If period already exists, prefer objects over strings and co-teaching data
-            if (typeof normalized[numericPeriod] === 'string' && typeof value === 'object') {
-              normalized[numericPeriod] = value
-            } else if (typeof normalized[numericPeriod] === 'object' && typeof value === 'object') {
-              if (value.coTeaching && !normalized[numericPeriod].coTeaching) {
-                normalized[numericPeriod] = value
-              }
-            }
-          } else {
-            normalized[numericPeriod] = value
-          }
-        }
-      })
-      
-      return normalized
-    }
-
-    // Main normalization function
-    async function startNormalization() {
-      if (normalizationInProgress.value) return
-      
-      normalizationInProgress.value = true
-      normalizationLog.value = ''
-      normalizationProgress.value = { total: 0, processed: 0, updated: 0 }
-      
-      try {
-        logNormalization('🔄 Starting schedule normalization...')
-        
-        // Get all students
-        const studentsSnapshot = await getDocs(collection(db, 'students'))
-        const students = studentsSnapshot.docs
-        
-        normalizationProgress.value.total = students.length
-        logNormalization(`📚 Found ${students.length} students to process`)
-        
-        for (const studentDoc of students) {
-          const studentData = studentDoc.data()
-          const studentId = studentDoc.id
-          
-          normalizationProgress.value.processed++
-          
-          // Check if student has schedule data
-          if (studentData.app?.schedule?.periods) {
-            const rawSchedule = studentData.app.schedule.periods
-            const normalizedSchedule = normalizeSchedule(rawSchedule)
-            
-            // Check if normalization made changes
-            const rawKeys = Object.keys(rawSchedule).sort()
-            const normalizedKeys = Object.keys(normalizedSchedule).map(k => String(k)).sort()
-            
-            const hasChanges = JSON.stringify(rawKeys) !== JSON.stringify(normalizedKeys) ||
-                              JSON.stringify(rawSchedule) !== JSON.stringify(normalizedSchedule)
-            
-            if (hasChanges) {
-              logNormalization(`📝 Updating student ${studentId}:`)
-              logNormalization(`   Before: ${JSON.stringify(rawSchedule)}`)
-              logNormalization(`   After:  ${JSON.stringify(normalizedSchedule)}`)
-              
-              // Update the student document
-              await updateDoc(doc(db, 'students', studentId), {
-                'app.schedule.periods': normalizedSchedule
-              })
-              
-              normalizationProgress.value.updated++
-            }
-          }
-          
-          // Small delay to prevent overwhelming Firebase
-          if (normalizationProgress.value.processed % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 100))
-          }
-        }
-        
-        logNormalization('✅ Schedule normalization complete!')
-        logNormalization(`📊 Final stats: ${normalizationProgress.value.processed} processed, ${normalizationProgress.value.updated} updated`)
-        
-      } catch (error) {
-        logNormalization(`❌ Error during normalization: ${error.message}`)
-        console.error('Normalization error:', error)
-      } finally {
-        normalizationInProgress.value = false
-      }
-    }
-
-    function clearNormalizationLog() {
-      normalizationLog.value = ''
-      normalizationProgress.value = { total: 0, processed: 0, updated: 0 }
-    }
 
     onMounted(() => {
       loadBackups()
@@ -569,13 +421,7 @@ export default {
       downloadBackup,
       deleteBackup,
       formatFileSize,
-      formatDate,
-      normalizationInProgress,
-      normalizationLog,
-      normalizationLogRef,
-      normalizationProgress,
-      startNormalization,
-      clearNormalizationLog
+      formatDate
     }
   }
 }

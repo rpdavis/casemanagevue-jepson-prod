@@ -100,6 +100,7 @@ import { functions } from '../firebase.js'
 import { getFirestore, collection, addDoc } from 'firebase/firestore'
 import { VALID_ROLES, isApprovedRole } from '../config/roles.js'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { auditLogger } from '@/utils/auditLogger'
 import { 
   validateUserData, 
   sanitizeUserFormData, 
@@ -177,8 +178,28 @@ export default {
           status: 'active'
         }
         const docRef = await addDoc(collection(db, 'users'), userData)
+        
+        // Log user creation
+        await auditLogger.logUserManagement(docRef.id, 'create', {
+          userData: {
+            name: name,
+            email: email,
+            role: role,
+            provider: provider,
+            aeriesId: aeriesId
+          },
+          method: 'firestore_direct'
+        })
+        
         return { success: true, userId: docRef.id }
       } catch (error) {
+        // Log creation failure
+        await auditLogger.logUserManagement('unknown', 'create_failed', {
+          error: error.message,
+          attemptedData: { name, email, role, provider, aeriesId },
+          method: 'firestore_direct'
+        })
+        
         throw error
       }
     }
@@ -187,6 +208,13 @@ export default {
       try {
         try {
           await addUserWithRoleCallable({ name, email, role, provider, aeriesId })
+          
+          // Log successful user creation via cloud function
+          await auditLogger.logUserManagement('cloud_function_user', 'create', {
+            userData: { name, email, role, provider, aeriesId },
+            method: 'cloud_function'
+          })
+          
           return { success: true, method: 'cloud-function' }
         } catch (cloudError) {
           // Check if the error is because user already exists
@@ -194,6 +222,14 @@ export default {
               cloudError.message?.includes('409') || 
               cloudError.message?.includes('already exists')) {
             console.log(`User ${email} already exists in Firebase Auth, skipping...`)
+            
+            // Log existing user attempt
+            await auditLogger.logUserManagement('existing_user', 'create_skipped', {
+              userData: { name, email, role, provider, aeriesId },
+              reason: 'user_already_exists',
+              method: 'cloud_function'
+            })
+            
             return { success: true, method: 'already-exists', message: 'User already exists' }
           }
           
@@ -202,6 +238,13 @@ export default {
           return { success: true, method: 'firestore' }
         }
       } catch (error) {
+        // Log overall creation failure
+        await auditLogger.logUserManagement('unknown', 'create_failed', {
+          error: error.message,
+          attemptedData: { name, email, role, provider, aeriesId },
+          method: 'addUserToFirestore'
+        })
+        
         return { success: false, error: error.message }
       }
     }

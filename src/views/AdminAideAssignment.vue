@@ -112,7 +112,7 @@ const saving = ref(false)
 
 const isAdmin = computed(() => {
   const role = authStore.currentUser?.role
-  return ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'].includes(role)
+        return ['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(role)
 })
 
 const paraeducators = computed(() => {

@@ -94,7 +94,9 @@ const filters = reactive({
 
 // Check if provider view should be shown
 const showProviderView = computed(() => {
-  return ['case_manager', 'administrator_504_CM', 'sped_chair'].includes(props.currentUserRole)
+      return ['case_manager', 'admin_504', 'sped_chair',
+            // Legacy roles for backward compatibility
+            'administrator_504_CM'].includes(props.currentUserRole)
 })
 
 function emitFilters() {

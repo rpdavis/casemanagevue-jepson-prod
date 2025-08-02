@@ -210,9 +210,9 @@ function deselectAll() {
 function filterStudentData(student) {
   const currentUser = authStore.currentUser
   const isAdmin = currentUser?.role === 'admin' || 
-                 currentUser?.role === 'administrator' || 
+                 currentUser?.role === 'administrator' || currentUser?.role === 'staff_view' ||
                  currentUser?.role === 'sped_chair' || 
-                 currentUser?.role === 'administrator_504_CM'
+                 currentUser?.role === 'administrator_504_CM' || currentUser?.role === 'admin_504'
 
   // If user is admin, return all selected data
   if (isAdmin) {

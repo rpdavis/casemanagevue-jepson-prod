@@ -23,11 +23,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: StudentsView,
-    meta: {
-      requiresAuth: true,
-      allowedRoles: STUDENT_ACCESS_ROLES,
-    },
+    redirect: '/students',
   },
   {
     path: '/students',
@@ -99,7 +95,7 @@ const routes = [
     component: TestingView,
     meta: {
       requiresAuth: true,
-      allowedRoles: ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'],
+      allowedRoles: ['admin', 'school_admin', 'sped_chair', 'admin_504'],
     },
   },
 ];

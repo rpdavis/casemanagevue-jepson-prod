@@ -115,7 +115,9 @@ const exportOptions = ref({
 // Check if user is admin
 const isAdmin = computed(() => {
   const role = currentUser.value?.role
-  return ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'].includes(role)
+        return ['admin', 'school_admin', 'admin_504', 'sped_chair',
+              // Legacy roles for backward compatibility
+              'administrator', 'administrator_504_CM'].includes(role)
 })
 
 // Toggle dropdown menu

@@ -1,36 +1,70 @@
-import { useAuth } from '@/composables/useAuth';
+import { useAuthStore } from '@/store/authStore'
+import { auditLogger } from '@/utils/auditLogger'
 
-/**
- * Sets up a global navigation guard.
- * @param {object} router - The Vue router instance.
- */
-export function setupGuards(router) {
-  const { waitForAuthInit } = useAuth();
+export const authGuard = async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Wait for auth to initialize
+  while (authStore.isLoading) {
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  
+  if (!authStore.currentUser) {
+    // Log unauthorized access attempt
+    await auditLogger.logSystemAccess('unauthorized_access_attempt', {
+      attemptedRoute: to.path,
+      fromRoute: from.path,
+      success: false
+    })
+    
+    next('/login')
+  } else if (!authStore.currentUser.role) {
+    console.log(`User ${authStore.currentUser.uid} exists in Auth but has no role - redirecting to login for role assignment`)
+    
+    // Log incomplete user setup
+    await auditLogger.logSystemAccess('incomplete_user_setup', {
+      userId: authStore.currentUser.uid,
+      userEmail: authStore.currentUser.email,
+      attemptedRoute: to.path,
+      reason: 'no_role_assigned'
+    })
+    
+    next('/login')
+  } else {
+    next()
+  }
+}
 
-  // Wait for the initial auth state to be resolved before guarding routes
-  waitForAuthInit.then(() => {
-    router.beforeEach((to, from, next) => {
-      const { currentUser } = useAuth(); // Get the reactive user state
+export const adminGuard = async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  if (!authStore.currentUser || !['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(authStore.currentUser.role)) {
+    console.warn(`User with role '${authStore.currentUser?.role}' tried to access restricted route: ${to.path}`)
+    
+    // Log unauthorized admin access attempt
+    await auditLogger.logSystemAccess('unauthorized_admin_access', {
+      userRole: authStore.currentUser?.role || 'none',
+      attemptedRoute: to.path,
+      fromRoute: from.path,
+      success: false
+    })
+    
+    next('/students')
+  } else {
+    // Log successful admin access
+    await auditLogger.logSystemAccess('admin_route_access', {
+      userRole: authStore.currentUser.role,
+      accessedRoute: to.path,
+      fromRoute: from.path,
+      success: true
+    })
+    
+    next()
+  }
+}
 
-      const requiresAuth = to.meta.requiresAuth;
-      const allowedRoles = to.meta.allowedRoles;
-
-      if (requiresAuth && !currentUser.value) {
-        // Not authenticated, redirect to login
-        next({ name: 'Login' });
-      } else if (requiresAuth && currentUser.value && !currentUser.value.role) {
-        // User exists in Auth but has no role in Firestore - this is the OAuth connection scenario
-        console.log(`User ${currentUser.value.uid} exists in Auth but has no role - redirecting to login for role assignment`);
-        next({ name: 'Login' });
-      } else if (requiresAuth && allowedRoles && currentUser.value && !allowedRoles.includes(currentUser.value.role)) {
-        // Authenticated, but does not have the required role
-        console.warn(`User with role '${currentUser.value.role}' tried to access restricted route: ${to.path}`);
-        // Redirect to a 'not-authorized' page or home
-        next({ name: 'Home' });
-      } else {
-        // All good, proceed
-        next();
-      }
-    });
-  });
+export const setupGuards = (router) => {
+  // This function can be used to set up global navigation guards if needed
+  // For now, the guards are applied individually to routes
+  console.log('Router guards setup completed')
 }

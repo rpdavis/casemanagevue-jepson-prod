@@ -4,6 +4,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'fi
 import { db, storage, auth } from '@/firebase'
 import { getDisplayValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
+import { auditLogger } from '@/utils/auditLogger'
 import { 
   validateStudentData, 
   sanitizeStudentFormData, 
@@ -98,7 +99,7 @@ export function useStudentForm(props, emit) {
   // Form state initialization
   const initializeFormData = (student) => {
     return {
-      ssid: student.id || '',
+      ssid: getDisplayValue(student, 'ssid') || student.id || '',
       firstName: getDisplayValue(student, 'firstName') || '',
       lastName: getDisplayValue(student, 'lastName') || '',
       grade: getDisplayValue(student, 'grade') || '7',
@@ -106,7 +107,7 @@ export function useStudentForm(props, emit) {
       reviewDate: getDisplayValue(student, 'reviewDate') || '',
       reevalDate: getDisplayValue(student, 'reevalDate') || '',
       meetingDate: getDisplayValue(student, 'meetingDate') || '',
-      caseManagerId: student.app?.studentData?.caseManagerId || student.caseManagerId || student.casemanager_id || '',
+      caseManagerId: getDisplayValue(student, 'caseManagerId') || student.caseManagerId || student.casemanager_id || '',
       schedule: student.app?.schedule?.periods || student.aeries?.schedule?.periods || student.schedule || {},
       services: (student.app?.schedule?.classServices || student.services) || [],
       speechId: student.app?.providers?.speechId || student.speechId || student.speech_id || '',
@@ -176,24 +177,39 @@ export function useStudentForm(props, emit) {
   }, { deep: true })
 
   // Watch for changes in student prop and update form
-  // Only update when student ID changes to avoid overwriting user changes
-  watch(() => props.student?.id, (newId, oldId) => {
-    if (newId && newId !== oldId) {
-      console.log('🔍 useStudentForm DEBUG - Student ID changed, updating form:', newId)
-      console.log('🔍 useStudentForm DEBUG - newStudent.app?.schedule?.periods:', JSON.stringify(props.student?.app?.schedule?.periods, null, 2))
-      console.log('🔍 useStudentForm DEBUG - newStudent.aeries?.schedule?.periods:', JSON.stringify(props.student?.aeries?.schedule?.periods, null, 2))
-      console.log('🔍 useStudentForm DEBUG - newStudent.schedule:', JSON.stringify(props.student?.schedule, null, 2))
+  // Watch for both ID changes and when student data is first loaded
+  watch(() => props.student, (newStudent, oldStudent) => {
+    if (newStudent && Object.keys(newStudent).length > 0) {
+      // Only update if this is a new student or if the student ID changed
+      const isNewStudent = !oldStudent || Object.keys(oldStudent).length === 0
+      const isStudentChanged = newStudent.id !== oldStudent?.id
       
-      // Update form with new student data
-      const newFormData = initializeFormData(props.student)
-      Object.assign(form, newFormData)
-      
-      // Sync co-teaching services after form initialization
-      syncCoTeachingServices()
-      
-      console.log('🔍 useStudentForm DEBUG - Processed form.schedule:', form.schedule)
+      if (isNewStudent || isStudentChanged) {
+        console.log('🔍 useStudentForm DEBUG - Student data changed, updating form:', newStudent.id)
+        console.log('🔍 useStudentForm DEBUG - Student data:', {
+          firstName: getDisplayValue(newStudent, 'firstName'),
+          lastName: getDisplayValue(newStudent, 'lastName'),
+          plan: getDisplayValue(newStudent, 'plan'),
+          caseManagerId: getDisplayValue(newStudent, 'caseManagerId'),
+          rawStudent: newStudent
+        })
+        
+        // Update form with new student data
+        const newFormData = initializeFormData(newStudent)
+        Object.assign(form, newFormData)
+        
+        // Sync co-teaching services after form initialization
+        syncCoTeachingServices()
+        
+        console.log('🔍 useStudentForm DEBUG - Form updated:', {
+          plan: form.plan,
+          caseManagerId: form.caseManagerId,
+          firstName: form.firstName,
+          lastName: form.lastName
+        })
+      }
     }
-  }, { immediate: true })
+  }, { immediate: true, deep: true })
 
   // Watch for app settings changes and update form accordingly
   watch(() => appSettings.value, (newSettings) => {
@@ -429,7 +445,14 @@ export function useStudentForm(props, emit) {
         return
       }
       
-      console.log('Form submitted:', form)
+      console.log('🚀 Form submitted:', {
+        plan: form.plan,
+        caseManagerId: form.caseManagerId,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        mode: props.mode,
+        studentId: props.student?.id
+      })
       isSaving.value = true
       
       // Debug authentication and user info
@@ -642,6 +665,14 @@ export function useStudentForm(props, emit) {
         await setDoc(doc(db, 'students', props.student.id), payload, { merge: true })
         newStudentId = props.student.id
         console.log('Student updated successfully')
+        
+        // Log student update
+        await auditLogger.logStudentAccess(props.student.id, 'edit', {
+          fields: Object.keys(appData.studentData || {}),
+          hasDocuments: !!(ataglancePdfUrl || bipPdfUrl),
+          formMode: 'edit'
+        })
+        
       } else {
         console.log('Adding new student')
         // For new students, SSID is required
@@ -662,6 +693,14 @@ export function useStudentForm(props, emit) {
         newStudentId = docRef.id
         payload.id = newStudentId
         console.log('Student added successfully with ID:', newStudentId, 'SSID:', ssid)
+        
+        // Log student creation
+        await auditLogger.logStudentAccess(newStudentId, 'create', {
+          ssid: ssid,
+          fields: Object.keys(appData.studentData || {}),
+          hasDocuments: !!(ataglancePdfUrl || bipPdfUrl),
+          formMode: 'create'
+        })
       }
       
 

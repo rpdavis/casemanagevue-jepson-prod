@@ -181,6 +181,7 @@ function handleAction(action) {
 
 .hamburger-btn.active .hamburger-line:nth-child(1) {
   transform: rotate(45deg) translate(5px, 5px);
+  margin: 3.7px 0;
 }
 
 .hamburger-btn.active .hamburger-line:nth-child(2) {
@@ -189,6 +190,7 @@ function handleAction(action) {
 
 .hamburger-btn.active .hamburger-line:nth-child(3) {
   transform: rotate(-45deg) translate(7px, -6px);
+  margin: 2.5px 0;
 }
 
 /* Overlay */

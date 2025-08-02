@@ -28,7 +28,7 @@ export function getDisplayValue(student, field, fallback = "—") {
   // App form data - check categorized structure first
   if (student.app) {
     // Student data fields
-    if (['firstName', 'lastName', 'grade', 'plan'].includes(field)) {
+    if (['firstName', 'lastName', 'grade', 'plan', 'ssid', 'caseManagerId'].includes(field)) {
       const appValue = getNestedValue(student.app, `studentData.${field}`)
       if (appValue != null && appValue !== "") {
         return appValue

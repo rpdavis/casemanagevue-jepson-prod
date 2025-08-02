@@ -2,6 +2,11 @@
 
 This directory contains comprehensive documentation for the CaseManageVue application - a special education case management system.
 
+## 🆕 **Enhanced Role System Documentation**
+- **[Enhanced Role System Manual](ENHANCED_ROLE_SYSTEM_MANUAL.md)** - Complete guide to the new role structure with diagrams and implementation instructions
+- **[Role Quick Reference](ROLE_QUICK_REFERENCE.md)** - Print-friendly reference card for administrators and staff  
+- **[Middle School Role Migration Plan](MIDDLE_SCHOOL_ROLE_MIGRATION_PLAN.md)** - Detailed technical migration strategy
+
 ## 📁 **Folder Structure**
 
 ### 🏗️ **[`architecture/`](./architecture/)**

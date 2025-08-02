@@ -48,20 +48,28 @@ const { debugSharedDriveAccess } = require("./debug-shared-drive-access");
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VALID_ROLES = [
   "admin",
-  "administrator",
-  "administrator_504_CM",
+  "school_admin",
+  "staff_view", 
+  "staff_edit",
+  "admin_504",
   "sped_chair",
   "case_manager",
   "teacher",
   "service_provider",
-  "paraeducator"
+  "paraeducator",
+  // Legacy role names for backward compatibility during migration
+  "administrator",
+  "administrator_504_CM"
 ];
 
 const ADMIN_ROLES = [
   "admin",
+  "school_admin",
+  "admin_504",
+  "sped_chair",
+  // Legacy role names for backward compatibility during migration
   "administrator",
-  "administrator_504_CM",
-  "sped_chair"
+  "administrator_504_CM"
 ];
 
 // ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
@@ -521,8 +529,14 @@ exports.getStudentFileUrl = onCall({
     const hasAccess = (
       // Super admins can access any file
       userRole === 'admin' || userRole === 'sped_chair' ||
-      // 504 coordinators can access all files
-      userRole === 'administrator_504_CM' ||
+      // School admins can access all files
+      userRole === 'school_admin' ||
+      // Staff editors can access all files
+      userRole === 'staff_edit' ||
+      // 504 coordinators can access all files (both old and new names)
+      userRole === 'administrator_504_CM' || userRole === 'admin_504' ||
+      // Staff viewers can access all files (both old and new names)
+      userRole === 'administrator' || userRole === 'staff_view' ||
       // User is in the student's staff list
       staffIds.includes(userId) ||
       // Case manager can access their own student's files
@@ -620,7 +634,10 @@ downloadApp.get('/downloadStudentFile', async (req, res) => {
   const staffIds = data.app?.staffIds || [];
   const caseManagerId = data.app?.studentData?.caseManagerId;
   const allowed = (
-    role === 'admin' || role === 'sped_chair' || role === 'administrator_504_CM' ||
+    role === 'admin' || role === 'sped_chair' || 
+    role === 'school_admin' || role === 'staff_edit' ||
+    role === 'administrator_504_CM' || role === 'admin_504' ||
+    role === 'administrator' || role === 'staff_view' ||
     staffIds.includes(uid) || (role === 'case_manager' && uid === caseManagerId)
   );
   if (!allowed) {
@@ -850,4 +867,82 @@ exports.debugSharedDriveAccess = debugSharedDriveAccess;
 
 // Export all teacher feedback functions
 Object.assign(exports, teacherFeedbackFunctions);
+
+// ─── ROLE MIGRATION FUNCTION ─────────────────────────────────────────────────
+// Role migration function to update users from old role names to new ones
+exports.migrateUserRoles = onCall({
+  region: "us-central1"
+}, async (request) => {
+  requireRole(request, ["admin"]);
+
+  const { dryRun = true } = request.data;
+
+  try {
+    const ROLE_MIGRATION_MAP = {
+      'administrator': 'staff_view',
+      'administrator_504_CM': 'admin_504'
+      // Other roles remain the same
+    };
+
+    const usersRef = db.collection('users');
+    const snapshot = await usersRef.get();
+    
+    const migrations = [];
+    const batch = db.batch();
+    let batchCount = 0;
+
+    for (const doc of snapshot.docs) {
+      const userData = doc.data();
+      const currentRole = userData.role;
+      
+      if (ROLE_MIGRATION_MAP[currentRole]) {
+        const newRole = ROLE_MIGRATION_MAP[currentRole];
+        migrations.push({
+          uid: doc.id,
+          email: userData.email,
+          name: userData.name,
+          oldRole: currentRole,
+          newRole: newRole
+        });
+
+        if (!dryRun) {
+          // Update Firestore document
+          batch.update(doc.ref, { role: newRole });
+          
+          // Update custom claims
+          await adminAuth.setCustomUserClaims(doc.id, { role: newRole });
+          
+          batchCount++;
+          
+          // Commit batch every 500 operations (Firestore limit)
+          if (batchCount >= 500) {
+            await batch.commit();
+            batchCount = 0;
+          }
+        }
+      }
+    }
+
+    // Commit remaining operations
+    if (!dryRun && batchCount > 0) {
+      await batch.commit();
+    }
+
+    console.log(`🔄 Role migration ${dryRun ? 'preview' : 'completed'}: ${migrations.length} users affected`);
+
+    return {
+      success: true,
+      dryRun,
+      migrationsFound: migrations.length,
+      migrations: migrations,
+      message: dryRun 
+        ? `Found ${migrations.length} users that would be migrated. Call with dryRun=false to execute.`
+        : `Successfully migrated ${migrations.length} users to new role structure.`
+    };
+
+  } catch (error) {
+    console.error("Role migration error:", error);
+    throw new HttpsError("internal", `Failed to migrate roles: ${error.message}`);
+  }
+});
 

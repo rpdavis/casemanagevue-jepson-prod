@@ -1,8 +1,9 @@
 // /Users/rd/CaseManageVue/src/composables/useStudents.js
 
-import { ref } from 'vue'
-import { collection, getDocs, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
-import { db } from '../firebase'
+import { ref, computed, watch } from 'vue'
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, writeBatch, orderBy, getDocs } from 'firebase/firestore'
+import { db } from '@/firebase'
+import { auditLogger } from '@/utils/auditLogger'
 import { performRateLimitedBatchOperation } from '../utils/validation'
 
 // Helper function to convert Firestore Maps to plain objects
@@ -113,7 +114,17 @@ export default function useStudents() {
   }
 
   async function deleteStudent(id) {
+    // Get student data before deletion for logging
+    const studentToDelete = students.value.find(s => s.id === id)
+    
     await deleteDoc(doc(db, 'students', id))
+    
+    // Log student deletion
+    await auditLogger.logStudentAccess(id, 'delete', {
+      studentName: studentToDelete ? `${studentToDelete.app?.studentData?.firstName || ''} ${studentToDelete.app?.studentData?.lastName || ''}`.trim() : 'Unknown',
+      ssid: studentToDelete?.app?.studentData?.ssid,
+      deletedFields: studentToDelete ? Object.keys(studentToDelete.app?.studentData || {}) : []
+    })
     
     // Trigger Google Sheets sync if linked
     try {
@@ -128,6 +139,7 @@ export default function useStudents() {
       }
     } catch (error) {
       console.error('Failed to sync to Google Sheets:', error)
+      // Don't throw - we don't want to fail the delete if sync fails
     }
   }
 
@@ -135,6 +147,13 @@ export default function useStudents() {
     try {
       const studentSnap = await getDocs(collection(db, 'students'))
       const students = studentSnap.docs
+      
+      // Log bulk deletion before operation
+      await auditLogger.logStudentAccess('bulk_operation', 'delete_all', {
+        studentCount: students.length,
+        operation: 'bulk_delete_all_students',
+        deletedStudentIds: students.map(doc => doc.id)
+      })
 
       await performRateLimitedBatchOperation(
         students,
@@ -152,6 +171,13 @@ export default function useStudents() {
       return { success: true }
     } catch (error) {
       console.error('Error deleting all students:', error)
+      
+      // Log deletion failure
+      await auditLogger.logStudentAccess('bulk_operation', 'delete_all_failed', {
+        error: error.message,
+        operation: 'bulk_delete_all_students_failed'
+      })
+      
       throw error
     }
   }
