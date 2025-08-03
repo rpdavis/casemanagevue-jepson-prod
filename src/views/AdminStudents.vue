@@ -155,7 +155,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { getFirestore, collection, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
+import { getFirestore, collection, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, writeBatch, setDoc, serverTimestamp } from 'firebase/firestore'
 import useStudents from '@/composables/useStudents'
 import useUsers from '@/composables/useUsers'
 import { useAuth } from '@/composables/useAuth'
@@ -395,13 +395,12 @@ const saveStudent = async (studentId) => {
     })
     
     if (hasStudentDataChanges) {
-      // Build proper nested structure - include required fields plus changes
+      // Build proper nested structure - preserve ALL existing fields plus changes
       updates.app = {
         studentData: {
-          // Include required fields from original data
-          firstName: originalStudent.app?.studentData?.firstName,
-          lastName: originalStudent.app?.studentData?.lastName,
-          // Include the changed fields
+          // Include ALL existing fields from original data
+          ...originalStudent.app?.studentData,
+          // Then merge in the changed fields
           ...studentDataUpdates
         }
       }
@@ -431,15 +430,20 @@ const saveStudent = async (studentId) => {
       return
     }
 
+    // Add update metadata
+    sanitizedUpdates.updatedAt = serverTimestamp()
+    sanitizedUpdates.updatedBy = currentUser.value?.uid || null
+
     // Apply sanitized updates back to editing state
     Object.assign(editingStudent.value, sanitizedUpdates)
 
-    console.log('🚀 ADMIN SAVE DEBUG - Calling updateStudent with:', {
+    console.log('🚀 ADMIN SAVE DEBUG - Calling setDoc with merge:', {
       studentId,
       sanitizedUpdates
     })
     
-    await updateStudent(studentId, sanitizedUpdates)
+    // Use setDoc with merge: true like the working StudentForm
+    await setDoc(doc(db, 'students', studentId), sanitizedUpdates, { merge: true })
     
     console.log('🚀 ADMIN SAVE DEBUG - updateStudent completed successfully')
     

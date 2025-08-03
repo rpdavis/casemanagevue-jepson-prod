@@ -129,13 +129,15 @@ export default {
     
         const availableRoles = [
       { value: 'admin', label: 'Admin' },
-      { value: 'administrator', label: 'Administrator' },
-      { value: 'administrator_504_CM', label: 'Administrator 504/CM' },
+      { value: 'school_admin', label: 'School Admin' },
+      { value: 'admin_504', label: '504 Coordinator' },
       { value: 'sped_chair', label: 'SPED Chair' },
+      { value: 'staff_view', label: 'Staff (View)' },
+      { value: 'staff_edit', label: 'Staff (Edit)' },
       { value: 'case_manager', label: 'Case Manager' },
-      { value: 'paraeducator', label: 'Paraeducator' },
       { value: 'teacher', label: 'Teacher' },
-      { value: 'service_provider', label: 'Service Provider' }
+      { value: 'service_provider', label: 'Service Provider' },
+      { value: 'paraeducator', label: 'Paraeducator' }
     ]
     
     // Test users for quick switching
@@ -147,16 +149,16 @@ export default {
         role: 'admin'
       },
       {
-        uid: 'test-administrator',
-        name: 'Test Administrator',
-        email: 'administrator@test.com',
-        role: 'administrator'
+        uid: 'test-school-admin',
+        name: 'Test School Admin',
+        email: 'schooladmin@test.com',
+        role: 'school_admin'
       },
       {
-        uid: 'test-administrator-504-cm',
-        name: 'Test Admin 504/CM',
+        uid: 'test-admin-504',
+        name: 'Test 504 Coordinator',
         email: 'admin504@test.com',
-        role: 'administrator_504_CM'
+        role: 'admin_504'
       },
       {
         uid: 'test-sped-chair',
@@ -627,9 +629,11 @@ export default {
 
 /* Role-specific colors */
 .role-admin { color: #e74c3c; }
-.role-administrator { color: #e74c3c; }
-.role-administrator_504_CM { color: #e67e22; }
+.role-school_admin { color: #e74c3c; }
+.role-admin_504 { color: #e67e22; }
 .role-sped_chair { color: #f39c12; }
+.role-staff_view { color: #95a5a6; }
+.role-staff_edit { color: #7f8c8d; }
 .role-case_manager { color: #3498db; }
 .role-paraeducator { color: #9b59b6; }
 .role-teacher { color: #2ecc71; }

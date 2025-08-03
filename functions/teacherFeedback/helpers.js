@@ -5,7 +5,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const db = getFirestore();
 
 // ─── AUTHENTICATION & AUTHORIZATION ───────────────────────────────────────────
-const ADMIN_ROLES = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'];
+const ADMIN_ROLES = ['admin', 'school_admin', 'admin_504', 'sped_chair'];
 
 function requireAuth(request) {
   if (!request.auth) {

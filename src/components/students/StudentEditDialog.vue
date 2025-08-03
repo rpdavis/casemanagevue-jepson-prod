@@ -39,22 +39,9 @@ const { students, fetchStudents } = useStudents()
 // Get student data from the students list
 const student = computed(() => {
   const foundStudent = students.value.find(s => s.id === props.studentId)
-  console.log('📋 StudentEditDialog - studentId:', props.studentId)
-  console.log('📋 StudentEditDialog - students count:', students.value.length)
-  console.log('📋 StudentEditDialog - found student:', foundStudent ? 
-    { id: foundStudent.id, hasApp: !!foundStudent.app, keys: Object.keys(foundStudent) } : 
-    'NOT FOUND')
-  
-  if (foundStudent) {
-    console.log('📋 StudentEditDialog - student data preview:', {
-      id: foundStudent.id,
-      firstName: foundStudent.app?.studentData?.firstName,
-      lastName: foundStudent.app?.studentData?.lastName,
-      plan: foundStudent.app?.studentData?.plan,
-      caseManagerId: foundStudent.app?.studentData?.caseManagerId
-    })
-  }
-  
+  console.log('StudentEditDialog - studentId:', props.studentId)
+  console.log('StudentEditDialog - all students:', students.value)
+  console.log('StudentEditDialog - found student:', foundStudent)
   return foundStudent || {}
 })
 

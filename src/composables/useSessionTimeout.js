@@ -94,8 +94,10 @@ class SessionTimeoutManager {
   }
 
   setupActivityListeners() {
+    // Create bound handler to ensure proper cleanup
+    this.boundActivityHandler = this.handleActivity.bind(this)
     this.activityEvents.forEach(event => {
-      document.addEventListener(event, this.handleActivity.bind(this), true)
+      document.addEventListener(event, this.boundActivityHandler, true)
     })
   }
 
@@ -103,6 +105,8 @@ class SessionTimeoutManager {
     if (!this.isEnabled.value) return
     
     this.lastActivity = Date.now()
+    
+    // Always extend session on activity
     this.hideWarning()
     this.resetTimeout()
   }
@@ -115,29 +119,33 @@ class SessionTimeoutManager {
     // Clear existing timeouts
     this.clearTimeouts()
     
-    const now = Date.now()
     const timeoutMs = Math.round(this.timeoutMinutes.value * 60 * 1000)
-    const warningMs = Math.max(0, timeoutMs - (2 * 60 * 1000)) // Show warning 2 minutes before timeout, or immediately if timeout is < 2 minutes
+    const warningMs = Math.max(1000, timeoutMs - (2 * 60 * 1000)) // Show warning 2 minutes before timeout, minimum 1 second
     
-    // Set warning timeout
-    if (warningMs > 0 && warningMs < timeoutMs) {
+    console.log(`🔒 Session timeout reset: ${this.timeoutMinutes.value} minutes (${timeoutMs}ms), warning in ${warningMs}ms`)
+    
+    // Set warning timeout - always set if timeout is more than 10 seconds
+    if (timeoutMs > 10000) {
       this.warningTimeoutId = setTimeout(() => {
+        console.log('🚨 Showing session warning')
         this.showSessionWarning()
       }, warningMs)
-    } else {
-      // Warning will show immediately when timeout starts
     }
     
     // Set logout timeout
     this.timeoutId = setTimeout(() => {
+      console.log('⏰ Session timeout triggered')
       this.handleSessionTimeout()
     }, timeoutMs)
-    
   }
 
   showSessionWarning() {
+    if (this.showWarning.value) return // Prevent multiple warnings
+    
     this.showWarning.value = true
-    this.warningCountdown.value = 120 // 2 minutes in seconds
+    this.warningCountdown.value = Math.min(120, Math.floor(this.timeoutMinutes.value * 60 / 2)) // 2 minutes or half the timeout, whichever is smaller
+    
+    console.log(`🚨 Session warning displayed, countdown: ${this.warningCountdown.value} seconds`)
     
     // Start countdown
     const countdownInterval = setInterval(() => {
@@ -164,6 +172,7 @@ class SessionTimeoutManager {
   }
 
   async handleSessionTimeout() {
+    console.log('🔒 Handling session timeout')
     
     try {
       // Log the session timeout event
@@ -187,9 +196,9 @@ class SessionTimeoutManager {
       // Sign out user
       await signOut(auth)
       
-      // Show notification and redirect
-      alert(`Your session has expired after ${this.timeoutMinutes.value} minutes of inactivity. Please log in again.`)
+      console.log('🚪 User signed out due to session timeout')
       
+      // Redirect to login - let the auth guard handle the redirect
       if (this.router) {
         this.router.push('/login')
       } else {
@@ -198,6 +207,8 @@ class SessionTimeoutManager {
       
     } catch (error) {
       console.error('Error during session timeout:', error)
+      // Force redirect even if there's an error
+      window.location.href = '/login'
     }
   }
 
@@ -226,10 +237,12 @@ class SessionTimeoutManager {
     this.clearTimeouts()
     this.hideWarning()
     
-    // Remove activity listeners
-    this.activityEvents.forEach(event => {
-      document.removeEventListener(event, this.handleActivity.bind(this), true)
-    })
+    // Remove activity listeners using the bound handler
+    if (this.boundActivityHandler) {
+      this.activityEvents.forEach(event => {
+        document.removeEventListener(event, this.boundActivityHandler, true)
+      })
+    }
     
     // Unsubscribe from settings changes
     if (this.unsubscribeSettings) {

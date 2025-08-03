@@ -24,23 +24,14 @@
         </div>
       </div>
       <div class="header-controls">
-        <!-- Filter Toggle Button - Only for Admin Roles -->
-        <button 
-          v-if="canAccessFilters" 
-          @click="toggleFilters" 
-          class="filter-toggle-btn" 
-          :class="{ active: showFilters }"
-        >
-          <span>🔍</span> Filters
-        </button>
-
         <!-- Sort By Dropdown -->
-        <div class="filter-group">
+        <div class="filter-group sort-group">
+          <ArrowDownWideNarrow :size="16" class="sort-icon" />
           <select v-model="currentFilters.sortBy" @change="applyFilters()" class="sort-select">
-            <option value="firstName">First Name</option>
+            <option value="firstName">First Names</option>
             <option value="lastName">Last Name</option>
             <option value="grade">Grade</option>
-            <option value="reviewDate">Review Date</option>
+            <option value="reviewDate">Plan Review Date</option>
             <option value="reevalDate">Re-evaluation Date</option>
             <option value="meetingDate">Meeting Date</option>
           </select>
@@ -52,8 +43,9 @@
             <label
               v-for="option in providerViewOptions"
               :key="option.value"
-              class="radio-btn"
+              class="radio-btn icon-btn"
               :class="{ active: currentFilters.providerView === option.value }"
+              :title="getProviderTooltip(option.value)"
             >
               <input
                 type="radio"
@@ -61,7 +53,10 @@
                 :value="option.value"
                 @change="applyFilters"
               >
-              {{ option.label }}
+              <Users v-if="option.value === 'all_iep'" :size="16" />
+              <User v-else-if="option.value === 'case_manager'" :size="16" />
+              <Presentation v-else-if="option.value === 'service_provider' || option.value === 'teacher'" :size="16" />
+              <Globe v-else-if="option.value === 'all'" :size="16" />
             </label>
           </div>
         </div>
@@ -69,11 +64,11 @@
         <!-- View Mode -->
         <div class="filter-group">
           <div class="radio-group">
-            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'list' }">
+            <label class="radio-btn icon-btn" :class="{ active: currentFilters.viewMode === 'list' }" title="List view">
               <input type="radio" :value="'list'" :checked="currentFilters.viewMode === 'list'" @change="setViewMode('list')">
-              List
+              <List :size="16" />
             </label>
-            <label class="radio-btn" :class="{ active: currentFilters.viewMode === 'class', disabled: isClassViewDisabled }">
+            <label class="radio-btn icon-btn" :class="{ active: currentFilters.viewMode === 'class', disabled: isClassViewDisabled }" title="Class-period view">
               <input 
                 type="radio" 
                 :value="'class'"
@@ -81,21 +76,33 @@
                 @change="setViewMode('class')"
                 :disabled="isClassViewDisabled"
               >
-              <span :class="{ 'strikethrough': isClassViewDisabled }">Class</span>
+              <Columns :size="16" :class="{ 'strikethrough': isClassViewDisabled }" />
+              <span v-if="isClassViewDisabled" class="disabled-icon">🚫</span>
             </label>
-            <label v-if="canAccessTesting" class="radio-btn" :class="{ active: currentFilters.viewMode === 'testing' }">
+            <label v-if="canAccessTesting" class="radio-btn icon-btn" :class="{ active: currentFilters.viewMode === 'testing' }" title="Separate Setting For Testing">
               <input type="radio" :value="'testing'" :checked="currentFilters.viewMode === 'testing'" @change="setViewMode('testing')">
-              SS-Testing
+              <ClipboardList :size="16" />
             </label>
 
           </div>
         </div>
 
-        <!-- Reset Filters -->
-        <button @click="clearFilters" class="reset-btn" title="Reset all filters">
-          🔄
+        <!-- Filter Toggle Button -->
+        <button 
+          v-if="canAccessFilters" 
+          @click="toggleFilters" 
+          class="radio-btn icon-btn filter-toggle-btn" 
+          :class="{ active: showFilters }"
+          title="Toggle filters"
+        >
+          <Filter :size="16" />
         </button>
       </div>
+    </div>
+
+    <!-- Selected Radio Button Display -->
+    <div v-if="selectedRadioText" class="selected-radio-display">
+      {{ selectedRadioText }}
     </div>
 
     <!-- Hidden Filters Panel -->
@@ -147,6 +154,11 @@
     </div>
     
     <div class="content">
+      <!-- Print-only user name -->
+      <div class="print-user-name">
+        {{ authStore.currentUser?.name || authStore.currentUser?.email || authStore.currentUser?.displayName || currentUser?.name || currentUser?.email || 'System User' }}
+      </div>
+      
       <!-- List View -->
       <div v-if="currentViewMode === 'list'">
         <StudentTable
@@ -278,13 +290,32 @@
 // Vue imports
 import { computed, ref, watch } from 'vue'
 
+// Store
+import { useAuthStore } from '@/store/authStore.js'
+
+// Initialize auth store
+const authStore = useAuthStore()
+
 // Composables
 import { useStudentData } from '@/composables/useStudentData.js'
 import { useStudentFilters } from '@/composables/useStudentFilters.js'
-import { useUnifiedRoleView } from '@/composables/roles/useUnifiedRoleView.js'
+import { useRoleBasedView } from '@/composables/roles/useRoleBasedView.js'
 import { useStudentViews } from '@/composables/useStudentViews.js'
 import { useStudentNavActions } from '@/composables/useStudentNavActions.js'
 import { useStudentQueries } from '@/composables/useStudentQueries.js'
+
+// Lucide Icons
+import {
+  List,
+  Columns,
+  ClipboardList,
+  Globe,
+  User,
+  Users,
+  Presentation,
+  ArrowDownWideNarrow,
+  Filter
+} from 'lucide-vue-next'
 
 // Components
 import StudentNavMenu from '@/components/students/StudentNavMenu.vue'
@@ -298,7 +329,7 @@ import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.v
 // Initialize composables
 const studentData = useStudentData()
 const filterData = useStudentFilters(studentData)
-  const roleView = useUnifiedRoleView(studentData, filterData)
+  const roleView = useRoleBasedView(studentData, filterData)
 const navActions = useStudentNavActions(studentData)
 
 // Extract data from composables
@@ -404,6 +435,25 @@ const {
 
 
 
+// Get tooltip for provider view option
+const getProviderTooltip = (value) => {
+  const role = currentUser.value?.role
+  switch (value) {
+    case 'all_iep':
+      return 'CM+SP'
+    case 'case_manager': 
+      return 'Case Manager'
+    case 'service_provider': 
+      return 'Service Provider'
+    case 'teacher':
+      return 'Service Provider'
+    case 'all': 
+      return role === 'sped_chair' ? 'All students (with IEPs)' : 'All students'
+    default: 
+      return 'All students'
+  }
+}
+
 // Fallback provider view options for roles that don't have custom options
 const defaultProviderViewOptions = computed(() => {
   if (providerViewOptions?.value) {
@@ -426,21 +476,63 @@ const defaultProviderViewOptions = computed(() => {
     { value: 'service_provider', label: 'SP' }
   ]
 })
+
+// Generate text for selected radio buttons
+const selectedRadioText = computed(() => {
+  const texts = []
+  
+  // Student radio button (provider view) - show first if exists
+  if (currentFilters.providerView && providerViewOptions?.value?.length) {
+    const providerText = getProviderTooltip(currentFilters.providerView)
+    if (providerText) {
+      texts.push(providerText)
+    }
+  }
+  
+  // View mode radio button
+  if (currentFilters.viewMode) {
+    let viewModeText = ''
+    switch (currentFilters.viewMode) {
+      case 'list':
+        viewModeText = 'List view'
+        break
+      case 'class':
+        viewModeText = 'Class-period view'
+        break
+      case 'testing':
+        viewModeText = 'Separate Setting For Testing'
+        break
+    }
+    if (viewModeText) {
+      texts.push(viewModeText)
+    }
+  }
+  
+  return texts.length > 0 ? texts.join(' | ') : ''
+})
 </script>
 
 <style scoped>
 .students-view {
   padding: 20px;
-  padding-top: 30px;
+  padding-top: 23px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.selected-radio-display {
+  font-size: 0.9rem;
+  font-family: 'Roboto', sans-serif;
+  color: #999999;
+  font-weight: 500;
+  margin-bottom: 10px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 1px;
   padding-bottom: 15px;
   border-bottom: 2px solid #e0e0e0;
   gap: 20px;
@@ -486,35 +578,21 @@ const defaultProviderViewOptions = computed(() => {
   flex-wrap: wrap;
 }
 
+/* Filter toggle button specific styling */
 .filter-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  color: #495057;
+  border: 1px solid #ced4da !important;
+  border-radius: 6px !important;
+  background: #f8f9fa !important;
 }
 
 .filter-toggle-btn:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
+  background: #e9ecef !important;
+  border-color: #adb5bd !important;
 }
 
 .filter-toggle-btn.active {
-  background: #007bff;
-  color: white;
-  border-color: #007bff;
-}
-
-.filter-toggle-btn.active:hover {
-  background: #0056b3;
-  border-color: #0056b3;
+  background: #007bff !important;
+  border-color: #007bff !important;
 }
 
 .filter-group {
@@ -588,22 +666,20 @@ const defaultProviderViewOptions = computed(() => {
   position: absolute;
 }
 
-.reset-btn {
-  padding: 8px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.reset-btn:hover {
-  background: #f8f9fa;
-  border-color: #adb5bd;
-}
+/* Reset button removed - filter button moved to its position */
 
 /* Sort Dropdown Styling */
+.sort-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-icon {
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
 .sort-select {
   padding: 8px 12px;
   border: 1px solid #ced4da;
@@ -612,6 +688,8 @@ const defaultProviderViewOptions = computed(() => {
   background: white;
   min-width: 140px;
   cursor: pointer;
+  height: 36px; /* Match radio button height (8px padding * 2 + 20px content) */
+  box-sizing: border-box;
 }
 
 .sort-select:focus {
@@ -710,11 +788,14 @@ const defaultProviderViewOptions = computed(() => {
 
 .content {
  
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  
+  /* box-shadow: 0 2px 4px rgba(0,0,0,0.1); */
   overflow: hidden;
 }
-
+.content > div:first-child {
+  border-radius: 8px;
+  box-shadow: 2px 1px 20px 0px #0000001a;
+}
 /* View Mode Styles */
 .view-container {
   padding: 20px;
@@ -759,5 +840,113 @@ const defaultProviderViewOptions = computed(() => {
   font-weight: 600;
 }
 
+/* Icon Button Styles */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  position: relative;
+  min-width: 36px;
+}
+
+.disabled-icon {
+  font-size: 0.7rem;
+  position: absolute;
+  top: -2px;
+  right: -2px;
+}
+
+/* Tooltip Styles */
+.icon-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease-in-out 0.3s forwards;
+  pointer-events: none;
+}
+
+.icon-btn[title]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-bottom-color: #333;
+  z-index: 1001;
+  opacity: 0;
+  animation: tooltipFadeIn 0.2s ease-in-out 0.3s forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Hide user name on screen */
+.print-user-name {
+  display: none !important;
+}
+
+/* Print-specific styles */
+@media print {
+  .page-header {
+    display: none !important;
+  }
+  
+  .selected-radio-display {
+    display: none !important;
+  }
+  
+  .students-view .print-user-name {
+    visibility: visible !important;
+    display: block !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #000 !important;
+    margin-bottom: 10px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 2px solid #000 !important;
+    text-align: left !important;
+    background: none !important;
+    position: relative !important;
+    z-index: 9999 !important;
+    border-radius: 0 !important;
+  }
+  
+  /* Ensure table is right under username and full width */
+  .students-view .content {
+    visibility: visible !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  .students-view table {
+    width: 100% !important;
+    margin-top: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  .students-view {
+    visibility: visible !important;
+  }
+}
 
 </style>

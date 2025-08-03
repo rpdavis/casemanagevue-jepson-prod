@@ -48,11 +48,11 @@ export function useStudentData() {
   
   const isAdmin = computed(() => {
     const role = currentUser.value?.role
-    return ['admin', 'administrator', 'sped_chair', 'administrator_504_CM'].includes(role)
+    return ['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(role)
   })
 
   const showProviderView = computed(() => {
-    return ['case_manager', 'administrator_504_CM', 'sped_chair'].includes(currentUser.value?.role)
+    return ['case_manager', 'admin_504', 'sped_chair'].includes(currentUser.value?.role)
   })
 
   const userMapObj = computed(() => userMap.value || {})
@@ -96,9 +96,7 @@ export function useStudentData() {
       
       // Load aide assignments based on user role and permissions
       const userRole = currentUser.value?.role
-      if (['admin', 'school_admin', 'admin_504', 'sped_chair',
-           // Legacy roles for backward compatibility
-           'administrator', 'administrator_504_CM'].includes(userRole)) {
+      if (['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(userRole)) {
         // Admin roles can load all aide assignments
         await loadAideAssignments()
       } else if (userRole === 'paraeducator' && currentUser.value.uid) {

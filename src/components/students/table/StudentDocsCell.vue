@@ -5,24 +5,40 @@
       <a 
         v-if="getDocumentUrl(student, 'ataglancePdfUrl')" 
         href="#" 
-        @click.prevent="openSecureFile(getDocumentUrl(student, 'ataglancePdfUrl'))"
+        @click.prevent="openSecureFile(getDocumentUrl(student, 'ataglancePdfUrl'), 'ataglance')"
+        class="doc-link"
+        :class="{ 'loading': loadingFiles.ataglance }"
       >
-        At-A-Glance
+        <div v-if="loadingFiles.ataglance" class="loading-spinner">
+          <RotateCw :size="14" class="spin" />
+        </div>
+        <FileText v-else :size="16" class="doc-icon" />
+        <span>{{ loadingFiles.ataglance ? 'Loading...' : 'At-A-Glance' }}</span>
       </a>
+      
       <a 
         v-if="getDocumentUrl(student, 'bipPdfUrl')" 
         href="#" 
-        @click.prevent="openSecureFile(getDocumentUrl(student, 'bipPdfUrl'))"
+        @click.prevent="openSecureFile(getDocumentUrl(student, 'bipPdfUrl'), 'bip')"
+        class="doc-link"
+        :class="{ 'loading': loadingFiles.bip }"
       >
-        BIP
+        <div v-if="loadingFiles.bip" class="loading-spinner">
+          <RotateCw :size="14" class="spin" />
+        </div>
+        <FileText v-else :size="16" class="doc-icon" />
+        <span>{{ loadingFiles.bip ? 'Loading...' : 'BIP' }}</span>
       </a>
+      
       <template v-if="!getDocumentUrl(student, 'ataglancePdfUrl') && !getDocumentUrl(student, 'bipPdfUrl')">—</template>
     </div>
   </td>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import usePdfHandler from '@/composables/usePdfHandler'
+import { FileText, RotateCw } from 'lucide-vue-next'
 
 const props = defineProps({
   student: {
@@ -38,13 +54,22 @@ const props = defineProps({
 // Use PDF handler for secure download and viewing
 const { downloadPdf } = usePdfHandler()
 
-// Handle secure file opening
-const openSecureFile = async (filePath) => {
+// Loading states for each file type
+const loadingFiles = ref({
+  ataglance: false,
+  bip: false
+})
+
+// Handle secure file opening with loading states
+const openSecureFile = async (filePath, fileType) => {
   try {
     if (!filePath) {
       alert('File not found.')
       return
     }
+    
+    // Set loading state
+    loadingFiles.value[fileType] = true
     
     // Get the original filename from the student data
     const originalFileName = props.student.app?.documents?.bipFileName || 
@@ -57,6 +82,74 @@ const openSecureFile = async (filePath) => {
   } catch (error) {
     console.error('Error opening secure file:', error)
     alert('Error opening file. Please try again.')
+  } finally {
+    // Clear loading state
+    loadingFiles.value[fileType] = false
   }
 }
-</script> 
+</script>
+
+<style scoped>
+.docs-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.doc-link {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #1976d2;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.25rem 0;
+  transition: all 0.2s ease;
+}
+
+.doc-link:hover {
+  color: #1565c0;
+  text-decoration: underline;
+}
+
+.doc-link.loading {
+  color: #666;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.doc-link.loading:hover {
+  text-decoration: none;
+}
+
+.doc-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.doc-link:hover .doc-icon {
+  opacity: 1;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  color: #1976d2;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style> 

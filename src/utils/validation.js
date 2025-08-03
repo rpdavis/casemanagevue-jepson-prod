@@ -65,7 +65,7 @@ export function validateStringLength(value, fieldName, minLength = 0, maxLength 
 
 export function validateRole(role) {
   const validRoles = [
-    'admin', 'administrator', 'administrator_504_CM', 'sped_chair',
+    'admin', 'school_admin', 'admin_504', 'sped_chair',
     'case_manager', 'teacher', 'service_provider', 'paraeducator'
   ];
   

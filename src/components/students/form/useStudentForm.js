@@ -5,6 +5,7 @@ import { db, storage, auth } from '@/firebase'
 import { getDisplayValue } from '@/utils/studentUtils'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { auditLogger } from '@/utils/auditLogger'
+import { useAuthStore } from '@/store/authStore'
 import { 
   validateStudentData, 
   sanitizeStudentFormData, 
@@ -15,6 +16,9 @@ import {
 export function useStudentForm(props, emit) {
   // Load app settings
   const { appSettings, loadAppSettings, loading: appSettingsLoading, error: appSettingsError } = useAppSettings()
+  
+  // Auth store for current user info
+  const authStore = useAuthStore()
   
   // Loading state
   const isSaving = ref(false)
@@ -651,7 +655,8 @@ export function useStudentForm(props, emit) {
       // Create the full payload with nested structure
       const payload = {
         app: appData,
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        updatedBy: authStore.currentUser?.uid || null
       }
       
       console.log('Saving payload:', payload)

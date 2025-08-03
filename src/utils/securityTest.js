@@ -62,9 +62,11 @@ function checkStudentAccess(student, user) {
 
   switch (role) {
     case 'admin':
-    case 'administrator':
-    case 'administrator_504_CM':
+    case 'school_admin':
+    case 'admin_504':
     case 'sped_chair':
+    case 'staff_view':
+    case 'staff_edit':
       // Admins can access all students
       return true
 

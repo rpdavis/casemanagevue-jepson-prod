@@ -6,15 +6,15 @@
         <template v-if="testingView">
           <th class="print">Student Info</th>
           <th class="print">Schedule</th>
-          <th class="print">Assessment Accom.</th>
+          <th class="print">Assessment Accommodations</th>
         </template>
         <!-- Regular View Headers -->
         <template v-else>
           <th class="print">Student Info</th>
           <th class="print">Services</th>
           <th class="print">Schedule</th>
-          <th class="print">Instruction Accom.</th>
-          <th class="print">Assessment Accom.</th>
+          <th class="print">Instruction Accommodations</th>
+          <th class="print">Assessment Accommodations</th>
           <th class="print">Docs</th>
           <th class="print">Actions</th>
         </template>
@@ -40,7 +40,7 @@
                 <li v-for="(periodData, period) in getSchedule(student)" :key="period" class="schedule-period">
                   <div class="period-assignment">
                     <div class="primary-line">
-                      <span class="period-label">{{ period }}:</span>
+                      <span class="period-label">{{ getPeriodLabel ? getPeriodLabel(period) : period }}:</span>
                       <span class="primary-teacher">{{ getUserInitialLastName(periodData.teacherId || periodData) }}</span>
                     </div>
                     <div v-if="isCoTeaching(periodData)" class="coteaching-info">
@@ -116,6 +116,7 @@
             :student="student"
             :get-schedule="getSchedule"
             :get-user-initial-last-name="getUserInitialLastName"
+            :get-period-label="getPeriodLabel"
           />
           
           <!-- Instruction Accom. Cell -->
@@ -148,6 +149,8 @@
             :student="student"
             :current-user="currentUser"
             :student-data="studentData"
+            :get-user-name="getUserName"
+            :format-date="formatDate"
             @edit="$emit('edit', student.id)"
             @email="$emit('email', student.id)"
             @teacher-feedback="$emit('teacher-feedback', student.id)"
@@ -226,7 +229,8 @@ const {
   getServiceProviderId,
   getProviderFieldName,
   isDirectAssignment,
-  formatListFromText
+  formatListFromText,
+  getPeriodLabel
 } = useStudentTable(props)
 
 // Helper function to check if a period has co-teaching data

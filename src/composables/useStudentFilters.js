@@ -39,6 +39,10 @@ export function useStudentFilters(studentData) {
 
   // Filter management
   const toggleFilters = () => {
+    // If we're closing the filters panel, reset the filters
+    if (showFilters.value) {
+      clearFilters()
+    }
     showFilters.value = !showFilters.value
   }
 
@@ -72,7 +76,7 @@ export function useStudentFilters(studentData) {
     // Apply provider view filtering (for roles that have provider views)
     // Skip provider view filtering for roles that don't have provider view options
     const userRole = currentUser.value?.role
-    const rolesWithoutProviderViews = ['admin', 'administrator']
+    const rolesWithoutProviderViews = ['admin', 'school_admin']
     
     console.log('🔍 FILTER DEBUG: Provider view filtering check:', {
       userRole,

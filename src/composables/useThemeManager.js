@@ -27,6 +27,10 @@ const DEFAULT_THEME = {
   textSecondary: '#666666',
   textMuted: '#999999',
   textInverse: '#ffffff',
+  headerTextColor: '#1a1a1a',
+  
+  // Accent Colors
+  accentColor: '#e3f2fd',
   
   // Border Colors
   borderColor: '#dee2e6',
@@ -80,7 +84,13 @@ const DEFAULT_THEME = {
   fontSizeBase: '1rem',
   fontSizeLg: '1.125rem',
   fontSizeXl: '1.25rem',
-  fontSizeXxl: '1.5rem'
+  fontSizeXxl: '1.5rem',
+  
+  // Style Options
+  borderStyle: 'rounded',
+  shadowStyle: 'subtle',
+  contrastLevel: 'standard',
+  lineHeight: '1.5'
 }
 
 // CSS Variable mapping
@@ -101,6 +111,8 @@ const CSS_VARIABLE_MAP = {
   textSecondary: '--text-secondary',
   textMuted: '--text-muted',
   textInverse: '--text-inverse',
+  headerTextColor: '--header-text-color',
+  accentColor: '--accent-color',
   borderColor: '--border-color',
   borderLight: '--border-light',
   borderDark: '--border-dark',
@@ -138,7 +150,8 @@ const CSS_VARIABLE_MAP = {
   fontSizeBase: '--font-size-base',
   fontSizeLg: '--font-size-lg',
   fontSizeXl: '--font-size-xl',
-  fontSizeXxl: '--font-size-xxl'
+  fontSizeXxl: '--font-size-xxl',
+  lineHeight: '--line-height-base'
 }
 
 export function useThemeManager() {

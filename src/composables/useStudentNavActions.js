@@ -47,9 +47,7 @@ export function useStudentNavActions(studentData) {
     router.push('/admin')
   }
 
-  const navigateToTesting = () => {
-    router.push('/testing')
-  }
+
 
   const navigateToAideSchedule = () => {
     router.push('/aide-schedule')
@@ -70,10 +68,6 @@ export function useStudentNavActions(studentData) {
       case 'admin':
         navigateToAdmin()
         break
-      case 'testing':
-        navigateToTesting()
-        break
-
       case 'aide-schedule':
         navigateToAideSchedule()
         break
@@ -116,7 +110,6 @@ export function useStudentNavActions(studentData) {
 
     // Navigation
     navigateToAdmin,
-    navigateToTesting,
     navigateToAideSchedule,
     handleNavAction,
     handleLogout

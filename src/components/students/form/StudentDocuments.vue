@@ -22,7 +22,7 @@
             @click="removeBipFile" 
             class="btn-remove"
           >
-            🗑️ Remove
+            <Trash2 :size="16" /> Remove
           </button>
         </span>
         <span 
@@ -35,11 +35,11 @@
             @click="form.removeBipFile = false" 
             class="btn-undo"
           >
-            ↩️ Undo
+            <RotateCcw :size="16" /> Undo
           </button>
         </span>
         <div v-if="isUploading && uploadingFile === 'bip'" class="upload-status loading-pulse">
-          <span class="loading-spinner">🔄</span>
+          <RotateCw :size="16" class="loading-spinner" />
           <strong>Loading... Uploading BIP document...</strong>
         </div>
         <div v-if="pdfError" class="error-message">
@@ -68,7 +68,7 @@
             @click="removeAtaglanceFile" 
             class="btn-remove"
           >
-            🗑️ Remove
+            <Trash2 :size="16" /> Remove
           </button>
         </span>
         <span 
@@ -81,11 +81,11 @@
             @click="form.removeAtaglanceFile = false" 
             class="btn-undo"
           >
-            ↩️ Undo
+            <RotateCcw :size="16" /> Undo
           </button>
         </span>
         <div v-if="isUploading && uploadingFile === 'ataglance'" class="upload-status loading-pulse">
-          <span class="loading-spinner">🔄</span>
+          <RotateCw :size="16" class="loading-spinner" />
           <strong>Loading... Uploading At-A-Glance document...</strong>
         </div>
       </label>
@@ -95,6 +95,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { Trash2, RotateCcw, RotateCw } from 'lucide-vue-next'
 import usePdfHandler from '@/composables/usePdfHandler'
 
 // Props & Emits
@@ -299,6 +300,9 @@ import { validateFile, checkSecurityThreats } from '@/utils/validation.js'
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .btn-remove:hover {
@@ -323,6 +327,9 @@ import { validateFile, checkSecurityThreats } from '@/utils/validation.js'
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .btn-undo:hover {

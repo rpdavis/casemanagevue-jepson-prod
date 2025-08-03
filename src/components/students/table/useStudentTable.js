@@ -24,7 +24,7 @@ export function useStudentTable(props) {
         await auditLogger.logStudentAccess('table_view', 'view', {
           studentCount: props.studentData.students.value.length,
           viewType: 'student_table',
-          hasFilters: Object.keys(props.filterData.activeFilters.value || {}).length > 0
+          hasFilters: props.filterData?.currentFilters ? Object.keys(props.filterData.currentFilters).length > 0 : false
         })
       }
       
@@ -474,6 +474,9 @@ export function useStudentTable(props) {
     
     // Utility functions
     formatListFromText,
-    getFlagClass
+    getFlagClass,
+    
+    // Period label functions
+    getPeriodLabel: getLabel
   }
 } 

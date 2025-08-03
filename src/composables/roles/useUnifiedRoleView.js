@@ -71,8 +71,16 @@ export function useUnifiedRoleView(studentData, filterData) {
         }
         return []
       
+      case 'all_iep':
+        // CM+SP view: students they case manage OR provide services to
+        return baseStudents.filter(student => {
+          const isCaseManager = ACCESS_PATTERN_FUNCTIONS.case_manager(currentUserId.value, student, studentData)
+          const isServiceProvider = ACCESS_PATTERN_FUNCTIONS.teacher(currentUserId.value, student, studentData)
+          return isCaseManager || isServiceProvider
+        })
+      
       case 'iep_504_all':
-        if (role === 'administrator_504_CM') {
+        if (role === 'administrator_504_CM' || role === 'admin_504') {
           return baseStudents.filter(student => 
             ACCESS_PATTERN_FUNCTIONS.all_iep_504(currentUserId.value, student, studentData)
           )
@@ -146,9 +154,14 @@ export function useUnifiedRoleView(studentData, filterData) {
       return studentData.getCaseManagerId(student) === currentUserId.value
     }
     
-    // Admin roles can edit all students
-    const adminRoles = ['admin', 'administrator', 'sped_chair', 'administrator_504_CM', 'service_provider']
-    return adminRoles.includes(role)
+    // Service providers can only edit students on their caseload
+    if (role === 'service_provider') {
+      return student.app?.staffIds?.includes(currentUserId.value)
+    }
+    
+    // Roles that can edit ALL students
+    const canEditAllRoles = ['admin', 'school_admin', 'staff_edit', 'admin_504', 'sped_chair']
+    return canEditAllRoles.includes(role)
   }
 
   const canSendFeedback = (student) => {

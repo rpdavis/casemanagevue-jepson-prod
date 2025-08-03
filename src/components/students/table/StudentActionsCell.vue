@@ -1,21 +1,29 @@
 <template>
-  <td>
-    <div class="action-buttons">
-      <!-- Only show Edit for admins/sped_chair or case managers on their own caseload -->
-      <button
-        v-if="canEditStudent"
-        class="edit-btn"
-        @click="$emit('edit', student.id)"
-        title="Edit Student"
-      >✏️</button>
-      <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">✉️</button>
-      <button v-if="canSendFeedback" 
-              class="teacher-feedback-btn" 
-              @click="$emit('teacher-feedback', student.id)" 
-              title="Send Teacher Feedback Form">📝</button>
-    </div>
-    <div v-if="student?.updatedAt?.seconds" class="updated-date" :title="'Last Updated: ' + formatDate(student.updatedAt)">
-      {{ formatDate(student.updatedAt, true) }}
+  <td class="actions-cell">
+    <div class="actions-content">
+      <div class="action-buttons">
+        <!-- Only show Edit for admins/sped_chair or case managers on their own caseload -->
+        <button
+          v-if="canEditStudent"
+          class="edit-btn"
+          @click="$emit('edit', student.id)"
+          title="Edit Student"
+        >
+          <Edit :size="16" />
+        </button>
+        <button class="email-btn" @click="$emit('email', student.id)" title="Email Student">
+          <Mail :size="16" />
+        </button>
+        <button v-if="canSendFeedback" 
+                class="teacher-feedback-btn" 
+                @click="$emit('teacher-feedback', student.id)" 
+                title="Send Teacher Feedback Form">
+          <MessageSquare :size="16" />
+        </button>
+      </div>
+      <div v-if="student?.updatedAt" class="action-updated-date" :title="updateTooltip">
+        {{ student.updatedAt.seconds ? new Date(student.updatedAt.seconds * 1000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : new Date(student.updatedAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) }}
+      </div>
     </div>
   </td>
 </template>
@@ -23,6 +31,7 @@
 <script setup>
 import { computed } from 'vue'
 import { RoleUtils } from '@/composables/roles/roleConfig'
+import { Edit, Mail, MessageSquare } from 'lucide-vue-next'
 
 const props = defineProps({
   student: {
@@ -36,10 +45,68 @@ const props = defineProps({
   studentData: {
     type: Object,
     required: false
+  },
+  getUserName: {
+    type: Function,
+    required: true
+  },
+  formatDate: {
+    type: Function,
+    required: true
   }
 })
 
 const emit = defineEmits(['edit', 'email', 'teacher-feedback'])
+
+// Get the username of who last updated the student
+const updatedByUser = computed(() => {
+  if (!props.student?.updatedBy) return null
+  return props.getUserName(props.student.updatedBy)
+})
+
+// Create the tooltip text with username
+const updateTooltip = computed(() => {
+  if (!props.student?.updatedAt) return ''
+  
+  try {
+    let formattedDate = ''
+    
+    // Handle Firestore Timestamp format (which we now know it is)
+    if (props.student.updatedAt.seconds) {
+      // Convert Firestore Timestamp to JavaScript Date
+      const jsDate = new Date(props.student.updatedAt.seconds * 1000)
+      formattedDate = jsDate.toLocaleString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: '2-digit',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    } else {
+      // Fallback for other formats
+      const jsDate = new Date(props.student.updatedAt)
+      formattedDate = jsDate.toLocaleString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: '2-digit',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    }
+    
+    const userText = updatedByUser.value ? ` by ${updatedByUser.value}` : ''
+    return `Last Updated: ${formattedDate}${userText}`
+    
+  } catch (error) {
+    console.warn('Error formatting date in tooltip:', error)
+    // Manual fallback formatting
+    const jsDate = new Date(props.student.updatedAt.seconds * 1000)
+    const userText = updatedByUser.value ? ` by ${updatedByUser.value}` : ''
+    return `Last Updated: ${jsDate.toLocaleDateString()}${userText}`
+  }
+})
 
 // Determine if current user can edit this student
 const canEditStudent = computed(() => {
@@ -58,11 +125,14 @@ const canEditStudent = computed(() => {
     return props.student.app?.studentData?.caseManagerId === userId
   }
   
-  // Admin roles (admin, administrator, sped_chair, administrator_504_CM, service_provider) can edit all students
-  const adminRoles = ['admin', 'school_admin', 'staff_edit', 'admin_504', 'sped_chair', 'service_provider',
-                   // Legacy roles for backward compatibility
-                   'administrator', 'administrator_504_CM']
-  return adminRoles.includes(role)
+  // Service providers can only edit students on their caseload
+  if (role === 'service_provider') {
+    return props.student.app?.staffIds?.includes(userId)
+  }
+  
+  // Roles that can edit ALL students
+  const canEditAllRoles = ['admin', 'school_admin', 'staff_edit', 'admin_504', 'sped_chair']
+  return canEditAllRoles.includes(role)
 })
 
 // Determine if current user can send feedback forms for this student
@@ -134,19 +204,34 @@ td {
   border: solid #bfc7d1 1px;
 }
 
-.updated-date {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  padding: 0.2rem 0.4rem;
-  border-radius: var(--border-radius-sm);
-  background: #f5f5f5;
-  cursor: help;
-  transition: all var(--transition-base);
-  margin-top: auto;
+/* Actions cell layout - simple approach */
+.actions-cell {
+  vertical-align: top;
+  padding: 0.5rem !important;
 }
 
-.updated-date:hover {
-  background: #e3eaf6;
-  color: var(--primary-color);
+.actions-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 60px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  flex-grow: 1;
+}
+
+/* Updated date container - simple bottom margin */
+.action-updated-date {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666;
+  cursor: help;
+  margin-top: 0.5rem;
+  padding: 2px 0;
 }
 </style> 

@@ -181,6 +181,11 @@
       <div v-if="activeTab === 'admin-permissions'" class="admin-section">
         <AdminPermissionsMatrix />
       </div>
+
+      <!-- App Settings Testing Tab -->
+      <div v-if="activeTab === 'app-settings-testing'" class="admin-section">
+        <TestingView />
+      </div>
     </div>
   </div>
 </template>
@@ -219,6 +224,7 @@ import SecurityControlCenter from '@/components/SecurityControlCenter.vue'
 import ComponentHealthDashboard from '@/components/ComponentHealthDashboard.vue'
 import AdminPermissionsMatrix from '@/components/AdminPermissionsMatrix.vue'
 import ThemeManager from '@/components/ThemeManager.vue'
+import TestingView from '@/views/TestingView.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useAdminPermissions } from '@/composables/useAdminPermissions'
 import { auditLogger } from '@/utils/auditLogger'
@@ -250,7 +256,8 @@ export default {
     SecurityControlCenter,
     ComponentHealthDashboard,
     AdminPermissionsMatrix,
-    ThemeManager
+    ThemeManager,
+    TestingView
   },
   setup() {
     const router = useRouter()
@@ -317,7 +324,8 @@ export default {
       { key: 'audit-logs', label: 'Audit Logs', category: 'monitoring' },
       //{ key: 'iep-security', label: 'IEP Security', category: 'monitoring' },
       { key: 'security', label: 'Security Controls', category: 'monitoring' },
-      { key: 'component-health', label: 'Component Debug', category: 'monitoring' }
+      { key: 'component-health', label: 'Component Debug', category: 'monitoring' },
+      { key: 'app-settings-testing', label: 'App Settings Testing', category: 'monitoring' }
     ]
     
     // Admin-only tabs (only visible to 'admin' role)

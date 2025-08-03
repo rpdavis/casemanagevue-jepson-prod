@@ -101,20 +101,25 @@ class SecurePdfHandler {
 
   async downloadAndDecryptPdf(secureFileName, studentId) {
     try {
+      console.log('🔒 Starting secure PDF download process...')
+      
       // Check access permissions
+      console.log('🔍 Verifying user access permissions...')
       const userHasAccess = await this.verifyAccess(studentId);
       if (!userHasAccess) {
         throw new Error('Access denied');
       }
+      console.log('✅ Access permissions verified')
 
       // Use HTTP proxy Cloud Function to avoid CORS issues
+      console.log('🔑 Getting authentication token...')
       const { auth } = await import('@/firebase');
       const idToken = await auth.currentUser.getIdToken();
       
       // Use the HTTP proxy function instead of signed URLs
       const proxyUrl = `https://downloadstudentfile-zr6j2ycwuq-uc.a.run.app/downloadStudentFile?studentId=${studentId}&fileName=${secureFileName}`;
       
-      console.log('🔗 Using proxy URL for secure download');
+      console.log('🌐 Downloading encrypted file from secure storage...')
       
       const response = await fetch(proxyUrl, {
         headers: {
@@ -128,12 +133,14 @@ class SecurePdfHandler {
       }
       
       const encrypted = await response.text();
-      console.log('✅ Downloaded encrypted content via proxy');
+      console.log('✅ Downloaded encrypted content, size:', encrypted.length, 'characters')
 
       // Decrypt content
+      console.log('🔓 Decrypting PDF content...')
       const decrypted = CryptoJS.AES.decrypt(encrypted, this.encryptionKey).toString(CryptoJS.enc.Utf8);
       
       // Convert back to PDF
+      console.log('📄 Converting to PDF format...')
       const pdfContent = atob(decrypted);
       
       // Create Blob for download
@@ -142,11 +149,11 @@ class SecurePdfHandler {
         { type: 'application/pdf' }
       );
 
-      console.log('✅ PDF decrypted and blob created');
+      console.log('✅ PDF ready for viewing, size:', pdfBlob.size, 'bytes')
       return pdfBlob;
     } catch (error) {
-      console.error('PDF decryption failed:', error);
-      throw new Error('Failed to retrieve PDF');
+      console.error('❌ PDF download failed:', error);
+      throw new Error('Failed to retrieve PDF: ' + error.message);
     }
   }
 

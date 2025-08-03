@@ -5,7 +5,7 @@
         <li v-for="(periodData, period) in getSchedule(student)" :key="period" class="schedule-period">
           <div class="period-assignment">
             <div class="primary-line">
-              <span class="period-label">{{ period }}:</span>
+              <span class="period-label">{{ getPeriodLabel ? getPeriodLabel(period) : period }}:</span>
               <span class="primary-teacher">{{ getUserInitialLastName(periodData.teacherId || periodData) }}</span>
             </div>
             <div v-if="isCoTeaching(periodData)" class="coteaching-info">
@@ -37,6 +37,10 @@ const props = defineProps({
   getUserInitialLastName: {
     type: Function,
     required: true
+  },
+  getPeriodLabel: {
+    type: Function,
+    required: false
   }
 })
 

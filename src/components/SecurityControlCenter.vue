@@ -6,136 +6,7 @@
       <DebugEncryption :selected-student="selectedStudent" />
     </div>
 
-    <!-- Access Logs Section -->
-    <div class="security-section">
-      <h3>📋 Comprehensive Audit Logs</h3>
-      
-      <div class="log-controls">
-        <div class="log-filters">
-          <select v-model="timeRange" class="form-select">
-            <option value="1">Last 24 hours</option>
-            <option value="7">Last 7 days</option>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-          </select>
-          
-          <select v-model="logTypeFilter" class="form-select">
-            <option value="">All Log Types</option>
-            <option value="student_access">Student Access</option>
-            <option value="user_management">User Management</option>
-            <option value="system_access">System Access</option>
-            <option value="data_export">Data Export</option>
-          </select>
-          
-          <select v-model="actionFilter" class="form-select">
-            <option value="">All Actions</option>
-            <option value="login">Login</option>
-            <option value="logout">Logout</option>
-            <option value="create">Create</option>
-            <option value="edit">Edit</option>
-            <option value="delete">Delete</option>
-            <option value="view">View</option>
-            <option value="admin_panel_access">Admin Access</option>
-          </select>
-          
-          <input 
-            v-model="searchTerm" 
-            type="text" 
-            placeholder="Search logs..." 
-            class="form-input"
-          />
-          
-          <button @click="refreshLogs" class="btn btn-secondary">
-            🔄 Refresh
-          </button>
-          
-          <button @click="exportLogs" class="btn btn-primary">
-            📊 Export Logs
-          </button>
-        </div>
-      </div>
-      
-      <div class="log-stats" v-if="logStats">
-        <div class="stat-card">
-          <h4>Total Events</h4>
-          <span class="stat-number">{{ logStats.total }}</span>
-        </div>
-        <div class="stat-card">
-          <h4>Failed Events</h4>
-          <span class="stat-number error">{{ logStats.failed }}</span>
-        </div>
-        <div class="stat-card">
-          <h4>Unique Users</h4>
-          <span class="stat-number">{{ logStats.uniqueUsers }}</span>
-        </div>
-        <div class="stat-card">
-          <h4>Admin Actions</h4>
-          <span class="stat-number">{{ logStats.adminActions }}</span>
-        </div>
-      </div>
-      
-      <div class="log-table" v-if="filteredLogs.length">
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Target</th>
-              <th>Status</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="log in paginatedLogs" :key="log.id" :class="getLogRowClass(log)">
-              <td>{{ formatDate(log.timestamp) }}</td>
-              <td>
-                <span class="log-type-badge" :class="log.type">
-                  {{ formatLogType(log.type) }}
-                </span>
-              </td>
-              <td>{{ log.userEmail || log.performedByEmail || 'System' }}</td>
-              <td>{{ formatAction(log.action) }}</td>
-              <td>{{ getLogTarget(log) }}</td>
-              <td>
-                <span :class="getStatusClass(log)">
-                  {{ getStatusText(log) }}
-                </span>
-              </td>
-              <td>
-                <button @click="showLogDetails(log)" class="btn-link">
-                  👁️ View
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <!-- Pagination -->
-        <div class="log-pagination">
-          <button 
-            @click="currentPage--" 
-            :disabled="currentPage <= 1"
-            class="btn btn-secondary"
-          >
-            Previous
-          </button>
-          <span>Page {{ currentPage }} of {{ totalPages }}</span>
-          <button 
-            @click="currentPage++" 
-            :disabled="currentPage >= totalPages"
-            class="btn btn-secondary"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-      
-      <div v-else-if="accessLogs.length === 0" class="no-logs">
-        No audit logs found for selected criteria
-      </div>
-    </div>
+
 
     <!-- Session Security Section -->
     <div class="security-section">
@@ -222,18 +93,7 @@
         </label>
       </div>
 
-      <div class="setting-group">
-        <label>
-          Maximum Failed Login Attempts:
-          <input 
-            type="number" 
-            v-model="maxLoginAttempts" 
-            min="3" 
-            max="10"
-            @change="updateLoginPolicy"
-          >
-        </label>
-      </div>
+
     </div>
 
     <!-- IP Restrictions -->
@@ -269,16 +129,7 @@
     <div class="security-section">
       <h3>🚨 Security Alerts</h3>
       <div class="alert-settings">
-        <div class="setting-group">
-          <label>
-            <input 
-              type="checkbox" 
-              v-model="alertSettings.failedLogins"
-              @change="updateAlertSettings"
-            >
-            Alert on Multiple Failed Login Attempts
-          </label>
-        </div>
+
 
         <div class="setting-group">
           <label>
@@ -330,9 +181,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
-import { db } from '@/firebase'
+import { ref, computed } from 'vue'
 import DebugEncryption from './DebugEncryption.vue'
 import SessionTimeoutDebug from './SessionTimeoutDebug.vue'
 import { useSessionTimeout } from '@/composables/useSessionTimeout'
@@ -345,89 +194,7 @@ const props = defineProps({
   }
 })
 
-// Access Logs
-const accessLogs = ref([])
-const timeRange = ref(1)
-const logTypeFilter = ref('')
-const actionFilter = ref('')
-const searchTerm = ref('')
-const currentPage = ref(1)
-const logsPerPage = 50
 
-// Computed properties for enhanced logging
-const filteredLogs = computed(() => {
-  let logs = accessLogs.value
-
-  // Filter by log type
-  if (logTypeFilter.value) {
-    logs = logs.filter(log => log.type === logTypeFilter.value)
-  }
-
-  // Filter by action
-  if (actionFilter.value) {
-    logs = logs.filter(log => 
-      log.action && log.action.toLowerCase().includes(actionFilter.value.toLowerCase())
-    )
-  }
-
-  // Filter by search term
-  if (searchTerm.value) {
-    const search = searchTerm.value.toLowerCase()
-    logs = logs.filter(log => 
-      (log.userEmail && log.userEmail.toLowerCase().includes(search)) ||
-      (log.performedByEmail && log.performedByEmail.toLowerCase().includes(search)) ||
-      (log.action && log.action.toLowerCase().includes(search)) ||
-      (log.studentId && log.studentId.toLowerCase().includes(search)) ||
-      (log.targetUserId && log.targetUserId.toLowerCase().includes(search))
-    )
-  }
-
-  return logs
-})
-
-const paginatedLogs = computed(() => {
-  const start = (currentPage.value - 1) * logsPerPage
-  const end = start + logsPerPage
-  return filteredLogs.value.slice(start, end)
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredLogs.value.length / logsPerPage)
-})
-
-const logStats = computed(() => {
-  if (accessLogs.value.length === 0) return null
-
-  const failed = accessLogs.value.filter(log => 
-    log.action && (
-      log.action.includes('failed') || 
-      log.action.includes('error') ||
-      log.action.includes('unauthorized') ||
-      (log.details && log.details.success === false)
-    )
-  ).length
-
-  const uniqueUsers = new Set(
-    accessLogs.value
-      .map(log => log.userEmail || log.performedByEmail)
-      .filter(email => email)
-  ).size
-
-  const adminActions = accessLogs.value.filter(log => 
-    log.action && (
-      log.action.includes('admin') ||
-      log.type === 'user_management' ||
-      log.action.includes('delete')
-    )
-  ).length
-
-  return {
-    total: accessLogs.value.length,
-    failed,
-    uniqueUsers,
-    adminActions
-  }
-})
 
 // Session Security - Use real session timeout system
 const { isEnabled: sessionTimeoutEnabled, timeoutMinutes: sessionTimeout, updateSettings } = useSessionTimeout()
@@ -437,7 +204,6 @@ const requireMFA = ref(false)
 // Data Access
 const restrictExport = ref(true)
 const watermarkPDFs = ref(true)
-const maxLoginAttempts = ref(5)
 
 // IP Restrictions
 const allowedIPs = ref([])
@@ -445,7 +211,6 @@ const newIP = ref('')
 
 // Alert Settings
 const alertSettings = ref({
-  failedLogins: true,
   unusualAccess: true,
   bulkExport: true
 })
@@ -453,64 +218,9 @@ const alertEmails = ref([])
 const newAlertEmail = ref('')
 
 // Methods
-const refreshLogs = async () => {
-  try {
-    const daysAgo = new Date()
-    daysAgo.setDate(daysAgo.getDate() - timeRange.value)
-    
-    // Try to fetch from new auditLogs collection first
-    try {
-      const auditQuery = query(
-        collection(db, 'auditLogs'),
-        where('timestamp', '>=', daysAgo),
-        orderBy('timestamp', 'desc'),
-        limit(100)
-      )
-      
-      const auditSnapshot = await getDocs(auditQuery)
-      accessLogs.value = auditSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      
-      if (accessLogs.value.length > 0) {
-        console.log('📋 Loaded', accessLogs.value.length, 'audit logs')
-        return
-      }
-    } catch (auditError) {
-      console.log('📋 No audit logs found, trying legacy iepAccessLogs')
-    }
-    
-    // Fallback to legacy iepAccessLogs collection
-    const q = query(
-      collection(db, 'iepAccessLogs'),
-      where('timestamp', '>=', daysAgo),
-      orderBy('timestamp', 'desc'),
-      limit(100)
-    )
-    
-    const snapshot = await getDocs(q)
-    accessLogs.value = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
-    
-    console.log('📋 Loaded', accessLogs.value.length, 'legacy access logs')
-    
-  } catch (error) {
-    console.error('Failed to fetch logs:', error)
-    accessLogs.value = [] // Set empty array on error
-  }
-}
 
-const formatDate = (timestamp) => {
-  if (!timestamp) return ''
-  const date = timestamp.toDate()
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(date)
-}
+
+
 
 const formatLogType = (type) => {
   switch (type) {
@@ -624,10 +334,7 @@ const updatePDFPolicy = () => {
   console.log('PDF policy updated:', watermarkPDFs.value)
 }
 
-const updateLoginPolicy = () => {
-  // Implementation for updating login policy
-  console.log('Login policy updated:', maxLoginAttempts.value)
-}
+
 
 const addAllowedIP = () => {
   if (newIP.value && !allowedIPs.value.includes(newIP.value)) {
@@ -656,10 +363,7 @@ const removeAlertEmail = (email) => {
   alertEmails.value = alertEmails.value.filter(item => item !== email)
 }
 
-// Initial load
-onMounted(() => {
-  refreshLogs()
-})
+
 </script>
 
 <style scoped>

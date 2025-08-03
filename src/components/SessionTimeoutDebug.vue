@@ -1,12 +1,14 @@
 <template>
   <div class="session-debug">
-    <h4>🔒 Session Timeout Debug</h4>
+    <h4><Shield :size="16" /> Session Timeout Debug</h4>
     
     <div class="debug-info">
       <div class="info-row">
         <strong>Timeout Enabled:</strong> 
         <span :class="{ 'status-active': isEnabled, 'status-inactive': !isEnabled }">
-          {{ isEnabled ? '✅ YES' : '❌ NO' }}
+          <CheckCircle v-if="isEnabled" :size="14" /> 
+          <XCircle v-else :size="14" />
+          {{ isEnabled ? 'YES' : 'NO' }}
         </span>
       </div>
       
@@ -18,14 +20,18 @@
       <div class="info-row">
         <strong>User Logged In:</strong> 
         <span :class="{ 'status-active': !!currentUser, 'status-inactive': !currentUser }">
-          {{ currentUser ? '✅ YES' : '❌ NO' }}
+          <CheckCircle v-if="currentUser" :size="14" /> 
+          <XCircle v-else :size="14" />
+          {{ currentUser ? 'YES' : 'NO' }}
         </span>
       </div>
       
       <div class="info-row">
         <strong>Warning Showing:</strong> 
         <span :class="{ 'status-warning': showWarning, 'status-inactive': !showWarning }">
-          {{ showWarning ? '⚠️ YES' : '❌ NO' }}
+          <AlertTriangle v-if="showWarning" :size="14" /> 
+          <XCircle v-else :size="14" />
+          {{ showWarning ? 'YES' : 'NO' }}
         </span>
       </div>
       
@@ -72,6 +78,7 @@
 import { ref, onMounted } from 'vue'
 import { useSessionTimeout } from '@/composables/useSessionTimeout'
 import { useAuth } from '@/composables/useAuth'
+import { Shield, CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
 
 const { isEnabled, timeoutMinutes, showWarning, warningCountdown, updateSettings, resetTimeout } = useSessionTimeout()
 const { currentUser } = useAuth()
@@ -113,7 +120,13 @@ const triggerActivity = () => {
 }
 
 const showConsoleInfo = () => {
-  // Session timeout debug information (removed console logs)
+  console.log('🔒 Session Timeout Debug Info:')
+  console.log('- Enabled:', isEnabled.value)
+  console.log('- Timeout Minutes:', timeoutMinutes.value)
+  console.log('- Warning Showing:', showWarning.value)
+  console.log('- Warning Countdown:', warningCountdown.value)
+  console.log('- User Logged In:', !!currentUser.value)
+  console.log('- Current User:', currentUser.value)
 }
 </script>
 

@@ -21,7 +21,8 @@
           </tr>
         </thead>
         <tbody v-if="isReady">
-          <tr v-for="page in adminPages" :key="page.key" class="permission-row">
+          <template v-for="page in adminPages" :key="page?.key || 'unknown'">
+            <tr v-if="page && page.key && permissions[page.key]" class="permission-row">
             <td class="page-info">
               <div class="page-name">{{ page.label }}</div>
               <div class="page-category">{{ page.category }}</div>
@@ -31,7 +32,7 @@
               <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'school_admin') }">
                 <input 
                   type="checkbox" 
-                  v-model="permissions[page.key].school_admin"
+                  :checked="permissions[page.key] && permissions[page.key].school_admin"
                   :disabled="isPageDisabledForRole(page.key, 'school_admin')"
                   @change="updatePermissions(page.key, 'school_admin', $event.target.checked)"
                 />
@@ -42,7 +43,7 @@
               <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'admin_504') }">
                 <input 
                   type="checkbox" 
-                  v-model="permissions[page.key].admin_504"
+                  :checked="permissions[page.key] && permissions[page.key].admin_504"
                   :disabled="isPageDisabledForRole(page.key, 'admin_504')"
                   @change="updatePermissions(page.key, 'admin_504', $event.target.checked)"
                 />
@@ -53,7 +54,7 @@
               <label class="permission-toggle" :class="{ disabled: isPageDisabledForRole(page.key, 'sped_chair') }">
                 <input 
                   type="checkbox" 
-                  v-model="permissions[page.key].sped_chair"
+                  :checked="permissions[page.key] && permissions[page.key].sped_chair"
                   :disabled="isPageDisabledForRole(page.key, 'sped_chair')"
                   @change="updatePermissions(page.key, 'sped_chair', $event.target.checked)"
                 />
@@ -61,6 +62,7 @@
               </label>
             </td>
           </tr>
+          </template>
         </tbody>
       </table>
       </div>
@@ -145,7 +147,8 @@ const adminPages = ref([
   { key: 'audit-logs', label: 'Audit Logs', category: 'System', description: 'View and search system audit logs' },
   { key: 'iep-security', label: 'IEP Security', category: 'System', description: 'IEP data encryption and security' },
   { key: 'security', label: 'Security Controls', category: 'System', description: 'Security monitoring and controls' },
-  { key: 'component-health', label: 'Component Debug', category: 'System', description: 'Component health and debugging' }
+  { key: 'component-health', label: 'Component Debug', category: 'System', description: 'Component health and debugging' },
+  { key: 'app-settings-testing', label: 'App Settings Testing', category: 'System', description: 'App settings testing and debugging tools' }
 ])
 
 // Permissions matrix - reactive object
@@ -177,7 +180,8 @@ const defaultPermissions = {
     'audit-logs': false,
     'iep-security': false,
     security: false,
-    'component-health': false
+    'component-health': false,
+    'app-settings-testing': true
   },
   admin_504: {
     // 504 plan coordination - as YOU specified
@@ -203,7 +207,8 @@ const defaultPermissions = {
     'audit-logs': false,
     'iep-security': false,
     security: false,
-    'component-health': false
+    'component-health': false,
+    'app-settings-testing': true
   },
   sped_chair: {
     // SPED program management - as YOU specified
@@ -229,7 +234,8 @@ const defaultPermissions = {
     'audit-logs': false,
     'iep-security': false,
     security: false,
-    'component-health': false
+    'component-health': false,
+    'app-settings-testing': true
   }
 }
 

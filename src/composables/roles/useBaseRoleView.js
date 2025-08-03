@@ -241,18 +241,14 @@ export function useBaseRoleView(studentData, filterData) {
   // Check if user has admin-level permissions
   const isAdminRole = computed(() => {
     const role = currentUser.value?.role
-    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair',
-            // Legacy roles for backward compatibility
-            'administrator', 'administrator_504_CM'].includes(role)
+    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair'].includes(role)
   })
 
   // Check if user can access filters - only specific admin roles
   const canAccessFilters = computed(() => {
     const role = currentUser.value?.role
     // Only admin roles can access filters - BUT also allow other roles to see students (just not the filter UI)
-    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair',
-            // Legacy roles for backward compatibility
-            'administrator', 'administrator_504_CM'].includes(role)
+    return ['admin', 'school_admin', 'staff_view', 'staff_edit', 'admin_504', 'sped_chair'].includes(role)
   })
 
   // Auto-switch to list view when class view becomes disabled

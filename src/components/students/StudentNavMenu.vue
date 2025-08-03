@@ -57,9 +57,6 @@
             <button @click="handleAction('admin')" class="nav-btn">
               <span>⚙️</span> Admin Panel
             </button>
-            <button @click="handleAction('testing')" class="nav-btn">
-              <span>🧪</span> Testing
-            </button>
           </div>
         </div>
 

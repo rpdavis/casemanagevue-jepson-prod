@@ -72,11 +72,11 @@
         <div>
           <label>
             <input type="checkbox" v-model="exportOptions.instruction" />
-            Instruction Accom.
+            Instruction Accommodations
           </label>
           <label>
             <input type="checkbox" v-model="exportOptions.assessment" />
-            Assessment Accom.
+            Assessment Accommodations
           </label>
           <label>
             <input type="checkbox" v-model="exportOptions.dates" />
@@ -115,9 +115,7 @@ const exportOptions = ref({
 // Check if user is admin
 const isAdmin = computed(() => {
   const role = currentUser.value?.role
-        return ['admin', 'school_admin', 'admin_504', 'sped_chair',
-              // Legacy roles for backward compatibility
-              'administrator', 'administrator_504_CM'].includes(role)
+        return ['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(role)
 })
 
 // Toggle dropdown menu

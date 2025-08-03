@@ -78,7 +78,7 @@ export function useStudentQueries() {
     }
   }
   
-  // Administrator_504_CM role - can view all students but only edit 504 plan students
+  // 504 Coordinator role - can view all students but only edit 504 plan students
   const getAdmin504Students = async () => {
     console.log('🔍 504 Admin query: Loading all students (edit restrictions applied at form level)')
     try {
@@ -131,24 +131,50 @@ export function useStudentQueries() {
   }
   
   const getCaseManagerStudents = async (userId) => {
-    console.log('🔒 Security: Loading students for case manager using staffIds:', userId)
+    console.log('🔒 Security: Loading students for case manager (CM + SP access):', userId)
     
     try {
-      // Use staffIds array for database-level security (same as teachers)
-      const q = query(
+      // Case managers need access to students they case manage AND students they provide services to
+      // We need to run two separate queries and combine the results
+      
+      // Query 1: Students where they are the case manager
+      const cmQuery = query(
         collection(db, 'students'),
-        where('app.staffIds', 'array-contains', userId),
-        orderBy('app.studentData.lastName', 'asc')
+        where('app.studentData.caseManagerId', '==', userId)
       )
-      const snapshot = await getDocs(q)
-      const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      const cmSnapshot = await getDocs(cmQuery)
+      const cmStudents = cmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       
-      console.log('🔒 Security: Case manager has access to', students.length, 'students via staffIds')
-      console.log('🔒 Security: CM accessible students:', students.map(s => 
+      // Query 2: Students where they provide services (in staffIds)
+      const spQuery = query(
+        collection(db, 'students'),
+        where('app.staffIds', 'array-contains', userId)
+      )
+      const spSnapshot = await getDocs(spQuery)
+      const spStudents = spSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      
+      // Combine and deduplicate students
+      const allStudents = [...cmStudents]
+      spStudents.forEach(spStudent => {
+        if (!allStudents.find(student => student.id === spStudent.id)) {
+          allStudents.push(spStudent)
+        }
+      })
+      
+      // Sort by last name
+      allStudents.sort((a, b) => {
+        const lastNameA = a.app?.studentData?.lastName || ''
+        const lastNameB = b.app?.studentData?.lastName || ''
+        return lastNameA.localeCompare(lastNameB)
+      })
+      
+      console.log('🔒 Security: Case manager found:', cmStudents.length, 'CM students,', spStudents.length, 'SP students')
+      console.log('🔒 Security: Total unique students:', allStudents.length)
+      console.log('🔒 Security: CM accessible students:', allStudents.map(s => 
         `${s.app?.studentData?.firstName} ${s.app?.studentData?.lastName}`
-      ).slice(0, 5))
+      ).slice(0, 8))
       
-      return students
+      return allStudents
     } catch (error) {
       console.error('🔒 Security: Error loading case manager students:', error)
       return []
@@ -426,8 +452,6 @@ export function useStudentQueries() {
           studentData = await getSpedChairStudents()
           break
         case 'admin_504':
-        // Legacy role for backward compatibility
-        case 'administrator_504_CM':
           // 504 Coordinator: See all students, edit restrictions applied at form level
           studentData = await getAdmin504Students()
           break
@@ -524,7 +548,7 @@ export function useStudentQueries() {
     }
     
     // Admin roles have full access
-    if (['admin', 'administrator', 'administrator_504_CM', 'sped_chair'].includes(role)) {
+    if (['admin', 'school_admin', 'admin_504', 'sped_chair'].includes(role)) {
       return true
     }
     

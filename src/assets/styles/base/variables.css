@@ -38,6 +38,10 @@
   --text-secondary: #666666;
   --text-muted: #999999;
   --text-inverse: #ffffff;
+  --header-text-color: #1a1a1a;
+  
+  /* Accent Colors */
+  --accent-color: #e3f2fd;
   
   /* Border Colors */
   --border-color: #dee2e6;
@@ -100,7 +104,7 @@
   --font-weight-bold: 700;
   
   --line-height-tight: 1.2;
-  --line-height-base: 1.4;
+  --line-height-base: 1.5;
   --line-height-relaxed: 1.6;
   
   /* === SHADOWS === */

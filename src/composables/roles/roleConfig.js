@@ -6,9 +6,11 @@ import { getDisplayValue } from '@/utils/studentUtils'
 // ─── ROLE DEFINITIONS ──────────────────────────────────────────────────────────
 export const ROLES = {
   ADMIN: 'admin',
-  ADMINISTRATOR: 'administrator', 
-  ADMINISTRATOR_504_CM: 'administrator_504_CM',
+  SCHOOL_ADMIN: 'school_admin',
+  ADMIN_504: 'admin_504',
   SPED_CHAIR: 'sped_chair',
+  STAFF_VIEW: 'staff_view',
+  STAFF_EDIT: 'staff_edit',
   CASE_MANAGER: 'case_manager',
   TEACHER: 'teacher',
   SERVICE_PROVIDER: 'service_provider',
@@ -18,11 +20,13 @@ export const ROLES = {
 // ─── ROLE HIERARCHY ───────────────────────────────────────────────────────────
 export const ROLE_HIERARCHY = {
   [ROLES.ADMIN]: 100,
-  [ROLES.ADMINISTRATOR]: 90,
+  [ROLES.SCHOOL_ADMIN]: 90,
   [ROLES.SPED_CHAIR]: 80,
-  [ROLES.ADMINISTRATOR_504_CM]: 70,
+  [ROLES.ADMIN_504]: 70,
+  [ROLES.STAFF_EDIT]: 65,
   [ROLES.CASE_MANAGER]: 60,
   [ROLES.SERVICE_PROVIDER]: 50,
+  [ROLES.STAFF_VIEW]: 45,
   [ROLES.TEACHER]: 40,
   [ROLES.PARAEDUCATOR]: 30
 }
@@ -123,15 +127,21 @@ export const ROLE_PERMISSIONS = {
 // ─── PROVIDER VIEW OPTIONS ────────────────────────────────────────────────────
 export const PROVIDER_VIEW_OPTIONS = {
   [ROLES.SPED_CHAIR]: [
-    { value: 'all', label: 'All' },
+    { value: 'all_iep', label: '*' },
     { value: 'case_manager', label: 'CM' },
     { value: 'service_provider', label: 'SP' },
-    { value: 'iep_all', label: '*' }
+    { value: 'all', label: 'All' }
   ],
   
   [ROLES.ADMINISTRATOR_504_CM]: [
     { value: 'case_manager', label: 'CM' },
     { value: 'iep_504_all', label: '*' }
+  ],
+  
+  // New role name for 504 Coordinator
+  ['admin_504']: [
+    { value: 'all_iep', label: '*' },
+    { value: 'case_manager', label: 'CM' }
   ],
   
   [ROLES.CASE_MANAGER]: [
@@ -150,16 +160,18 @@ export const PROVIDER_VIEW_OPTIONS = {
 export const DEFAULT_PROVIDER_VIEWS = {
   [ROLES.SPED_CHAIR]: 'all',
   [ROLES.ADMINISTRATOR_504_CM]: 'case_manager',
+  // New role name for 504 Coordinator
+  ['admin_504']: 'case_manager',
   [ROLES.CASE_MANAGER]: 'all',
   [ROLES.SERVICE_PROVIDER]: 'service_provider'
 }
 
 // ─── STUDENT ACCESS PATTERNS ──────────────────────────────────────────────────
 export const STUDENT_ACCESS_PATTERNS = {
-  // Case Manager Access: Students they case manage
+  // Case Manager Access: Students they case manage AND students they provide services to
   [ROLES.CASE_MANAGER]: {
-    patterns: ['case_manager'],
-    description: 'Students in their caseload'
+    patterns: ['case_manager', 'teacher'],
+    description: 'Students in their caseload and students they provide services to'
   },
   
   // Teacher Access: Students they teach

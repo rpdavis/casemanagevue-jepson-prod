@@ -73,9 +73,6 @@ export function useStudentAccess(currentUser, students, aideAssignment = null) {
       case 'staff_edit':
       case 'admin_504':
       case 'sped_chair':
-      // Legacy roles for backward compatibility
-      case 'administrator':
-      case 'administrator_504_CM':
         return true // See all students
         
       case 'case_manager':
@@ -112,7 +109,7 @@ export function useStudentAccess(currentUser, students, aideAssignment = null) {
     const userRole = user.role
     
     // Only certain roles have provider views
-    if (!['case_manager', 'sped_chair', 'admin_504', 'administrator_504_CM'].includes(userRole)) {
+    if (!['case_manager', 'sped_chair', 'admin_504'].includes(userRole)) {
       return accessible
     }
     
@@ -135,7 +132,7 @@ export function useStudentAccess(currentUser, students, aideAssignment = null) {
         return []
         
       case 'iep_504_all':
-        if (userRole === 'admin_504' || userRole === 'administrator_504_CM') {
+        if (userRole === 'admin_504') {
           return students.value.filter(s => {
             const plan = s.app?.studentData?.plan || s.plan
             return plan === 'IEP' || plan === '504'

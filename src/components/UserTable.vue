@@ -111,13 +111,21 @@
             <td class="admin-action-btns">
               <!-- View Mode -->
               <template v-if="activeRowId !== user.id">
-                <button @click="startEdit(user.id)" class="admin-action-btn edit" title="Edit">✏️</button>
+                <button @click="startEdit(user.id)" class="admin-action-btn edit" title="Edit">
+                  <Edit :size="16" />
+                </button>
               </template>
               <!-- Edit Mode -->
               <template v-else>
-                <button @click="saveUser(user.id)" class="admin-action-btn save" title="Save">💾</button>
-                <button @click="cancelEdit" class="admin-action-btn cancel" title="Cancel">❌</button>
-                <button @click="deleteUser(user.id)" class="admin-action-btn delete red" title="Delete User">🗑️</button>
+                <button @click="saveUser(user.id)" class="admin-action-btn save" title="Save">
+                  <Save :size="16" />
+                </button>
+                <button @click="cancelEdit" class="admin-action-btn cancel" title="Cancel">
+                  <X :size="16" />
+                </button>
+                <button @click="deleteUser(user.id)" class="admin-action-btn delete red" title="Delete User">
+                  <Trash2 :size="16" />
+                </button>
               </template>
             </td>
           </tr>
@@ -165,6 +173,7 @@ import { VALID_ROLES } from '../config/roles.js'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { useAdminPanelPermissions } from '@/composables/useAdminPanelPermissions'
 import { auditLogger } from '@/utils/auditLogger'
+import { Edit, Save, X, Trash2 } from 'lucide-vue-next'
 
 const PAGE_SIZE = 20
 

@@ -36,9 +36,11 @@ function convertFirestoreMaps(obj) {
   return result
 }
 
+// Global singleton state for students
+const students = ref([])
+let googleSheetsSync = null
+
 export default function useStudents() {
-  const students = ref([])
-  let googleSheetsSync = null
 
   // Lazy load Google Sheets sync only when needed
   async function getGoogleSheetsSync() {
