@@ -68,8 +68,7 @@ const auth = new google.auth.GoogleAuth({
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/documents',
-    'https://www.googleapis.com/auth/forms.responses.readonly',
-    'https://www.googleapis.com/auth/gmail.send'
+    'https://www.googleapis.com/auth/forms.responses.readonly'
   ]
 });
 
@@ -154,11 +153,6 @@ async function createFormsClient() {
   return google.forms({ version: 'v1', auth: client });
 }
 
-async function createGmailClient() {
-  const client = await auth.getClient();
-  return google.gmail({ version: 'v1', auth: client });
-}
-
 // Sanitize tab name for Google Sheets
 function sanitizeTabName(name) {
   return name
@@ -190,7 +184,6 @@ module.exports = {
   createDriveClient,
   createDocsClient,
   createFormsClient,
-  createGmailClient,
   getFirestore,
   sanitizeTabName,
   setCorsHeaders,

@@ -16,7 +16,13 @@ const DEFAULT_SETTINGS = {
   serviceProviders: ['SLP', 'OT', 'PT', 'SC', 'MH', 'TR', 'AUD', 'VI', 'AT', 'DHH', 'O&M', 'BIS', 'HN', 'SW'],
   customServiceProviders: [],
   numPeriods: 7,
-  periodLabels: ['1', '2', '3', '4', '5', '6', 'sh']
+  periodLabels: ['1', '2', '3', '4', '5', '6', 'sh'],
+  gmailApi: {
+    enabled: false,
+    isWorkspace: false,
+    isInternalOAuth: false,
+    lastCheck: null
+  }
 }
 
 // Global singleton state
@@ -49,6 +55,15 @@ export function useAppSettings() {
     try {
       const docSnap = await getDoc(settingsDocRef)
       appSettings.value = docSnap.exists() ? docSnap.data() : { ...DEFAULT_SETTINGS }
+      
+      // Auto-check Gmail API status on load if not already set
+      if (!appSettings.value.gmailApi?.lastCheck) {
+        try {
+          await checkGmailApiStatus()
+        } catch (gmailError) {
+          console.warn('Could not auto-check Gmail API status:', gmailError)
+        }
+      }
     } catch (e) {
       appSettings.value = { ...DEFAULT_SETTINGS }
     } finally {
@@ -114,11 +129,60 @@ export function useAppSettings() {
     loadAppSettings()
   }
 
+  // Check if Google Workspace and internal OAuth are configured
+  const checkGmailApiStatus = async () => {
+    try {
+      // Use the dynamic check from Firebase
+      const { checkAndAddGmailScope } = await import('@/firebase')
+      const gmailScopeAdded = await checkAndAddGmailScope()
+      
+      // Try to get more detailed info about the OAuth setup
+      let isWorkspace = false
+      let isInternalOAuth = gmailScopeAdded
+      
+      try {
+        const response = await fetch('https://oauth2.googleapis.com/tokeninfo')
+        if (response.ok) {
+          const data = await response.json()
+          isWorkspace = data.hd && data.hd.includes('.')
+        }
+      } catch (tokenError) {
+        console.warn('Could not get detailed OAuth info:', tokenError)
+      }
+
+      // Update settings
+      const newSettings = {
+        ...appSettings.value,
+        gmailApi: {
+          enabled: gmailScopeAdded,
+          isWorkspace,
+          isInternalOAuth,
+          lastCheck: new Date().toISOString()
+        }
+      }
+
+      // Save the updated settings
+      await saveAppSettings(newSettings)
+
+      return newSettings.gmailApi
+    } catch (error) {
+      console.error('Failed to check Gmail API status:', error)
+      return {
+        enabled: false,
+        isWorkspace: false,
+        isInternalOAuth: false,
+        lastCheck: new Date().toISOString(),
+        error: error.message
+      }
+    }
+  }
+
   return {
     appSettings,
     loadAppSettings,
     saveAppSettings,
     resetAppSettings,
+    checkGmailApiStatus,
     loading,
     error
   }

@@ -11,7 +11,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 
 // Firebase Admin
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
 const { getStorage } = require("firebase-admin/storage");
 
@@ -44,6 +44,8 @@ const { createSharedDrive, updateSharedDriveId } = require("./create-shared-driv
 
 // Import debug function
 const { debugSharedDriveAccess } = require("./debug-shared-drive-access");
+
+
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VALID_ROLES = [
@@ -155,8 +157,7 @@ const getGoogleAuth = () => {
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/documents",
       "https://www.googleapis.com/auth/drive",
-      "https://www.googleapis.com/auth/forms.responses.readonly",
-      "https://www.googleapis.com/auth/gmail.send"
+      "https://www.googleapis.com/auth/forms.responses.readonly"
     ],
   });
 };
@@ -867,6 +868,8 @@ exports.debugSharedDriveAccess = debugSharedDriveAccess;
 
 // Export all teacher feedback functions
 Object.assign(exports, teacherFeedbackFunctions);
+
+
 
 // ─── ROLE MIGRATION FUNCTION ─────────────────────────────────────────────────
 // Role migration function to update users from old role names to new ones

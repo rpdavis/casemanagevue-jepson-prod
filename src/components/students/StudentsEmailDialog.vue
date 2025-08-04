@@ -38,6 +38,28 @@
               Individual member of the IEP team
             </button>
           </div>
+
+          <!-- Show selected recipients -->
+          <div v-if="emails" class="selected-recipients">
+            <div class="recipients-header">
+              <h4>Selected Recipients:</h4>
+              <button 
+                v-if="!gmailApiEnabled" 
+                type="button" 
+                class="copy-button"
+                @click="copyToClipboard(emails)"
+                :class="{ copied: showingCopied }"
+              >
+                {{ showingCopied ? 'Copied!' : 'Copy All' }}
+              </button>
+            </div>
+            <div class="recipients-list">
+              {{ emails }}
+            </div>
+            <div v-if="!gmailApiEnabled" class="recipients-note">
+              <p>Note: Gmail API features are not enabled. You can copy these email addresses to use in your email client.</p>
+            </div>
+          </div>
           <div v-if="sendTo === 'Individual'" class="members-list">
             <div>Select members:</div>
             <div v-for="member in allMembers" :key="member.id">
@@ -98,14 +120,22 @@
       </main>
       <footer>
         <button @click="$emit('close')">Cancel</button>
-        <button :disabled="!canSend" @click="sendEmail">Send</button>
+        <template v-if="gmailApiEnabled">
+          <button :disabled="!canSend" @click="sendEmail">Send Email</button>
+        </template>
+        <template v-else>
+          <button :disabled="!canSend" @click="copyToClipboard(emails)">
+            {{ showingCopied ? 'Copied!' : 'Copy Email Addresses' }}
+          </button>
+        </template>
       </footer>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { useAppSettings } from '@/composables/useAppSettings'
 
 const props = defineProps({
   student: { type: Object, required: true },
@@ -114,7 +144,31 @@ const props = defineProps({
 })
 const { student, userMap } = props
 
-defineEmits(['close'])
+const emit = defineEmits(['close'])
+
+// Get app settings to check Gmail API status
+const { appSettings } = useAppSettings()
+const gmailApiEnabled = computed(() => appSettings.value.gmailApi?.enabled ?? false)
+
+// Function to copy text to clipboard
+const copyToClipboard = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    showCopiedMessage()
+  } catch (err) {
+    console.error('Failed to copy:', err)
+    alert('Failed to copy to clipboard. Please copy the email addresses manually.')
+  }
+}
+
+// Show "Copied!" message
+const showingCopied = ref(false)
+const showCopiedMessage = () => {
+  showingCopied.value = true
+  setTimeout(() => {
+    showingCopied.value = false
+  }, 2000)
+}
 
 const sendTo = ref('')
 const checkedMembers = ref([])
@@ -265,14 +319,24 @@ const canSend = computed(() => {
   return true
 })
 
-function sendEmail() {
+// Get recipient emails
+const emails = computed(() => {
   let recipients = []
   if (sendTo.value === 'Teachers') recipients = teachers.value
   else if (sendTo.value === 'TeachersAndService') recipients = [...teachers.value, ...serviceProviders.value]
   else if (sendTo.value === 'CaseManager') recipients = caseManager.value ? [caseManager.value] : []
   else if (sendTo.value === 'Individual') recipients = allMembers.value.filter(p => checkedMembers.value.includes(p.id))
-  const emails = recipients.map(p => p.email).filter(Boolean).join(',')
-  if (!emails) {
+  return recipients.map(p => p.email).filter(Boolean).join(',')
+})
+
+async function sendEmail() {
+  // Only proceed if Gmail API is enabled
+  if (!gmailApiEnabled.value) {
+    alert('Gmail API features are disabled. Please use the "Copy Email Addresses" button instead.')
+    return
+  }
+
+  if (!emails.value) {
     alert('No email addresses found for the selected recipients.')
     return
   }
@@ -376,39 +440,41 @@ function sendEmail() {
   const userWorkEmail = props.currentUser?.email
   
   if (!userWorkEmail) {
+    console.error('❌ No user email found in props.currentUser:', props.currentUser)
     alert('Unable to send email: User email not found. Please contact your administrator.')
     return
   }
-  
-  // Add a note about the sender in the email body for clarity
-  const secureBody = `[This email is being sent from: ${userWorkEmail}]\n\n${body}`
-  
-  // Create mailto link that respects the user's work email
-  const secureMailtoUrl = 
-    `mailto:${encodeURIComponent(emails)}` +
-    `?subject=${encodeURIComponent(subject)}` +
-    `&body=${encodeURIComponent(secureBody)}`
-  
-  console.log('🔍 Opening mailto URL:', secureMailtoUrl)
-  
-  // Check URL length (some systems have limits around 2000-8000 characters)
-  if (secureMailtoUrl.length > 2000) {
-    console.warn('⚠️ Mailto URL is very long:', secureMailtoUrl.length, 'characters')
+
+  console.log('🔍 User work email:', userWorkEmail)
+
+  // Create Gmail web interface URL
+  const gmailUrl =
+    `https://mail.google.com/mail/?view=cm&fs=1` +
+    `&to=${encodeURIComponent(emails.value)}` +
+    `&su=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(body)}`
+
+  // Security check
+  const proceed = confirm(
+    `IMPORTANT: Security Check\n\n` +
+    `This email MUST be sent from your school account: ${userWorkEmail}\n\n` +
+    `Please confirm:\n` +
+    `1. You are signed into Gmail with ${userWorkEmail}\n` +
+    `2. You are NOT signed into any other Gmail accounts\n\n` +
+    `Click OK only if you are using your school account.\n` +
+    `Click Cancel to open Gmail and switch accounts.`
+  )
+
+  if (!proceed) {
+    // Open Gmail in a new tab so they can switch accounts
+    window.open('https://mail.google.com', '_blank', 'noopener')
+    return
   }
-  
-  // Open email client with mailto link
-  console.log('🔍 Opening email client...')
-  console.log('🔍 Mailto URL length:', secureMailtoUrl.length)
-  
-  try {
-    window.location.href = secureMailtoUrl
-    console.log('✅ Email client opened successfully')
-  } catch (error) {
-    console.error('❌ Failed to open email client:', error)
-    alert(`Unable to open email client automatically. Please copy this email address: ${emails}`)
-  }
-  // Optionally close dialog
-  // $emit('close')
+
+  // Open Gmail compose in new tab
+  window.open(gmailUrl, '_blank', 'noopener')
+  console.log('✅ Gmail compose window opened')
+  emit('close')
 }
 </script>
 
@@ -714,5 +780,66 @@ footer button[disabled] {
 input[type="checkbox"]:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Selected Recipients */
+.selected-recipients {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.recipients-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.recipients-header h4 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.copy-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.25rem 0.75rem;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+  background: var(--primary-hover);
+}
+
+.copy-button.copied {
+  background: var(--success-color);
+}
+
+.recipients-list {
+  padding: 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  word-break: break-all;
+  margin-bottom: 0.5rem;
+}
+
+.recipients-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-muted);
+  border-radius: var(--border-radius-sm);
 }
 </style>

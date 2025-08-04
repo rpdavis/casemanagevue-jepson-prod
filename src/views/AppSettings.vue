@@ -176,6 +176,54 @@
         </fieldset>
       </section>
 
+      <!-- Gmail API Settings -->
+      <section class="settings-section">
+        <fieldset>
+          <legend>Gmail API Settings</legend>
+          <div class="gmail-api-settings">
+            <div class="gmail-api-status">
+              <h4>Status:</h4>
+              <div class="status-indicators">
+                <div class="status-item">
+                  <span class="status-label">Google Workspace:</span>
+                  <span :class="['status-value', settings.gmailApi?.isWorkspace ? 'enabled' : 'disabled']">
+                    {{ settings.gmailApi?.isWorkspace ? 'Yes' : 'No' }}
+                  </span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Internal OAuth:</span>
+                  <span :class="['status-value', settings.gmailApi?.isInternalOAuth ? 'enabled' : 'disabled']">
+                    {{ settings.gmailApi?.isInternalOAuth ? 'Yes' : 'No' }}
+                  </span>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Gmail API:</span>
+                  <span :class="['status-value', settings.gmailApi?.enabled ? 'enabled' : 'disabled']">
+                    {{ settings.gmailApi?.enabled ? 'Enabled' : 'Disabled' }}
+                  </span>
+                </div>
+              </div>
+              <div class="status-message" v-if="!settings.gmailApi?.enabled">
+                <p>Gmail API features are currently disabled. To enable them, you need:</p>
+                <ul>
+                  <li>A Google Workspace organization (not a personal Gmail account)</li>
+                  <li>OAuth consent screen set to "Internal" in Google Cloud Console</li>
+                </ul>
+                <p>Contact your Google Workspace administrator to configure these settings.</p>
+              </div>
+              <div class="last-check" v-if="settings.gmailApi?.lastCheck">
+                Last checked: {{ new Date(settings.gmailApi.lastCheck).toLocaleString() }}
+              </div>
+            </div>
+            <div class="gmail-api-actions">
+              <button type="button" @click="checkGmailApiStatusHandler" :disabled="loading">
+                Check Gmail API Status
+              </button>
+            </div>
+          </div>
+        </fieldset>
+      </section>
+
       <!-- Save/Load/Reset -->
       <section class="settings-section">
         <div class="admin-action-btns">
@@ -206,6 +254,9 @@ import {
   checkRateLimit,
   sanitizeNumeric
 } from '@/utils/validation.js'
+
+// Import the checkGmailApiStatus function
+const { appSettings, loadAppSettings, saveAppSettings, resetAppSettings, checkGmailApiStatus } = useAppSettings()
 
 const authStore = useAuthStore()
 const currentUser = computed(() => authStore.currentUser)
@@ -241,7 +292,7 @@ const DEFAULT_SERVICE_PROVIDERS = [
   { name: 'Social Work Services', abbreviation: 'SW' }
 ]
 
-const { loadAppSettings, saveAppSettings } = useAppSettings()
+
 
 const loading = ref(false)
 const saveLoading = ref(false)
@@ -663,6 +714,23 @@ const resetSettings = () => {
   }
 }
 
+// Gmail API status check
+const checkGmailApiStatusHandler = async () => {
+  loading.value = true
+  try {
+    const status = await checkGmailApiStatus()
+    if (status.enabled) {
+      showStatus('Gmail API is enabled and ready to use!')
+    } else {
+      showStatus(`Gmail API status: Workspace: ${status.isWorkspace ? 'Yes' : 'No'}, Internal OAuth: ${status.isInternalOAuth ? 'Yes' : 'No'}`, true)
+    }
+  } catch (error) {
+    showStatus('Failed to check Gmail API status: ' + error.message, true)
+  } finally {
+    loading.value = false
+  }
+}
+
 // Initialize on mount
 onMounted(() => {
   loadSettings()
@@ -880,5 +948,93 @@ button:disabled {
 
 .service-providers-custom {
   margin-top: 1rem;
+}
+
+/* Gmail API Settings */
+.gmail-api-settings {
+  padding: 1rem;
+}
+
+.gmail-api-status {
+  margin-bottom: 1rem;
+}
+
+.status-indicators {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+}
+
+.status-label {
+  font-weight: 500;
+}
+
+.status-value {
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--border-radius-pill);
+  font-weight: 500;
+}
+
+.status-value.enabled {
+  background: var(--success-color);
+  color: white;
+}
+
+.status-value.disabled {
+  background: var(--warning-color);
+  color: white;
+}
+
+.gmail-api-status .status-message {
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.gmail-api-status .status-message ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.gmail-api-status .last-check {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+.gmail-api-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.gmail-api-actions button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.gmail-api-actions button:hover {
+  background: var(--primary-hover);
+}
+
+.gmail-api-actions button:disabled {
+  background: var(--bg-muted);
+  cursor: not-allowed;
 }
 </style> 

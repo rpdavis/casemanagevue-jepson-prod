@@ -3,9 +3,7 @@
     <div v-if="getFlagValue(student, flagType)" class="flag-overlay" :class="flagClass">
       {{ flagText }}
     </div>
-    <div v-if="getDisplayValue(student, fieldName)" class="pill-list">
-      <div v-html="formatListFromText(getDisplayValue(student, fieldName))"></div>
-    </div>
+    <div v-if="getDisplayValue(student, fieldName)" v-html="formatListFromText(getDisplayValue(student, fieldName))"></div>
     <div v-else>—</div>
   </td>
 </template>

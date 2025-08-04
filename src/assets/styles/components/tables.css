@@ -253,7 +253,7 @@
 .instruction-cell .bullet-list {
   background: transparent;
   box-shadow: none;
-  padding: var(--spacing-xs) 0 !important;
+ 
 }
 
 .instruction-cell .bullet-list li {

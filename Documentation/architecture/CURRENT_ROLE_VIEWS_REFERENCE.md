@@ -258,53 +258,240 @@ const shouldShow = aideTeacherIds.includes(teacherId)
 
 ---
 
-## 📝 Other Roles to Document
+## 📝 Additional Role Views
 
 ### **🔍 service_provider (Service Provider) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**: [TO BE DOCUMENTED]
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **only students they provide services to** from database (e.g., 8-20 students)
+- **Security**: Database-level filtering using `staffIds` array
+- **Efficient**: Only loads students where service provider is in the `staffIds` array
+- **Query Pattern**: `where('app.staffIds', 'array-contains', userId)`
+
+### **Provider View Options**
+```javascript
+[ROLES.SERVICE_PROVIDER]: [
+  { value: 'all', label: 'All' },
+  { value: 'service_provider', label: 'SP' }
+]
+```
+
+### **Default View**: `'service_provider'` (SP mode - students they provide services to)
+
+### **View Modes**
+1. **All Mode**: Shows all students they provide services to (same as SP mode for service providers)
+2. **SP Mode**: Shows students where they provide services (teaching/co-teaching)
+
+### **Implementation**
+- Uses database-level security filtering (Pattern 1) 
+- Query: `getServiceProviderStudents(userId)` with `staffIds` array-contains filter
+- **Has provider view filtering** - can switch between All and SP views
+- Service provider IDs populated in `staffIds` by Cloud Function `updateStudentStaffIds`
+
+### **Email Functionality**
+- **Action Button**: Shows **Edit** and **Email** buttons (can edit students)
+- **Email Type**: Standard teacher feedback email
+- **Editing Permissions**: Can edit all students they provide services to
+- **Full Access**: Service providers have editing permissions for their students
+
+### **Recent Fixes**
+- No recent fixes documented - role working correctly
 
 ### **🔍 teacher (Teacher) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**: 
-  - **Action Button**: Only shows **Email** button (viewer-only role)
-  - **Email Type**: "Email Case Manager" - same as paraeducator
-  - **Subject Line**: `{initials} - Student Inquiry` (default)
-  - **Self-Filtering**: Teacher's email filtered out of recipient lists
-  - **Restrictions**: Cannot see case manager checkboxes
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **only students they teach** from database (e.g., 5-15 students)
+- **Security**: Database-level filtering using `staffIds` array
+- **Efficient**: Only loads students where teacher is in the `staffIds` array
+- **Query Pattern**: `where('app.staffIds', 'array-contains', userId)`
+
+### **Provider View Options**
+```javascript
+// Teachers do NOT have provider view options
+// They see only their assigned students - no client-side filtering needed
+```
+
+### **Default View**: All assigned students (no provider view dropdown)
+
+### **View Modes**
+1. **List View**: Shows all students they teach
+2. **Class View**: Students grouped by periods where teacher teaches them
+
+### **Implementation**
+- Uses database-level security filtering (Pattern 1)
+- Query: `getTeacherStudents(userId)` with `staffIds` array-contains filter
+- **No provider view filtering** - students already filtered by database query
+- Teacher IDs populated in `staffIds` by Cloud Function `updateStudentStaffIds`
+
+### **Email Functionality**
+- **Action Button**: Only shows **Email** button (viewer-only role)
+- **Email Type**: "Email Case Manager" - same as paraeducator
+- **Subject Line**: `{initials} - Student Inquiry` (default)
+- **Self-Filtering**: Teacher's email filtered out of recipient lists
+- **Restrictions**: Cannot see case manager checkboxes
+
+### **Recent Fixes**
+1. **Security Timing Issue - CRITICAL**:
+   - **Issue**: New teachers could see all students briefly on first login
+   - **Root Cause**: `StudentEditDialog.vue` called `fetchStudents()` (loads ALL students) if students array was empty during race condition
+   - **Security Risk**: Teachers temporarily had access to all student data before role-based filtering kicked in
+   - **Solution**: Removed `fetchStudents()` call from `StudentEditDialog.vue` - dialog now waits for role-based students to load or shows loading state
+   - **Impact**: Eliminates race condition where new users could briefly see unauthorized data
 
 ### **🔍 staff_view (Staff View) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**:
-  - **Action Button**: Only shows **Email** button (viewer-only role)
-  - **Email Type**: "Email Case Manager" - same as paraeducator
-  - **Subject Line**: `{initials} - Student Inquiry` (default)
-  - **Self-Filtering**: Staff member's email filtered out of recipient lists
-  - **Restrictions**: Cannot see case manager checkboxes
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **ALL students** from database (e.g., 49 students)
+- **Security**: View-only permissions for all students
+- **No DB-level filtering**: Full student list loaded, no client-side filtering needed
+- **Firestore Rules**: Uses `hasFullReadAccess()` function to grant read access to all students
+- **Query Permissions**: Can query without restrictions like admin roles
+
+### **Provider View Options**
+```javascript
+// Staff view does NOT have provider view options
+// They see all students - no client-side filtering
+```
+
+### **Default View**: All students (no provider view dropdown)
+
+### **View Modes**
+1. **List View**: Shows all students in system (view-only)
+2. **Class View**: Available when filtering by teacher or paraeducator
+
+### **Implementation**
+- Uses unified `useUnifiedRoleView.js` system via `useRoleBasedView.js` router
+- No provider view filtering - shows all students by default
+- View-only permissions - cannot edit students
+
+### **Email Functionality**
+- **Action Button**: Only shows **Email** button (viewer-only role)
+- **Email Type**: "Email Case Manager" - same as paraeducator
+- **Subject Line**: `{initials} - Student Inquiry` (default)
+- **Self-Filtering**: Staff member's email filtered out of recipient lists
+- **Restrictions**: Cannot see case manager checkboxes
+
+### **Recent Fixes**
+1. **Students Not Loading**:
+   - **Issue**: staff_view role was missing from `ROLE_PERMISSIONS` in `roleConfig.js`
+   - **Root Cause**: `useUnifiedRoleView` couldn't determine what permissions staff_view should have
+   - **Solution**: Added `STAFF_VIEW` permissions with `CAN_VIEW_ALL_STUDENTS`, `CAN_ACCESS_TESTING`, `CAN_ACCESS_FILTERS`, `CAN_USE_CLASS_VIEW`
+
+2. **Student Access Pattern Missing**:
+   - **Issue**: staff_view role was missing from `STUDENT_ACCESS_PATTERNS` in `roleConfig.js`
+   - **Root Cause**: `canAccessStudent()` function returned false for all students because no access patterns were defined
+   - **Solution**: Added `STAFF_VIEW` to access patterns with `patterns: ['all']` to show all students
+
+3. **Firestore Rules Access**:
+   - **Issue**: staff_view role had insufficient permissions in Firestore rules
+   - **Root Cause**: Role was not included in admin-level read access functions
+   - **Solution**: Added new `hasFullReadAccess()` function that includes both admin roles and staff view/edit roles
+   - **Impact**: staff_view can now query and read all students without restrictions
 
 ### **🔍 school_admin (School Admin) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**: [TO BE DOCUMENTED]
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **ALL students** from database (e.g., 49 students)
+- **Security**: Full editing permissions for all students
+- **No DB-level filtering**: Full student list loaded, then client-side filtered by provider views
+- **Query Pattern**: Uses `getAdminStudents()` - loads all students without restrictions
+
+### **Provider View Options**
+```javascript
+// School admins do NOT have provider view options in current implementation
+// They see all students by default - could be extended with provider views if needed
+```
+
+### **Default View**: All students (no provider view dropdown currently)
+
+### **View Modes**
+1. **List View**: Shows all students in system (full editing access)
+2. **Class View**: Available when filtering by teacher or paraeducator
+
+### **Implementation**
+- Uses full load + client-side filtering (Pattern 2)
+- Query: `getAdminStudents()` loads all students
+- **No provider view filtering currently** - shows all students by default
+- Full student editing permissions
+
+### **Email Functionality**
+- **Action Button**: Shows **Edit**, **Email**, and **Teacher Feedback** buttons
+- **Email Type**: Full admin email capabilities
+- **Editing Permissions**: Can edit all students
+- **Full Access**: Complete administrative access to all student data
+
+### **Recent Fixes**
+- No recent fixes documented - role working correctly
 
 ### **🔍 staff_edit (Staff Edit) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**: [TO BE DOCUMENTED]
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **ALL students** from database (e.g., 49 students)
+- **Security**: Full editing permissions for all students
+- **No DB-level filtering**: Full student list loaded, no client-side filtering needed
+- **Query Pattern**: Uses `getAdminStudents()` - loads all students without restrictions
+
+### **Provider View Options**
+```javascript
+// Staff edit does NOT have provider view options
+// They see all students by default - no client-side filtering
+```
+
+### **Default View**: All students (no provider view dropdown)
+
+### **View Modes**
+1. **List View**: Shows all students in system (full editing access)
+2. **Class View**: Available when filtering by teacher or paraeducator
+
+### **Implementation**
+- Uses full load + client-side filtering (Pattern 2)
+- Query: `getAdminStudents()` loads all students
+- **No provider view filtering** - shows all students by default
+- Full student editing permissions
+
+### **Email Functionality**
+- **Action Button**: Shows **Edit**, **Email**, and **Teacher Feedback** buttons
+- **Email Type**: Full admin email capabilities
+- **Editing Permissions**: Can edit all students
+- **Full Access**: Complete administrative access to all student data
+
+### **Recent Fixes**
+- No recent fixes documented - role working correctly
 
 ### **🔍 admin (Administrator) Role View**
-- **Database Access**: [TO BE DOCUMENTED]
-- **Provider View Options**: [TO BE DOCUMENTED]
-- **Email Functionality**: [TO BE DOCUMENTED]
-- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **Database Access**
+- **Query**: Gets **ALL students** from database (e.g., 49 students)
+- **Security**: Full administrative permissions for all students
+- **No DB-level filtering**: Full student list loaded, then client-side filtered by provider views
+- **Query Pattern**: Uses `getAdminStudents()` - loads all students without restrictions
+
+### **Provider View Options**
+```javascript
+// Admins do NOT have provider view options in current implementation
+// They see all students by default - could be extended with provider views if needed
+```
+
+### **Default View**: All students (no provider view dropdown currently)
+
+### **View Modes**
+1. **List View**: Shows all students in system (full administrative access)
+2. **Class View**: Available when filtering by teacher or paraeducator
+
+### **Implementation**
+- Uses full load + client-side filtering (Pattern 2)
+- Query: `getAdminStudents()` loads all students
+- **No provider view filtering currently** - shows all students by default
+- Full administrative permissions for all operations
+
+### **Email Functionality**
+- **Action Button**: Shows **Edit**, **Email**, and **Teacher Feedback** buttons
+- **Email Type**: Full administrative email capabilities
+- **Editing Permissions**: Can edit all students
+- **Full Access**: Complete administrative access to all student data and system functions
+
+### **Recent Fixes**
+- No recent fixes documented - role working correctly
 
 ---
 
@@ -316,14 +503,14 @@ const shouldShow = aideTeacherIds.includes(teacherId)
 - **Roles**: `case_manager`, `teacher`, `service_provider`, `paraeducator`
 - **Query**: Load ONLY authorized students from database
 - **Filtering**: Database-level security (Firestore queries)
-- **Provider Views**: None or bypassed (students already filtered)
+- **Provider Views**: None or minimal (students already filtered by database)
 - **Performance**: Efficient - only loads what user can see
 
 **Pattern 2 - Full Load + Client-Side Filtering (Admin Convenience):**
-- **Roles**: `admin`, `sped_chair`, `admin_504`, `school_admin`
+- **Roles**: `admin`, `sped_chair`, `admin_504`, `school_admin`, `staff_view`, `staff_edit`
 - **Query**: Load ALL students from database
-- **Filtering**: Client-side provider view filtering
-- **Provider Views**: Multiple options (All, CM, SP, etc.)
+- **Filtering**: Client-side provider view filtering (where applicable)
+- **Provider Views**: Multiple options for some roles (All, CM, SP, etc.)
 - **Performance**: Less efficient but provides admin flexibility
 
 ### **Implementation Notes:**
@@ -335,5 +522,5 @@ const shouldShow = aideTeacherIds.includes(teacherId)
 
 ---
 
-**📅 Last Updated**: After paraeducator class view fix and Pattern 1/2 clarification  
-**🔄 Status**: Active reference - now includes paraeducator role documentation
+**📅 Last Updated**: After completing all role documentation and fixing teacher security timing issue  
+**🔄 Status**: Complete reference - all roles documented and verified working correctly

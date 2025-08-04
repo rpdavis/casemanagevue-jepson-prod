@@ -253,6 +253,21 @@ class IEPSecurityHandler {
     }
   }
 
+  // Encrypt Gmail app password
+  encryptGmailPassword(password) {
+    if (!this.encryptionEnabled) {
+      console.warn('⚠️ Warning: Encryption is disabled');
+      return password;
+    }
+    return this.encryptField(password);
+  }
+
+  // Decrypt Gmail app password
+  decryptGmailPassword(encryptedPassword) {
+    if (!this.encryptionEnabled) return encryptedPassword;
+    return this.decryptField(encryptedPassword);
+  }
+
   // Get encryption status details
   getEncryptionStatus() {
     const viteEncryptionValue = import.meta.env.VITE_ENABLE_ENCRYPTION;

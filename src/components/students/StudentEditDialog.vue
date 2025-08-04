@@ -34,24 +34,22 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'saved'])
 
-const { students, fetchStudents } = useStudents()
+const { students } = useStudents()
 
 // Get student data from the students list
 const student = computed(() => {
   const foundStudent = students.value.find(s => s.id === props.studentId)
   console.log('StudentEditDialog - studentId:', props.studentId)
-  console.log('StudentEditDialog - all students:', students.value)
   console.log('StudentEditDialog - found student:', foundStudent)
+  console.log('StudentEditDialog - students count:', students.value.length)
   return foundStudent || {}
 })
 
-// Fetch students if not already loaded
-onMounted(async () => {
-  if (students.value.length === 0) {
-    console.log('StudentEditDialog - fetching students...')
-    await fetchStudents()
-  }
-})
+// SECURITY: Do NOT call fetchStudents() here as it loads all students without role filtering
+// The students should already be loaded via role-based queries from useStudentData()
+// If student is not found, it means either:
+// 1. Students are still loading (show loading state)
+// 2. User doesn't have access to this student (security working correctly)
 
 function handleSaved(studentData) {
   console.log('StudentEditDialog - student saved:', studentData)

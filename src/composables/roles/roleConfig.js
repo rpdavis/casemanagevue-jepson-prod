@@ -86,6 +86,33 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CAN_USE_CLASS_VIEW
   ],
   
+  [ROLES.SCHOOL_ADMIN]: [
+    PERMISSIONS.CAN_VIEW_ALL_STUDENTS,
+    PERMISSIONS.CAN_EDIT_ALL_STUDENTS,
+    PERMISSIONS.CAN_SEND_FEEDBACK,
+    PERMISSIONS.CAN_MANAGE_USERS,
+    PERMISSIONS.CAN_MANAGE_AIDES,
+    PERMISSIONS.CAN_ACCESS_TESTING,
+    PERMISSIONS.CAN_ACCESS_FILTERS,
+    PERMISSIONS.SHOW_PROVIDER_VIEW,
+    PERMISSIONS.CAN_USE_CLASS_VIEW
+  ],
+  
+  [ROLES.STAFF_VIEW]: [
+    PERMISSIONS.CAN_VIEW_ALL_STUDENTS,
+    PERMISSIONS.CAN_ACCESS_TESTING,
+    PERMISSIONS.CAN_ACCESS_FILTERS,
+    PERMISSIONS.CAN_USE_CLASS_VIEW
+  ],
+  
+  [ROLES.STAFF_EDIT]: [
+    PERMISSIONS.CAN_VIEW_ALL_STUDENTS,
+    PERMISSIONS.CAN_EDIT_ALL_STUDENTS,
+    PERMISSIONS.CAN_ACCESS_TESTING,
+    PERMISSIONS.CAN_ACCESS_FILTERS,
+    PERMISSIONS.CAN_USE_CLASS_VIEW
+  ],
+  
   [ROLES.ADMINISTRATOR_504_CM]: [
     PERMISSIONS.CAN_VIEW_ALL_STUDENTS,
     PERMISSIONS.CAN_EDIT_OWN_STUDENTS,
@@ -213,6 +240,24 @@ export const STUDENT_ACCESS_PATTERNS = {
   [ROLES.ADMINISTRATOR]: {
     patterns: ['all'],
     description: 'All students'
+  },
+  
+  // School Admin Access: All students
+  [ROLES.SCHOOL_ADMIN]: {
+    patterns: ['all'],
+    description: 'All students'
+  },
+  
+  // Staff View Access: All students (view-only)
+  [ROLES.STAFF_VIEW]: {
+    patterns: ['all'],
+    description: 'All students (view-only)'
+  },
+  
+  // Staff Edit Access: All students (can edit)
+  [ROLES.STAFF_EDIT]: {
+    patterns: ['all'],
+    description: 'All students (can edit)'
   }
 }
 

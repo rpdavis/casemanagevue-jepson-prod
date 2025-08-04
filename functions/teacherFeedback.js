@@ -72,8 +72,7 @@ const getGoogleAuth = () => {
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/documents",
       "https://www.googleapis.com/auth/drive",
-      "https://www.googleapis.com/auth/forms.responses.readonly",
-      "https://www.googleapis.com/auth/gmail.send"
+      "https://www.googleapis.com/auth/forms.responses.readonly"
     ],
   });
 };
@@ -519,119 +518,7 @@ exports.createFeedbackFormSheet = onCall({
   }
 });
 
-// Send teacher feedback form via email
-exports.sendTeacherFeedbackForm = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
-  requireRole(request, ["case_manager"]);
 
-  const { formUrl, studentId, teacherEmails, formTitle, customMessage } = request.data;
-  
-  if (!formUrl || !studentId || !teacherEmails?.length) {
-    throw new HttpsError("invalid-argument", "Missing required fields");
-  }
-
-  try {
-    // Get student data
-    const studentDoc = await db.collection("students").doc(studentId).get();
-    if (!studentDoc.exists) {
-      throw new HttpsError("not-found", "Student not found");
-    }
-    const student = studentDoc.data();
-
-    // Get form data to find the spreadsheet
-    const formId = extractFormId(formUrl);
-    const formQuery = await db.collection("feedbackForms")
-      .where("formUrl", "==", formUrl)
-      .limit(1)
-      .get();
-    
-    if (formQuery.empty) {
-      throw new HttpsError("not-found", "Feedback form not found");
-    }
-    
-    const formData = formQuery.docs[0].data();
-    const spreadsheetId = formData.spreadsheetId;
-    
-    if (!spreadsheetId) {
-      throw new HttpsError("failed-precondition", "No response sheet found for this form");
-    }
-
-    // Create student tab if it doesn't exist
-    const studentName = `${student.firstName || ""} ${student.lastName || ""}`.trim();
-    try {
-      await createStudentTab(spreadsheetId, studentName, studentId);
-      console.log(`✅ Created tab for student: ${studentName}`);
-    } catch (tabError) {
-      console.warn(`⚠️ Could not create student tab: ${tabError.message}`);
-      // Continue with sending the form even if tab creation fails
-    }
-    const caseManager = request.auth.token.name || request.auth.token.email;
-    
-    const subject = formTitle || `Teacher Feedback Request - ${studentName}`;
-    const message = customMessage || 
-`Dear Teacher,
-
-Please provide feedback for ${studentName} (Grade ${student.grade || "N/A"}):
-
-${formUrl}
-
-Thank you,
-${caseManager}
-Case Manager`.trim();
-
-    // Send emails via Gmail API
-    const auth = getGoogleAuth();
-    const gmail = google.gmail({ version: "v1", auth: await auth.getClient() });
-
-    const results = await Promise.allSettled(
-      teacherEmails.map(email => {
-        const raw = [
-          `To: ${email}`,
-          `Subject: ${subject}`,
-          "Content-Type: text/plain; charset=UTF-8",
-          "",
-          message
-        ].join("\n");
-
-        return gmail.users.messages.send({
-          userId: "me",
-          requestBody: {
-            raw: Buffer.from(raw).toString("base64")
-              .replace(/\+/g, "-")
-              .replace(/\//g, "_")
-              .replace(/=+$/, "")
-          }
-        });
-      })
-    );
-
-    // Log results
-    const successful = results.filter(r => r.status === "fulfilled").length;
-    await db.collection("feedbackSendLog").add({
-      studentId,
-      studentName,
-      caseManagerId: request.auth.uid,
-      caseManager,
-      formUrl,
-      teacherEmails,
-      successful,
-      failed: results.length - successful,
-      sentAt: new Date().toISOString()
-    });
-
-    return {
-      success: true,
-      sent: successful,
-      failed: results.length - successful
-    };
-
-  } catch (error) {
-    console.error("Feedback form error:", error);
-    throw new HttpsError("internal", "Failed to send feedback forms");
-  }
-});
 
 // Get case manager's own feedback system
 exports.getCaseManagerFeedbackSystem = onCall({
