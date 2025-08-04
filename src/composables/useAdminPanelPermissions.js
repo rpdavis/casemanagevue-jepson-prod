@@ -1,14 +1,15 @@
 import { ref, computed } from 'vue'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/firebase'
-import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/store/authStore'
 
 const permissions = ref({})
 const isLoading = ref(false)
 const isInitialized = ref(false)
 
 export function useAdminPanelPermissions() {
-  const { currentUser } = useAuth()
+  const authStore = useAuthStore()
+  const currentUser = computed(() => authStore.currentUser)
 
   // Load permissions from Firestore
   const loadPermissions = async () => {

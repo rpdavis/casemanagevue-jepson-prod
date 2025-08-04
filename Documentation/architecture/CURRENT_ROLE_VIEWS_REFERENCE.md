@@ -171,27 +171,169 @@ case 'iep_504_all':
 
 ---
 
+## 🔍 paraeducator (Paraeducator/Aide) Role View
+
+### **Database Access**
+- **Query**: Gets **only their assigned students** from database (e.g., 7 students)
+- **Security**: Database-level filtering using `aideSchedules` collection
+- **Efficient**: Only loads students they are assigned to help
+- **Two Assignment Types**:
+  - **Direct Assignment**: Students directly assigned to the aide
+  - **Class Assignment**: Students in classes where aide helps specific teachers in specific periods
+
+### **Provider View Options**
+```javascript
+// Paraeducators do NOT have provider view options
+// They see all their assigned students - no client-side filtering
+```
+
+### **Default View**: All assigned students (no provider view dropdown)
+
+### **View Modes**
+1. **List View**: Shows all 7 assigned students
+2. **Class View**: Students grouped by periods where aide is assigned to help teachers
+3. **Direct Assignment View**: Students directly assigned to the aide
+
+### **Implementation**
+- Uses database-level security filtering (Pattern 1)
+- Query loads from `aideSchedules` collection using `studentIds` array
+- **No provider view filtering** - uses `useUnifiedRoleView.js` but bypasses client-side filtering
+- Class view uses aide assignment data to match students to periods
+
+### **Database Query Process**
+1. **Primary Query**: `where('app.staffIds', 'array-contains', userId)` (usually returns 0)
+2. **Fallback Query**: Load from `aideSchedules/{userId}` document
+3. **Extract studentIds**: Get array of assigned student IDs
+4. **Individual Fetch**: Load each student document by ID
+5. **Result**: Only students the aide is authorized to see
+
+### **Class View Logic**
+```javascript
+// For each student and period, check if aide is assigned to help the teacher
+const aideData = aideAssignment.value[userId]
+const aideTeacherIds = aideData.classAssignment[period] // Array of teacher IDs
+const shouldShow = aideTeacherIds.includes(teacherId)
+```
+
+### **Email Functionality**
+- **Action Button**: Only shows **Email** button (no Edit or Teacher Feedback buttons)
+- **Email Type**: "Email Case Manager" - specialized for viewer-only roles
+- **Tooltip**: Shows "Email Case Manager" instead of generic "Email about Student"
+- **Subject Line**: 
+  - Default: `{initials} - Student Inquiry` (for general questions)
+  - Update: `{initials} - Student Update` (when case manager selects update categories)
+- **Recipients**: Opens email dialog with case manager included in team options
+- **Self-Filtering**: Paraeducator's email is automatically filtered out of recipient lists
+- **Update Categories**: Cannot see case manager-only update categories:
+  - Student information
+  - Meeting dates
+  - Services
+  - Schedule
+  - Instruction accommodations
+  - Assessment accommodations
+  - Documents
+- **Email Template**: Uses professional template with dynamic case manager name inclusion
+
+### **Recent Fixes**
+1. **Students Not Loading**:
+   - **Issue**: Paraeducator query was falling back to `aideSchedules` but not loading students
+   - **Solution**: Fixed query to properly extract `studentIds` array and fetch individual student documents
+
+2. **Class View Not Working**:
+   - **Issue**: Aide assignment data wasn't available in `useStudentViews` context
+   - **Root Cause**: Data flow timing issue between `useStudentData` and `useStudentViews`
+   - **Solution**: Ensured aide assignment loads before class view computation
+
+3. **Provider View Filtering Conflict**:
+   - **Issue**: `useUnifiedRoleView` was trying to apply client-side filtering to database-filtered students
+   - **Solution**: Added special handling for `paraeducator` role to bypass provider view filtering entirely
+
+4. **Email Action Button**:
+   - **Issue**: Paraeducators had Edit and Teacher Feedback buttons they shouldn't access
+   - **Solution**: Restricted to Email button only with "Email Case Manager" functionality
+
+5. **Email Dialog Enhancement**:
+   - **Issue**: Email system needed comprehensive update categories and professional templates
+   - **Solution**: Added 7 update categories (student info, meetings, services, schedule, accommodations, documents) with dynamic case manager name inclusion and improved UI (checkboxes on left, proper styling)
+
+---
+
 ## 📝 Other Roles to Document
 
-### **Next to Verify:**
-- [ ] `service_provider` - Served students view  
-- [ ] `teacher` - Assigned students view
-- [ ] `paraeducator` - Assigned students view
-- [ ] `school_admin` - New role, needs documentation
-- [ ] `staff_view` - New role, needs documentation
-- [ ] `staff_edit` - New role, needs documentation
+### **🔍 service_provider (Service Provider) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**: [TO BE DOCUMENTED]
+- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **🔍 teacher (Teacher) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**: 
+  - **Action Button**: Only shows **Email** button (viewer-only role)
+  - **Email Type**: "Email Case Manager" - same as paraeducator
+  - **Subject Line**: `{initials} - Student Inquiry` (default)
+  - **Self-Filtering**: Teacher's email filtered out of recipient lists
+  - **Restrictions**: Cannot see case manager checkboxes
+- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **🔍 staff_view (Staff View) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**:
+  - **Action Button**: Only shows **Email** button (viewer-only role)
+  - **Email Type**: "Email Case Manager" - same as paraeducator
+  - **Subject Line**: `{initials} - Student Inquiry` (default)
+  - **Self-Filtering**: Staff member's email filtered out of recipient lists
+  - **Restrictions**: Cannot see case manager checkboxes
+- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **🔍 school_admin (School Admin) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**: [TO BE DOCUMENTED]
+- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **🔍 staff_edit (Staff Edit) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**: [TO BE DOCUMENTED]
+- **Recent Fixes**: [TO BE DOCUMENTED]
+
+### **🔍 admin (Administrator) Role View**
+- **Database Access**: [TO BE DOCUMENTED]
+- **Provider View Options**: [TO BE DOCUMENTED]
+- **Email Functionality**: [TO BE DOCUMENTED]
+- **Recent Fixes**: [TO BE DOCUMENTED]
 
 ---
 
 ## 🎯 Key Points
 
+### **Two Database Security Patterns:**
+
+**Pattern 1 - Database-Level Filtering (Secure & Efficient):**
+- **Roles**: `case_manager`, `teacher`, `service_provider`, `paraeducator`
+- **Query**: Load ONLY authorized students from database
+- **Filtering**: Database-level security (Firestore queries)
+- **Provider Views**: None or bypassed (students already filtered)
+- **Performance**: Efficient - only loads what user can see
+
+**Pattern 2 - Full Load + Client-Side Filtering (Admin Convenience):**
+- **Roles**: `admin`, `sped_chair`, `admin_504`, `school_admin`
+- **Query**: Load ALL students from database
+- **Filtering**: Client-side provider view filtering
+- **Provider Views**: Multiple options (All, CM, SP, etc.)
+- **Performance**: Less efficient but provides admin flexibility
+
+### **Implementation Notes:**
 1. **admin_504 uses special legacy view** - `useAdministrator504View.js`
-2. **sped_chair uses unified system** - `useUnifiedRoleView.js`
-3. **All roles load full student list** - Filtering happens client-side
-4. **Provider views control what's shown** - Not what's loaded
-5. **Firestore rules control editing** - Not the view system
+2. **Most roles use unified system** - `useUnifiedRoleView.js`
+3. **Pattern 1 roles bypass provider filtering** - Students already filtered by database
+4. **Pattern 2 roles use provider views** - To filter the full student list
+5. **Firestore rules control editing permissions** - Independent of view system
 
 ---
 
-**📅 Last Updated**: After admin_504 and sped_chair view fixes  
-**🔄 Status**: Active reference - will expand as other roles are verified
+**📅 Last Updated**: After paraeducator class view fix and Pattern 1/2 clarification  
+**🔄 Status**: Active reference - now includes paraeducator role documentation

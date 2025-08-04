@@ -29,7 +29,6 @@ export function useAppSettings() {
   const settingsDocRef = doc(db, 'app_settings', 'global')
 
   const loadAppSettings = async () => {
-    // If already loading, wait for the current load to complete
     if (loading.value) {
       return new Promise((resolve) => {
         const unwatch = watch(loading, (newLoading) => {
@@ -41,7 +40,6 @@ export function useAppSettings() {
       })
     }
 
-    // If already initialized and not forced reload, return current settings
     if (isInitialized && !error.value) {
       return appSettings.value
     }
@@ -50,38 +48,46 @@ export function useAppSettings() {
     error.value = null
     try {
       const docSnap = await getDoc(settingsDocRef)
-      if (docSnap.exists()) {
-        appSettings.value = docSnap.data()
-        console.log('useAppSettings: Loaded existing settings:', appSettings.value)
-      } else {
-        appSettings.value = { ...DEFAULT_SETTINGS }
-        console.log('useAppSettings: No existing settings, using defaults:', appSettings.value)
-      }
-      isInitialized = true
-      return appSettings.value
+      appSettings.value = docSnap.exists() ? docSnap.data() : { ...DEFAULT_SETTINGS }
     } catch (e) {
-      error.value = e.message
-      console.error('useAppSettings: Error loading settings:', e)
-      throw e
+      appSettings.value = { ...DEFAULT_SETTINGS }
     } finally {
       loading.value = false
+      isInitialized = true
     }
+    return appSettings.value
   }
 
+  // Save app settings to Firestore
   const saveAppSettings = async (settings) => {
     loading.value = true
     error.value = null
+    
     try {
-      console.log('useAppSettings: Saving settings:', settings)
-      await setDoc(settingsDocRef, settings)
-      console.log('useAppSettings: Settings saved successfully')
-      // Update the local state immediately without reloading
+      const settingsRef = doc(db, 'app_settings', 'general')
+      await setDoc(settingsRef, settings)
+      
+      // Update the reactive appSettings after successful save
       appSettings.value = { ...settings }
-      isInitialized = true
+      
+      // Also save to localStorage as backup
+      try {
+        localStorage.setItem('app_settings_backup', JSON.stringify(settings))
+      } catch (backupError) {
+        console.warn('⚠️ Failed to save localStorage backup:', backupError)
+      }
+      
     } catch (e) {
-      error.value = e.message
-      console.error('useAppSettings: Error saving settings:', e)
-      throw e
+      error.value = e.message || 'Unknown error'
+      
+      // Fallback to localStorage if Firestore fails
+      try {
+        localStorage.setItem('app_settings_backup', JSON.stringify(settings))
+        console.warn('⚠️ saveAppSettings: Fell back to localStorage due to Firestore error')
+      } catch (fallbackError) {
+        console.error('❌ Both Firestore and localStorage saves failed:', fallbackError)
+        throw new Error('Failed to save settings to both Firestore and localStorage')
+      }
     } finally {
       loading.value = false
     }
@@ -107,10 +113,6 @@ export function useAppSettings() {
   if (!isInitialized && !loading.value) {
     loadAppSettings()
   }
-
-  watch(appSettings, (newVal) => {
-    console.log('appSettings changed:', newVal)
-  }, { deep: true })
 
   return {
     appSettings,

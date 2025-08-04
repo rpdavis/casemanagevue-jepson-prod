@@ -6,18 +6,12 @@ export function usePeriodLabels() {
 
   // Reactive labels array from app settings
   const labels = computed(() => {
-    console.log('🏷️ usePeriodLabels: appSettings.value:', appSettings.value)
-    console.log('🏷️ usePeriodLabels: periodLabels:', appSettings.value?.periodLabels)
-    console.log('🏷️ usePeriodLabels: numPeriods:', appSettings.value?.numPeriods)
-    
-    if (appSettings.value?.periodLabels && appSettings.value?.numPeriods) {
-      const result = appSettings.value.periodLabels.slice(0, appSettings.value.numPeriods)
-      console.log('🏷️ usePeriodLabels: returning labels:', result)
-      return result
+    // Use a snapshot to avoid reactive loops during save operations
+    const settings = appSettings.value
+    if (settings?.periodLabels && settings?.numPeriods) {
+      return [...settings.periodLabels.slice(0, settings.numPeriods)]
     }
-    const fallback = ['1', '2', '3', '4', '5', '6', '7']
-    console.log('🏷️ usePeriodLabels: returning fallback labels:', fallback)
-    return fallback
+    return ['1', '2', '3', '4', '5', '6', '7']
   })
 
   // Convert numeric period (1-7) to display label
@@ -27,7 +21,6 @@ export function usePeriodLabels() {
     
     const index = num - 1 // Convert 1-based to 0-based index
     const label = labels.value[index] || `Period ${num}`
-    console.log(`🏷️ getLabel(${periodNum}) -> "${label}" (index: ${index}, labels:`, labels.value, ')')
     return label
   }
 

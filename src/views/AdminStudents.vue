@@ -158,7 +158,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getFirestore, collection, query, orderBy, limit, getDocs, doc, updateDoc, deleteDoc, writeBatch, setDoc, serverTimestamp } from 'firebase/firestore'
 import useStudents from '@/composables/useStudents'
 import useUsers from '@/composables/useUsers'
-import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/store/authStore'
 import { useAdminPanelPermissions } from '@/composables/useAdminPanelPermissions'
 import { getDisplayValue } from '@/utils/studentUtils'
 import { 
@@ -356,8 +356,8 @@ const saveStudent = async (studentId) => {
       hasStudentInList: !!students.value.find(s => s.id === studentId)
     })
     
-    // Debug user permissions
-    const { currentUser } = useAuth()
+const authStore = useAuthStore()
+const currentUser = computed(() => authStore.currentUser)
     console.log('🔐 PERMISSION DEBUG:', {
       currentUser: currentUser.value,
       userRole: currentUser.value?.role,

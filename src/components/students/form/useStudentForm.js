@@ -139,7 +139,8 @@ export function useStudentForm(props, emit) {
       bipFile: null,
       ataglanceFile: null,
       removeBipFile: false,
-      removeAtaglanceFile: false
+      removeAtaglanceFile: false,
+      additionalDocuments: student.app?.documents?.additionalDocuments || []
     }
   }
 
@@ -269,6 +270,50 @@ export function useStudentForm(props, emit) {
     event.stopPropagation()
     form.removeAtaglanceFile = true
     form.ataglanceFile = null
+  }
+
+  // Additional document management functions
+  const addAdditionalDocument = (title) => {
+    if (!title || title.trim().length === 0 || title.trim().length > 24) {
+      throw new Error('Title must be between 1 and 24 characters')
+    }
+    
+    const totalDocuments = 2 + form.additionalDocuments.length // BIP + At-A-Glance + additional
+    if (totalDocuments >= 10) {
+      throw new Error('Maximum of 10 documents allowed (including BIP and At-A-Glance)')
+    }
+
+    const newDoc = {
+      id: crypto.randomUUID(),
+      title: title.trim(),
+      pdfUrl: '',
+      fileName: '',
+      toRemove: false
+    }
+    
+    form.additionalDocuments.push(newDoc)
+    return newDoc.id
+  }
+
+  const removeAdditionalDocument = (docId) => {
+    const doc = form.additionalDocuments.find(d => d.id === docId)
+    if (doc) {
+      doc.toRemove = true
+    }
+  }
+
+  const undoRemoveAdditionalDocument = (docId) => {
+    const doc = form.additionalDocuments.find(d => d.id === docId)
+    if (doc) {
+      doc.toRemove = false
+    }
+  }
+
+  const deleteAdditionalDocument = (docId) => {
+    const index = form.additionalDocuments.findIndex(d => d.id === docId)
+    if (index !== -1) {
+      form.additionalDocuments.splice(index, 1)
+    }
   }
 
   // File upload/delete utilities - SECURE VERSION
@@ -639,7 +684,17 @@ export function useStudentForm(props, emit) {
           bipPdfUrl,
           // Store original filenames for display
           bipFileName: form.bipFileName || null,
-          ataglanceFileName: form.ataglanceFileName || null
+          ataglanceFileName: form.ataglanceFileName || null,
+          // Additional documents (filtered to exclude removed ones)
+          additionalDocuments: form.additionalDocuments
+            .filter(doc => !doc.toRemove && doc.pdfUrl)
+            .map(doc => ({
+              id: doc.id,
+              title: doc.title,
+              pdfUrl: doc.pdfUrl,
+              fileName: doc.fileName,
+              uploadDate: doc.uploadDate || new Date().toISOString()
+            }))
         }
       }
       
@@ -748,6 +803,12 @@ export function useStudentForm(props, emit) {
     onFileChange,
     removeBipFile,
     removeAtaglanceFile,
+    
+    // Additional document handling
+    addAdditionalDocument,
+    removeAdditionalDocument,
+    undoRemoveAdditionalDocument,
+    deleteAdditionalDocument,
     
     // Provider utilities
     providerFieldMap,

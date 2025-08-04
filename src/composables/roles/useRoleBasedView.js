@@ -36,6 +36,15 @@ export function useRoleBasedView(studentData, filterData) {
   // Use the role-specific view
   const activeView = roleView.value
   
+  // Debug: Log role view results for paraeducators
+  if (currentRole.value === 'paraeducator') {
+    console.log('🔍 ROLE-BASED VIEW: Paraeducator activeView:', {
+      visibleStudents: activeView.visibleStudents?.value?.length || 0,
+      providerViewOptions: activeView.providerViewOptions?.value?.length || 0,
+      role: currentRole.value
+    })
+  }
+  
   // Legacy permission checks - now using active view's data
   const canEditAllStudents = computed(() => {
     const userRole = currentUser.value?.role

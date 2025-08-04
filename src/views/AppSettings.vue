@@ -198,7 +198,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useAppSettings } from '../composables/useAppSettings.js'
-import { useAuth } from '../composables/useAuth.js'
+import { useAuthStore } from '@/store/authStore.js'
 import { 
   sanitizeString, 
   checkSecurityThreats, 
@@ -207,7 +207,8 @@ import {
   sanitizeNumeric
 } from '@/utils/validation.js'
 
-const { currentUser } = useAuth()
+const authStore = useAuthStore()
+const currentUser = computed(() => authStore.currentUser)
 const userRole = computed(() => currentUser.value?.role || null)
 const isAdmin = computed(() => [
   'admin',
@@ -244,6 +245,7 @@ const { loadAppSettings, saveAppSettings } = useAppSettings()
 
 const loading = ref(false)
 const saveLoading = ref(false)
+const preventWatchers = ref(false)
 const status = ref('')
 const statusError = ref(false)
 const customServiceProviderName = ref('')
@@ -315,10 +317,98 @@ const validateSettings = () => {
     settings.value.periodLabels[i] = sanitizedLabel
   }
 
-  // Validate custom service providers
+  // Validate custom service providers (original validateSettings logic)
   if (settings.value.customServiceProviders) {
     for (let i = 0; i < settings.value.customServiceProviders.length; i++) {
       const provider = settings.value.customServiceProviders[i]
+      
+      if (provider.name) {
+        const sanitizedName = sanitizeString(provider.name, {
+          trim: true,
+          maxLength: 100,
+          removeDangerous: true
+        })
+
+        const securityCheck = checkSecurityThreats(sanitizedName)
+        if (!securityCheck.isSafe) {
+          showStatus(`Security threat detected in custom provider ${i + 1}: ${securityCheck.threats.join(', ')}`, true)
+          return false
+        }
+
+        provider.name = sanitizedName
+      }
+
+      if (provider.abbreviation) {
+        const sanitizedAbbr = sanitizeString(provider.abbreviation, {
+          trim: true,
+          maxLength: 10,
+          removeDangerous: true
+        })
+
+        const securityCheck = checkSecurityThreats(sanitizedAbbr)
+        if (!securityCheck.isSafe) {
+          showStatus(`Security threat detected in custom provider abbreviation ${i + 1}: ${securityCheck.threats.join(', ')}`, true)
+          return false
+        }
+
+        provider.abbreviation = sanitizedAbbr
+      }
+    }
+  }
+
+  return true
+}
+
+// Non-reactive validation function for save operations
+const validateSettingsCopy = (settingsCopy) => {
+  // Validate number of periods
+  const sanitizedNumPeriods = sanitizeNumeric(settingsCopy.numPeriods, {
+    min: 1,
+    max: 15,
+    decimals: 0
+  })
+  
+  if (sanitizedNumPeriods === null) {
+    showStatus('Invalid number of periods. Must be between 1 and 15.', true)
+    return false
+  }
+  
+  settingsCopy.numPeriods = sanitizedNumPeriods
+
+  // Validate period labels
+  for (let i = 0; i < settingsCopy.numPeriods; i++) {
+    if (!settingsCopy.periodLabels[i]) {
+      settingsCopy.periodLabels[i] = `Per${i + 1}`
+    }
+
+    // Sanitize period label
+    const sanitizedLabel = sanitizeString(settingsCopy.periodLabels[i], {
+      trim: true,
+      maxLength: 3,
+      removeDangerous: true
+    })
+
+    // Security threat detection
+    const securityCheck = checkSecurityThreats(sanitizedLabel)
+    if (!securityCheck.isSafe) {
+      showStatus(`Security threat detected in period ${i + 1} label: ${securityCheck.threats.join(', ')}`, true)
+      return false
+    }
+
+    // Validate length
+    const lengthValidation = validateStringLength(sanitizedLabel, { max: 3, fieldName: `Period ${i + 1} label` })
+    if (!lengthValidation.isValid) {
+      showStatus(lengthValidation.error, true)
+      return false
+    }
+
+    settingsCopy.periodLabels[i] = sanitizedLabel
+  }
+
+  // Validate custom service providers
+  if (settingsCopy.customServiceProviders) {
+    for (let i = 0; i < settingsCopy.customServiceProviders.length; i++) {
+      const provider = settingsCopy.customServiceProviders[i]
       
       if (provider.name) {
         const sanitizedName = sanitizeString(provider.name, {
@@ -408,7 +498,10 @@ const removeCustomServiceProvider = (index) => {
 }
 
 // Watchers for validation
-watch(() => settings.value.numPeriods, (newVal) => {
+watch(() => settings.value.numPeriods, (newVal, oldVal) => {
+  // Prevent infinite loops during save operations
+  if (saveLoading.value || preventWatchers.value) return;
+  
   // Sanitize and validate on change
   const sanitizedVal = sanitizeNumeric(newVal, { min: 1, max: 15, decimals: 0 })
   if (sanitizedVal !== null && sanitizedVal !== newVal) {
@@ -425,7 +518,10 @@ watch(() => settings.value.numPeriods, (newVal) => {
 })
 
 // Watch period labels for validation
-watch(() => settings.value.periodLabels, (newLabels) => {
+watch(() => settings.value.periodLabels, (newLabels, oldLabels) => {
+  // Prevent infinite loops during save operations
+  if (saveLoading.value || preventWatchers.value) return;
+  
   newLabels.forEach((label, index) => {
     if (label && label.length > 3) {
       settings.value.periodLabels[index] = label.substring(0, 3)
@@ -474,27 +570,72 @@ const loadSettings = async (showMessage = false) => {
 }
 
 const saveSettings = async () => {
+  console.log('🔧 STEP 1: Starting save operation...')
+  
   // Rate limiting for save operations
   const rateCheck = checkRateLimit('saveAppSettings', 10, 60000) // 10 saves per minute
   if (!rateCheck.allowed) {
+    console.log('❌ STEP 1 FAILED: Rate limit exceeded')
     showStatus('Too many save requests. Please wait before saving again.', true)
     return
   }
+  console.log('✅ STEP 1 COMPLETE: Rate limit check passed')
 
-  // Validate settings before saving
-  if (!validateSettings()) {
-    return
-  }
-
+  console.log('🔧 STEP 2: Preventing watchers and preparing settings...')
+  // Prevent watchers from running during validation and save
+  preventWatchers.value = true
   saveLoading.value = true
+  
   try {
-    await saveAppSettings(settings.value)
+    console.log('🔧 STEP 3: Creating non-reactive copy for validation...')
+    
+    // Create a non-reactive copy for validation and saving
+    const settingsToSave = JSON.parse(JSON.stringify(settings.value))
+    
+    console.log('🔧 STEP 4: Validating settings copy...')
+    // Validate the copy instead of the reactive object
+    if (!validateSettingsCopy(settingsToSave)) {
+      console.log('❌ STEP 4 FAILED: Validation failed')
+      preventWatchers.value = false
+      saveLoading.value = false
+      return
+    }
+    console.log('✅ STEP 4 COMPLETE: Validation passed')
+    
+    console.log('🔧 STEP 5: Calling saveAppSettings...')
+    await saveAppSettings(settingsToSave)
+    console.log('✅ STEP 5 COMPLETE: saveAppSettings returned successfully')
+    
     showStatus('Settings saved successfully')
+    console.log('✅ SAVE OPERATION COMPLETED SUCCESSFULLY')
+    
   } catch (error) {
-    showStatus('Error saving settings', true)
-    console.error('Save settings error:', error)
+    console.error('❌ SAVE OPERATION FAILED at some step')
+    console.error('❌ Error:', error)
+    console.error('❌ Error message:', error.message)
+    console.error('❌ Error stack:', error.stack)
+    
+    if (error.message === 'Save operation timed out') {
+      showStatus('Save operation timed out. Please try again.', true)
+    } else if (error.message && error.message.includes('quota')) {
+      showStatus('Storage quota exceeded. Please contact administrator.', true)
+    } else if (error.message && error.message.includes('permission')) {
+      showStatus('Permission denied. Please check your access rights.', true)
+    } else {
+      showStatus('Error saving settings: ' + (error.message || 'Unknown error'), true)
+    }
   } finally {
+    console.log('👉 saveSettings: before cleanup')
+    console.log('🔧 STEP 7: Cleaning up - setting saveLoading to false')
     saveLoading.value = false
+    
+    // Reset preventWatchers after a small delay to ensure UI updates first
+    setTimeout(() => {
+      preventWatchers.value = false
+    }, 100)
+    
+    console.log('👉 saveSettings: after cleanup')
+    console.log('✅ STEP 7 COMPLETE: Cleanup finished')
   }
 }
 

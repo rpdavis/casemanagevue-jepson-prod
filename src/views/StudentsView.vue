@@ -56,7 +56,7 @@
               <Users v-if="option.value === 'all_iep'" :size="16" />
               <User v-else-if="option.value === 'case_manager'" :size="16" />
               <Presentation v-else-if="option.value === 'service_provider' || option.value === 'teacher'" :size="16" />
-              <Globe v-else-if="option.value === 'all'" :size="16" />
+              <Globe v-else-if="option.value === 'all' || option.value === 'iep_504_all'" :size="16" />
             </label>
           </div>
         </div>
@@ -258,6 +258,7 @@
       v-if="emailingStudentId"
       :student="getStudentById(emailingStudentId)"
       :user-map="userMapObj"
+      :current-user="currentUser"
       @close="emailingStudentId = null"
     />
     
@@ -330,6 +331,23 @@ import TeacherFeedbackDialog from '@/components/students/TeacherFeedbackDialog.v
 const studentData = useStudentData()
 const filterData = useStudentFilters(studentData)
   const roleView = useRoleBasedView(studentData, filterData)
+
+// Debug: Watch for paraeducator visible students changes
+console.log('🔍 STUDENTS VIEW DEBUG: Setting up watcher, currentRole:', roleView.currentRole?.value)
+watch(() => roleView.currentRole?.value, (newRole) => {
+  console.log('🔍 STUDENTS VIEW DEBUG: Role changed to:', newRole)
+  if (newRole === 'paraeducator') {
+    console.log('🔍 STUDENTS VIEW DEBUG: Paraeducator role detected, setting up visibleStudents watcher')
+    watch(() => roleView.visibleStudents?.value, (newStudents) => {
+      console.log('🔍 STUDENTS VIEW: Paraeducator visibleStudents changed:', {
+        count: newStudents?.length || 0,
+        studentNames: newStudents?.map(s => 
+          `${s.app?.studentData?.firstName || 'Unknown'} ${s.app?.studentData?.lastName || 'Unknown'}`
+        ) || []
+      })
+    }, { immediate: true })
+  }
+}, { immediate: true })
 const navActions = useStudentNavActions(studentData)
 
 // Extract data from composables
@@ -447,6 +465,8 @@ const getProviderTooltip = (value) => {
       return 'Service Provider'
     case 'teacher':
       return 'Service Provider'
+    case 'iep_504_all':
+      return 'All IEP/504 students'
     case 'all': 
       return role === 'sped_chair' ? 'All students (with IEPs)' : 'All students'
     default: 

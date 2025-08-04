@@ -225,7 +225,7 @@ import ComponentHealthDashboard from '@/components/ComponentHealthDashboard.vue'
 import AdminPermissionsMatrix from '@/components/AdminPermissionsMatrix.vue'
 import ThemeManager from '@/components/ThemeManager.vue'
 import TestingView from '@/views/TestingView.vue'
-import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/store/authStore'
 import { useAdminPermissions } from '@/composables/useAdminPermissions'
 import { auditLogger } from '@/utils/auditLogger'
 
@@ -270,7 +270,8 @@ export default {
     const { users: userMap, fetchUsers } = useUsers()
     
     // Get current user for admin-only features
-    const { currentUser } = useAuth()
+    const authStore = useAuthStore()
+    const currentUser = computed(() => authStore.currentUser)
     
     // Get admin permissions system
     const { loadPermissions, getPermittedTabs, permissionsLoaded } = useAdminPermissions()

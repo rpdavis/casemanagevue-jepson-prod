@@ -9,6 +9,7 @@
   overflow: hidden;
   box-shadow: var(--shadow-md);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-table);
 }
 
 .table th,
@@ -17,6 +18,7 @@
   text-align: left;
   vertical-align: top;
   border-bottom: var(--border-width) solid var(--table-border);
+  line-height: var(--line-height-table);
 }
 
 .table thead th {
@@ -25,6 +27,9 @@
   font-weight: var(--font-weight-semibold);
   padding: var(--table-header-padding);
   border-bottom: var(--border-width) solid var(--table-border);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-table);
+  letter-spacing: 0.025em;
 }
 
 .table tbody tr:nth-child(even) {
@@ -43,7 +48,8 @@
   box-shadow: var(--shadow-md);
   border-radius: var(--border-radius-lg);
   overflow: hidden;
-  font-size: 0.95rem;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-table);
 }
 
 .students-table thead {
@@ -58,6 +64,14 @@
   text-align: left;
   vertical-align: top;
   border-bottom: var(--border-width) solid var(--table-border);
+  line-height: var(--line-height-table);
+}
+
+.students-table th {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.025em;
+  color: var(--text-secondary);
 }
 
 .students-table tbody tr:nth-child(even) {
@@ -77,16 +91,19 @@
 .student-name {
   font-weight: var(--font-weight-bold);
   color: #003366;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+  letter-spacing: -0.01em;
 }
 
 .data-source {
   font-size: var(--font-size-xs);
   opacity: 0.7;
   cursor: help;
+  font-feature-settings: "tnum" 1;
 }
 
 .data-source:hover {
@@ -375,6 +392,8 @@
 .student-dates span {
   position: relative;
   cursor: help;
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .student-dates span:hover::after {
@@ -390,6 +409,7 @@
   font-size: var(--font-size-xs);
   white-space: nowrap;
   z-index: var(--z-tooltip);
+  font-feature-settings: "tnum" 1;
 }
 
 /* Date badge tooltips moved to StudentTable.css - only used in student table */

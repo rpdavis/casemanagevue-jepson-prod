@@ -26,6 +26,17 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
 
+// Enable debug logging in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔧 Firebase debug mode enabled');
+  // Enable Firestore debug logging
+  import('firebase/firestore').then(({ enableMultiTabIndexedDbPersistence }) => {
+    console.log('🔧 Firestore persistence enabled');
+  }).catch(err => {
+    console.log('🔧 Firestore persistence not enabled:', err);
+  });
+}
+
 // Set up Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 

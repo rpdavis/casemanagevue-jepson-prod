@@ -1,38 +1,54 @@
 /* Typography Styles */
 
-/* Headings */
+/* Base font features for professional appearance */
+body {
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Headings with improved hierarchy */
 h1, h2, h3, h4, h5, h6 {
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   margin-bottom: var(--spacing-sm);
   color: var(--text-primary);
+  letter-spacing: -0.025em; /* Slightly tighter letter spacing for headings */
 }
 
 h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+h2 {
   font-size: var(--font-size-xxl);
   font-weight: var(--font-weight-bold);
 }
 
-h2 {
-  font-size: var(--font-size-xl);
-}
-
 h3 {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
 }
 
 h4 {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 h5 {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 h6 {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  color: var(--text-secondary);
 }
 
 /* Paragraphs */
@@ -104,7 +120,9 @@ pre code {
 .text-lg { font-size: var(--font-size-lg); }
 .text-xl { font-size: var(--font-size-xl); }
 .text-xxl { font-size: var(--font-size-xxl); }
+.text-3xl { font-size: var(--font-size-3xl); }
 
+.font-light { font-weight: var(--font-weight-light); }
 .font-normal { font-weight: var(--font-weight-normal); }
 .font-medium { font-weight: var(--font-weight-medium); }
 .font-semibold { font-weight: var(--font-weight-semibold); }
@@ -136,5 +154,79 @@ pre code {
 
 /* Line Height Utilities */
 .leading-tight { line-height: var(--line-height-tight); }
+.leading-snug { line-height: var(--line-height-snug); }
 .leading-base { line-height: var(--line-height-base); }
-.leading-relaxed { line-height: var(--line-height-relaxed); } 
+.leading-relaxed { line-height: var(--line-height-relaxed); }
+.leading-loose { line-height: var(--line-height-loose); }
+
+/* Professional Typography Enhancements */
+
+/* Tabular numbers for better alignment in tables, dates, and numbers */
+.font-tabular {
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Improved readability for body text */
+.text-body {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--text-primary);
+}
+
+/* Professional labels and captions */
+.text-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  letter-spacing: 0.025em;
+}
+
+.text-caption {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  line-height: var(--line-height-base);
+}
+
+/* Page titles and section headers */
+.text-page-title {
+  font-size: var(--font-size-xxl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+}
+
+.text-section-header {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Table-specific typography improvements */
+.table-text {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-table);
+}
+
+.table-text-tight {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-table-tight);
+}
+
+.table-header {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-table);
+  color: var(--text-secondary);
+}
+
+/* Timestamps and metadata */
+.text-timestamp {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-feature-settings: "tnum" 1;
+  font-variant-numeric: tabular-nums;
+} 

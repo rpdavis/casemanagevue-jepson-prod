@@ -59,12 +59,26 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
     
     const currentRole = studentData.currentUser.value?.role
     
+    // Debug: Check what students are available
+          // Debug: Log student counts for paraeducator role
+      if (currentRole === 'paraeducator') {
+        console.log('🔍 studentsByClass DEBUG:', {
+          role: currentRole,
+          roleBasedStudents: roleBasedStudents?.value?.length || 0,
+          aideAssignmentAvailable: !!aideAssignment.value
+        })
+      }
+    
     // For class view, case managers should see ALL their accessible students
     // (not filtered by provider view), then filter by periods they teach
     let studentsForClassView
     if (currentRole === 'case_manager') {
       studentsForClassView = studentData.students.value // Raw database students (all 4)
       console.log('🔵 studentsByClass: Case manager - using raw database students:', studentsForClassView.length)
+    } else if (currentRole === 'paraeducator') {
+      // For paraeducators, use the role-based students (should be 7 from database)
+      studentsForClassView = roleBasedStudents?.value || studentData.students.value
+      console.log('🔵 studentsByClass: Paraeducator - using role-based students:', studentsForClassView.length)
     } else {
       studentsForClassView = studentsToUse.value // Provider-filtered students  
       console.log('🔵 studentsByClass: Other role - using provider-filtered students:', studentsForClassView.length)
@@ -76,9 +90,6 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
     
     studentsForClassView.forEach(student => {
       const schedule = getSchedule(student) || {}
-      // Debug: print full schedule object to inspect coTeaching structure
-      console.log(`🕵️ studentsByClass full schedule for ${student.app?.studentData?.firstName}:`, schedule)
-      
       Object.entries(schedule).forEach(([period, data]) => {
         // Extract teacherId from both simple and complex schedule structures
         let teacherId, coTeacherId
@@ -87,10 +98,6 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
         } else if (data && typeof data === 'object') {
           teacherId   = data.teacherId
           coTeacherId = data.coTeaching?.caseManagerId
-          // Debug: if coTeaching exists, log its content
-          if (data.coTeaching) {
-            console.log(`🕵️ studentsByClass coTeaching data for ${student.app?.studentData?.firstName} in period ${period}:`, data.coTeaching)
-          }
         } else {
           return // Skip if no valid teacherId
         }
@@ -106,7 +113,8 @@ export function useStudentViews(studentData, filterData, roleBasedStudents = nul
         // Role-specific logic for including students in periods
         if (currentRole === 'paraeducator') {
           // Paraeducators see students in periods where they're assigned to help teachers
-          const aideData = aideAssignment.value[currentUserId]
+          const aideData = aideAssignment.value?.[currentUserId]
+          
           if (aideData?.classAssignment && aideData.classAssignment[period]) {
             const aideTeacherIds = Array.isArray(aideData.classAssignment[period]) 
               ? aideData.classAssignment[period] 

@@ -29,8 +29,24 @@
         <FileText v-else :size="16" class="doc-icon" />
         <span>{{ loadingFiles.bip ? 'Loading...' : 'BIP' }}</span>
       </a>
+
+      <!-- Additional Documents -->
+      <a 
+        v-for="doc in getAdditionalDocuments(student)" 
+        :key="doc.id"
+        href="#" 
+        @click.prevent="openSecureAdditionalFile(doc)"
+        class="doc-link"
+        :class="{ 'loading': loadingFiles[doc.id] }"
+      >
+        <div v-if="loadingFiles[doc.id]" class="loading-spinner">
+          <RotateCw :size="14" class="spin" />
+        </div>
+        <FileText v-else :size="16" class="doc-icon" />
+        <span>{{ loadingFiles[doc.id] ? 'Loading...' : doc.title }}</span>
+      </a>
       
-      <template v-if="!getDocumentUrl(student, 'ataglancePdfUrl') && !getDocumentUrl(student, 'bipPdfUrl')">—</template>
+      <template v-if="!getDocumentUrl(student, 'ataglancePdfUrl') && !getDocumentUrl(student, 'bipPdfUrl') && getAdditionalDocuments(student).length === 0">—</template>
     </div>
   </td>
 </template>
@@ -48,13 +64,17 @@ const props = defineProps({
   getDocumentUrl: {
     type: Function,
     required: true
+  },
+  getAdditionalDocuments: {
+    type: Function,
+    required: true
   }
 })
 
 // Use PDF handler for secure download and viewing
 const { downloadPdf } = usePdfHandler()
 
-// Loading states for each file type
+// Loading states for each file type (including additional documents)
 const loadingFiles = ref({
   ataglance: false,
   bip: false
@@ -85,6 +105,29 @@ const openSecureFile = async (filePath, fileType) => {
   } finally {
     // Clear loading state
     loadingFiles.value[fileType] = false
+  }
+}
+
+// Handle opening additional documents
+const openSecureAdditionalFile = async (doc) => {
+  try {
+    if (!doc.pdfUrl) {
+      alert('File not found.')
+      return
+    }
+    
+    // Set loading state for this specific document
+    loadingFiles.value[doc.id] = true
+    
+    // Use the secure PDF handler to decrypt and open the file
+    await downloadPdf(doc.pdfUrl, props.student.id, doc.fileName)
+    
+  } catch (error) {
+    console.error('Error opening additional document:', error)
+    alert('Error opening file. Please try again.')
+  } finally {
+    // Clear loading state
+    loadingFiles.value[doc.id] = false
   }
 }
 </script>

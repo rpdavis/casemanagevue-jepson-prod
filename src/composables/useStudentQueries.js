@@ -470,7 +470,9 @@ export function useStudentQueries() {
           break
           
         case 'paraeducator':
+          console.log('🔍 PARAEDUCATOR QUERY: Starting query for userId:', currentUserId.value)
           studentData = await getParaeducatorStudents(currentUserId.value)
+          console.log('🔍 PARAEDUCATOR QUERY: Query completed, returned:', studentData.length, 'students')
           break
           
         default:

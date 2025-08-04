@@ -18,6 +18,8 @@ export function useUnifiedRoleView(studentData, filterData) {
   const baseView = useBaseRoleView(studentData, filterData)
   const currentUserId = computed(() => baseView.currentUser.value?.uid)
   const currentRole = computed(() => baseView.currentUser.value?.role || 'guest')
+  
+  console.log('🔍 UNIFIED ROLE VIEW: Composable initialized for role:', currentRole.value)
 
   // ─── PROVIDER VIEW CONFIGURATION ────────────────────────────────────────────
   const providerViewOptions = computed(() => {
@@ -39,11 +41,41 @@ export function useUnifiedRoleView(studentData, filterData) {
 
   // ─── STUDENT FILTERING LOGIC ────────────────────────────────────────────────
   const visibleStudents = computed(() => {
-    if (!currentUserId.value) return []
+    console.log('🔍 UNIFIED ROLE VIEW: visibleStudents computed called for role:', currentRole.value)
+    if (!currentUserId.value) {
+      console.log('🔍 UNIFIED ROLE VIEW: No currentUserId, returning empty array')
+      return []
+    }
     
     const baseStudents = baseView.visibleStudents.value
     const providerView = filterData.currentFilters.providerView
     const role = currentRole.value
+    
+    console.log('🔍 UNIFIED ROLE VIEW: Processing students:', {
+      role,
+      baseStudentsCount: baseStudents.length,
+      providerView,
+      currentUserId: currentUserId.value
+    })
+
+    // Special handling for roles that use database-level filtering (Pattern 1)
+    // Paraeducators and teachers get their students from database queries - no additional filtering needed
+    if (role === 'paraeducator' || role === 'teacher') {
+      console.log(`🔍 ${role.toUpperCase()} ROLE VIEW: Received ${baseStudents.length} students from database`)
+      console.log(`🔍 ${role.toUpperCase()} ROLE VIEW: Student names:`, baseStudents.map(s =>
+        `${s.app?.studentData?.firstName || 'Unknown'} ${s.app?.studentData?.lastName || 'Unknown'}`
+      ))
+      console.log(`🔍 ${role.toUpperCase()} ROLE VIEW: Returning students directly (no provider view filtering)`)
+      return baseStudents
+    }
+    
+    // Special handling for other roles without provider views
+    if (!providerView || providerView === '') {
+      // For other roles without provider views, show all accessible students
+      return baseStudents.filter(student => 
+        RoleUtils.canAccessStudent(currentUserId.value, role, student, studentData)
+      )
+    }
 
     // Apply provider view filtering
     switch (providerView) {

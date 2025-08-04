@@ -9,30 +9,41 @@ export default function useUsers() {
   const userList = ref([])
 
   async function fetchUsers() {
-    const userSnap = await getDocs(collection(db, 'users'))
-    const userMap = {}
-    const allUsers = []
-    userSnap.forEach(doc => {
-      const data = doc.data()
-      userMap[doc.id] = { id: doc.id, ...data }  // Add id to the user data
-      allUsers.push({ id: doc.id, ...data })
+    console.log('🔍 USERS DEBUG: Starting fetchUsers()')
+    try {
+      const userSnap = await getDocs(collection(db, 'users'))
+      console.log('🔍 USERS DEBUG: Retrieved', userSnap.size, 'users from database')
       
-      // Debug log each user's Aeries ID
-      if (data.aeriesId) {
-        console.log('🔍 Loaded user with Aeries ID:', {
-          name: data.name,
-          email: data.email,
-          aeriesId: data.aeriesId,
-          id: doc.id
-        })
-      }
-    })
-    users.value = userMap
-    userList.value = allUsers
-    
-    // Debug log all loaded users
-    console.log('📚 Total users loaded:', allUsers.length)
-    console.log('🔑 Users with Aeries IDs:', allUsers.filter(u => u.aeriesId).length)
+      const userMap = {}
+      const allUsers = []
+      userSnap.forEach(doc => {
+        const data = doc.data()
+        userMap[doc.id] = { id: doc.id, ...data }  // Add id to the user data
+        allUsers.push({ id: doc.id, ...data })
+      })
+      
+      users.value = userMap
+      userList.value = allUsers
+      
+      console.log('🔍 USERS DEBUG: Processed users by role:')
+      const roleCount = {}
+      allUsers.forEach(user => {
+        roleCount[user.role] = (roleCount[user.role] || 0) + 1
+      })
+      console.log('🔍 USERS DEBUG: Role counts:', roleCount)
+      
+      console.log('🔍 USERS DEBUG: All users list:', allUsers.map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role
+      })))
+      
+      console.log('🔍 USERS DEBUG: fetchUsers() completed successfully')
+    } catch (error) {
+      console.error('🔴 USERS DEBUG: Error in fetchUsers():', error)
+      throw error
+    }
   }
 
   const userRoles = computed(() => {

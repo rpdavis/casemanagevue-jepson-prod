@@ -13,6 +13,7 @@ class SessionTimeoutManager {
     this.showWarning = ref(false)
     this.warningCountdown = ref(0)
     this.lastActivity = Date.now()
+    this.lastLogTime = null
     this.router = null
     this.unsubscribeSettings = null
     
@@ -26,6 +27,8 @@ class SessionTimeoutManager {
   }
 
   init() {
+    console.log('🔧 Session timeout system initialization STARTED')
+    
     // Listen for settings changes from Firestore
     this.loadSettings()
     
@@ -102,16 +105,32 @@ class SessionTimeoutManager {
   }
 
   handleActivity() {
+    
     if (!this.isEnabled.value) return
     
-    this.lastActivity = Date.now()
+    const now = Date.now()
     
-    // Always extend session on activity
-    this.hideWarning()
-    this.resetTimeout()
+    // Throttle activity handling to prevent infinite loops
+    // Only reset timeout if it's been more than 30 seconds since last reset
+    if (now - this.lastActivity < 30000) {
+      this.lastActivity = now
+      return
+    }
+    
+    this.lastActivity = now
+    
+    // Only extend session if warning is showing or it's been a while
+    if (this.showWarning.value) {
+      this.hideWarning()
+      this.resetTimeout()
+    } else {
+      // Just update last activity without resetting timeout constantly
+      // This prevents the infinite loop while still tracking activity
+    }
   }
 
   resetTimeout() {
+    
     if (!this.isEnabled.value || !auth.currentUser) {
       return
     }
@@ -119,10 +138,16 @@ class SessionTimeoutManager {
     // Clear existing timeouts
     this.clearTimeouts()
     
+    const now = Date.now()
     const timeoutMs = Math.round(this.timeoutMinutes.value * 60 * 1000)
     const warningMs = Math.max(1000, timeoutMs - (2 * 60 * 1000)) // Show warning 2 minutes before timeout, minimum 1 second
     
-    console.log(`🔒 Session timeout reset: ${this.timeoutMinutes.value} minutes (${timeoutMs}ms), warning in ${warningMs}ms`)
+    // Reduce console spam - only log every 5 minutes or when warning shows
+    const shouldLog = !this.lastLogTime || (now - this.lastLogTime > 300000) || this.showWarning.value
+    if (shouldLog) {
+      console.log(`🔒 Session timeout reset: ${this.timeoutMinutes.value} minutes (${timeoutMs}ms), warning in ${warningMs}ms`)
+      this.lastLogTime = now
+    }
     
     // Set warning timeout - always set if timeout is more than 10 seconds
     if (timeoutMs > 10000) {
@@ -172,6 +197,7 @@ class SessionTimeoutManager {
   }
 
   async handleSessionTimeout() {
+    
     console.log('🔒 Handling session timeout')
     
     try {
@@ -194,6 +220,8 @@ class SessionTimeoutManager {
       this.hideWarning()
       
       // Sign out user
+      console.log('🚨 SESSION TIMEOUT LOGOUT: About to call signOut()')
+      console.log('🔍 Session timeout stack trace:', new Error().stack)
       await signOut(auth)
       
       console.log('🚪 User signed out due to session timeout')

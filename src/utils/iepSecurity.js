@@ -7,10 +7,10 @@ class IEPSecurityHandler {
     // This key should come from environment variables in production
     this.encryptionKey = import.meta.env.VITE_PDF_ENCRYPTION_KEY || 'default-dev-key-replace-in-production';
     
-    // Read encryption toggle from environment
+    // Read encryption toggle from environment (restored to original v1.1.4 behavior)
     this.encryptionEnabled = import.meta.env.VITE_ENABLE_ENCRYPTION !== 'false';
     
-    // Log encryption status in any environment
+    // Log encryption status
     console.log('🔒 IEP Encryption:', this.encryptionEnabled ? 'Enabled' : 'Disabled');
   }
 

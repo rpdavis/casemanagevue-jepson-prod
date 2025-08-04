@@ -10,6 +10,8 @@
     <!-- Debug Access Info - Shows admin users how to access debug tools -->
     <DebugAccessInfo />
     <SessionTimeoutDialog />
+    <!-- Token Debugger for monitoring auth issues -->
+    <TokenDebugger />
   </div>
 </template>
 
@@ -18,6 +20,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import UserRoleSwitcher from '@/components/UserRoleSwitcher.vue'
 import DebugAccessInfo from '@/components/DebugAccessInfo.vue'
 import SessionTimeoutDialog from '@/components/SessionTimeoutDialog.vue'
+import TokenDebugger from '@/components/TokenDebugger.vue'
 import { useThemeInitializer } from '@/composables/useThemeInitializer'
 
 const showDebugRoleSwitcher = ref(false)

@@ -74,14 +74,44 @@ export function useStudentData() {
       await fetchUsers()
       console.log('🔍 useStudentData: fetchUsers() completed')
       
+      // Debug: Check if users are accessible
+      console.log('🔍 useStudentData: Users available in userMap:', Object.keys(userMapObj.value).length)
+      console.log('🔍 useStudentData: Users available in userList:', userList.value?.length || 0)
+      if (currentUser.value?.role === 'paraeducator') {
+        console.log('🔍 PARAEDUCATOR DEBUG: Can access user data:', {
+          userMapKeys: Object.keys(userMapObj.value).slice(0, 5),
+          userListSample: userList.value?.slice(0, 3).map(u => ({ id: u.id, name: u.name, role: u.role }))
+        })
+      }
+      
       // Then fetch students based on user role (SECURITY: Database-level filtering)
       const user = currentUser.value
       console.log('🔍 useStudentData: Checking user for loadStudents call:', user)
+      
+      if (user?.role === 'paraeducator') {
+        console.log('🔍 PARAEDUCATOR DEBUG: Full user object:', {
+          uid: user.uid,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          customClaims: user.customClaims,
+          fullUser: user
+        })
+      }
+      
       if (user) {
-        console.log('🔒 Security: Fetching students for user role:', user.role)
+        console.log('🔒 Security: Fetching students for user role:', user.role, 'userId:', user.uid)
         console.log('🔍 useStudentData: About to call loadStudents()...')
         const roleBasedStudents = await loadStudents()
         console.log('🔍 useStudentData: loadStudents() returned:', roleBasedStudents.length, 'students')
+        if (user.role === 'paraeducator') {
+          console.log('🔍 PARAEDUCATOR DEBUG: Student details:', roleBasedStudents.map(s => ({
+            id: s.id,
+            firstName: s.app?.studentData?.firstName,
+            lastName: s.app?.studentData?.lastName,
+            fullData: s
+          })))
+        }
         setStudents(roleBasedStudents)
         
         // Run security test to verify access control
@@ -101,8 +131,9 @@ export function useStudentData() {
         await loadAideAssignments()
       } else if (userRole === 'paraeducator' && currentUser.value.uid) {
         // Paraeducators can only load their own aide assignment
-        console.log('🔍 useStudentData: Loading individual aide assignment for paraeducator:', currentUser.value.uid)
+        console.log('🔍 PARAEDUCATOR DEBUG: Loading aide assignment for paraeducator:', currentUser.value.uid)
         await loadAideAssignment(currentUser.value.uid)
+        console.log('🔍 PARAEDUCATOR DEBUG: Aide assignment loaded, current assignments:', aideAssignment.value)
         
         // Listen for changes to their own aideSchedules document for real-time updates
         const aideDocRef = doc(db, 'aideSchedules', currentUser.value.uid)

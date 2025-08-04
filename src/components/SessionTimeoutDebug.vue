@@ -75,13 +75,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useSessionTimeout } from '@/composables/useSessionTimeout'
-import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/store/authStore'
 import { Shield, CheckCircle, XCircle, AlertTriangle } from 'lucide-vue-next'
 
 const { isEnabled, timeoutMinutes, showWarning, warningCountdown, updateSettings, resetTimeout } = useSessionTimeout()
-const { currentUser } = useAuth()
+const authStore = useAuthStore()
+const currentUser = computed(() => authStore.currentUser)
 
 // Store original timeout settings
 const originalEnabled = ref(false)

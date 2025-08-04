@@ -142,7 +142,11 @@
           />
           
           <!-- Docs Cell -->
-          <StudentDocsCell :student="student" :get-document-url="getDocumentUrl" />
+          <StudentDocsCell 
+            :student="student" 
+            :get-document-url="getDocumentUrl" 
+            :get-additional-documents="getAdditionalDocuments"
+          />
           
           <!-- Actions Cell -->
           <ActionsCell
@@ -230,7 +234,8 @@ const {
   getProviderFieldName,
   isDirectAssignment,
   formatListFromText,
-  getPeriodLabel
+  getPeriodLabel,
+  getAdditionalDocuments
 } = useStudentTable(props)
 
 // Helper function to check if a period has co-teaching data

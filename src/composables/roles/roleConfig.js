@@ -50,7 +50,6 @@ export const PERMISSIONS = {
   CAN_USE_CLASS_VIEW: 'canUseClassView'
 }
 
-// ─── ROLE PERMISSIONS CONFIGURATION ───────────────────────────────────────────
 export const ROLE_PERMISSIONS = {
   [ROLES.ADMIN]: [
     PERMISSIONS.CAN_VIEW_ALL_STUDENTS,
@@ -140,8 +139,8 @@ export const PROVIDER_VIEW_OPTIONS = {
   
   // New role name for 504 Coordinator
   ['admin_504']: [
-    { value: 'all_iep', label: '*' },
-    { value: 'case_manager', label: 'CM' }
+    { value: 'case_manager', label: 'CM' },
+    { value: 'iep_504_all', label: '*' }
   ],
   
   [ROLES.CASE_MANAGER]: [
@@ -241,9 +240,31 @@ export const ACCESS_PATTERN_FUNCTIONS = {
   },
   
   // Check if user is paraeducator assigned to student
-  paraeducator: (userId, student, aideAssignment) => {
+  paraeducator: (userId, student, studentData, aideAssignment) => {
     if (!aideAssignment) return false
-    return aideAssignment.shouldAideSeeStudent(userId, student)
+    
+    // Get the aide data for this user
+    const aideData = aideAssignment[userId]
+    if (!aideData) return false
+    
+    // Check direct assignment first
+    const directStudentIds = Array.isArray(aideData.directAssignment) 
+      ? aideData.directAssignment 
+      : (aideData.directAssignment ? [aideData.directAssignment] : [])
+    if (directStudentIds.includes(student.id)) return true
+    
+    // Check class assignment
+    const schedule = studentData.getSchedule(student)
+    if (!schedule) return false
+    
+    const aidePeriods = aideData.classAssignment || {}
+    return Object.entries(schedule).some(([period, data]) => {
+      const teacherId = typeof data === 'string' ? data : data?.teacherId
+      const aideTeacherIds = aidePeriods[period]
+      if (!aideTeacherIds || !teacherId) return false
+      const teacherIdArray = Array.isArray(aideTeacherIds) ? aideTeacherIds : [aideTeacherIds]
+      return teacherIdArray.includes(teacherId)
+    })
   },
   
   // Check if student has IEP

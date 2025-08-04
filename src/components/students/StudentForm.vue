@@ -49,6 +49,10 @@
           :on-file-change="onFileChange"
           :remove-bip-file="removeBipFile"
           :remove-ataglance-file="removeAtaglanceFile"
+          :add-additional-document="addAdditionalDocument"
+          :remove-additional-document="removeAdditionalDocument"
+          :undo-remove-additional-document="undoRemoveAdditionalDocument"
+          :delete-additional-document="deleteAdditionalDocument"
           @loading-change="onFileLoadingChange"
         />
 
@@ -120,6 +124,12 @@ const {
   onFileChange,
   removeBipFile,
   removeAtaglanceFile,
+  
+  // Additional document handling
+  addAdditionalDocument,
+  removeAdditionalDocument,
+  undoRemoveAdditionalDocument,
+  deleteAdditionalDocument,
   
   // Provider utilities
   providerFieldMap,
