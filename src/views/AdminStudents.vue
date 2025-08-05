@@ -16,6 +16,7 @@
         @click="deleteAllStudents" 
         class="delete-all-btn"
       >
+        <Trash2 :size="16" />
         Delete All Students
       </button>
     </div>
@@ -119,13 +120,21 @@
           <td class="admin-action-btns">
             <!-- Edit Mode -->
             <template v-if="activeEditId === student.id">
-              <button @click="saveStudent(student.id)" class="admin-action-btn save" title="Save">💾</button>
-              <button @click="cancelEdit" class="admin-action-btn cancel" title="Cancel">❌</button>
-              <button @click="deleteStudentRecord(student.id)" class="admin-action-btn delete red" title="Delete Student">🗑️</button>
+              <button @click="saveStudent(student.id)" class="admin-action-btn save" title="Save">
+                <Save :size="16" />
+              </button>
+              <button @click="cancelEdit" class="admin-action-btn cancel" title="Cancel">
+                <X :size="16" />
+              </button>
+              <button @click="deleteStudentRecord(student.id)" class="admin-action-btn delete red" title="Delete Student">
+                <Trash2 :size="16" />
+              </button>
             </template>
             <!-- View Mode -->
             <template v-else>
-              <button @click="startEdit(student.id)" class="admin-action-btn edit" title="Edit">✏️</button>
+              <button @click="startEdit(student.id)" class="admin-action-btn edit" title="Edit">
+                <Edit :size="16" />
+              </button>
             </template>
           </td>
         </tr>
@@ -139,6 +148,7 @@
         :disabled="currentPage === 1"
         class="admin-btn"
       >
+        <ChevronLeft :size="16" />
         Prev
       </button>
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
@@ -148,6 +158,7 @@
         class="admin-btn"
       >
         Next
+        <ChevronRight :size="16" />
       </button>
     </div>
   </div>
@@ -169,6 +180,7 @@ import {
   validateStudentData,
   sanitizeStudentFormData
 } from '@/utils/validation.js'
+import { Edit, Save, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const db = getFirestore()
 const { students, fetchStudents, updateStudent, deleteStudent } = useStudents()

@@ -26,6 +26,7 @@
         @click="deleteAllUsers" 
         class="delete-all-btn"
       >
+        <Trash2 :size="16" />
         Delete All Users
       </button>
     </div>
@@ -140,6 +141,7 @@
         :disabled="currentPage === 1"
         class="admin-btn"
       >
+        <ChevronLeft :size="16" />
         Previous
       </button>
       <span>Page {{ currentPage }}</span>
@@ -149,12 +151,13 @@
         class="admin-btn"
       >
         Next
+        <ChevronRight :size="16" />
       </button>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { 
   getFirestore, 
@@ -173,318 +176,285 @@ import { VALID_ROLES } from '../config/roles.js'
 import { useAppSettings } from '@/composables/useAppSettings'
 import { useAdminPanelPermissions } from '@/composables/useAdminPanelPermissions'
 import { auditLogger } from '@/utils/auditLogger'
-import { Edit, Save, X, Trash2 } from 'lucide-vue-next'
+import { Edit, Save, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 const PAGE_SIZE = 20
 
-export default {
-  name: 'UserTable',
-  setup() {
-    const db = getFirestore()
-    
-    const users = ref([])
-    const currentPage = ref(1)
-    const searchType = ref('name')
-    const searchTerm = ref('')
-    const activeRowId = ref(null)
-    const statusMessage = ref('')
-    const isError = ref(false)
-    const hasNextPage = ref(false)
-    const usersPageDocs = ref([])
-    const editingUser = ref(null)
+const db = getFirestore()
 
-    const validRoles = VALID_ROLES
-    const appSettingsComposable = useAppSettings()
-    const appSettings = appSettingsComposable.appSettings
-    const loadAppSettings = appSettingsComposable.loadAppSettings
-    
-    // Admin panel permissions
-    const { canDeleteAllUsers, initializeIfNeeded } = useAdminPanelPermissions()
+const users = ref([])
+const currentPage = ref(1)
+const searchType = ref('name')
+const searchTerm = ref('')
+const activeRowId = ref(null)
+const statusMessage = ref('')
+const isError = ref(false)
+const hasNextPage = ref(false)
+const usersPageDocs = ref([])
+const editingUser = ref(null)
 
-    // Debounced search implementation
-    let debounceTimer = null
-    const debouncedHandleSearch = () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        handleSearch()
-      }, 300) // 300ms delay to prevent rapid API calls
-    }
+const validRoles = VALID_ROLES
+const appSettingsComposable = useAppSettings()
+const appSettings = appSettingsComposable.appSettings
+const loadAppSettings = appSettingsComposable.loadAppSettings
 
-    const providersLoaded = computed(() =>
-      Array.isArray(appSettings.value?.serviceProviders) && appSettings.value.serviceProviders.length > 0
-    )
+// Admin panel permissions
+const { canDeleteAllUsers, initializeIfNeeded } = useAdminPanelPermissions()
 
-    const serviceProviders = computed(() => {
-      return appSettings.value?.serviceProviders || []
-    })
+// Debounced search implementation
+let debounceTimer = null
+const debouncedHandleSearch = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    handleSearch()
+  }, 300) // 300ms delay to prevent rapid API calls
+}
 
-    const showStatus = (message, error = false) => {
-      statusMessage.value = message
-      isError.value = error
-      if (message) {
-        setTimeout(() => {
-          statusMessage.value = ''
-          isError.value = false
-        }, 5000) // Increased to 5 seconds for better visibility
-      }
-    }
+const providersLoaded = computed(() =>
+  Array.isArray(appSettings.value?.serviceProviders) && appSettings.value.serviceProviders.length > 0
+)
 
-    const handleSearch = () => {
-      currentPage.value = 1
-      fetchUsers()
-    }
+const serviceProviders = computed(() => {
+  return appSettings.value?.serviceProviders || []
+})
 
-    const fetchUsers = async (pageDirection = 'first') => {
-      const usersRef = collection(db, 'users')
-      let q
-
-      // Client-side name search
-      if (searchTerm.value && searchType.value === 'name') {
-        const snapAll = await getDocs(query(usersRef, orderBy('name'), limit(1000)))
-        const filtered = snapAll.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(u => (u.name || '').toLowerCase().includes(searchTerm.value.toLowerCase()))
-        activeRowId.value = null
-        users.value = filtered
-        hasNextPage.value = false
-        return
-      }
-
-      // Email or default search
-      if (searchTerm.value && searchType.value === 'email') {
-        q = query(
-          usersRef,
-          orderBy('email'),
-          where('email', '>=', searchTerm.value),
-          where('email', '<=', searchTerm.value + '\uf8ff'),
-          limit(PAGE_SIZE)
-        )
-      } else if (!searchTerm.value) {
-        q = query(usersRef, orderBy('name'), limit(PAGE_SIZE))
-      } else {
-        q = query(
-          usersRef,
-          orderBy('name'),
-          where('name', '>=', searchTerm.value),
-          where('name', '<=', searchTerm.value + '\uf8ff'),
-          limit(PAGE_SIZE)
-        )
-      }
-
-      // Cursor-based paging
-      if (pageDirection === 'next' && usersPageDocs.value.length) {
-        q = query(
-          usersRef,
-          orderBy(searchType.value),
-          startAfter(usersPageDocs.value[usersPageDocs.value.length - 1]),
-          limit(PAGE_SIZE)
-        )
-      }
-
-      const snap = await getDocs(q)
-      usersPageDocs.value = snap.docs
-      activeRowId.value = null
-      users.value = usersPageDocs.value.map(d => ({ id: d.id, ...d.data() }))
-      hasNextPage.value = snap.size === PAGE_SIZE
-    }
-
-    const startEdit = (userId) => {
-      if (activeRowId.value) return
-      activeRowId.value = userId
-      editingUser.value = { ...users.value.find(u => u.id === userId) }
-    }
-
-    const cancelEdit = () => {
-      activeRowId.value = null
-      editingUser.value = null
-      fetchUsers()
-    }
-
-    const updateUserField = (userId, field, value) => {
-      if (editingUser.value && editingUser.value.id === userId) {
-        editingUser.value[field] = value
-      }
-    }
-
-    const saveUser = async (userId) => {
-      if (!editingUser.value || editingUser.value.id !== userId) return
-
-      try {
-        // Get original user data for logging
-        const originalUser = users.value.find(u => u.id === userId)
-        
-        // Filter out undefined values and prepare the update data
-        const updateData = {}
-        if (editingUser.value.name !== undefined) updateData.name = editingUser.value.name?.trim() || null
-        if (editingUser.value.title !== undefined) updateData.title = editingUser.value.title?.trim() || null
-        if (editingUser.value.role !== undefined) updateData.role = editingUser.value.role
-        if (editingUser.value.provider !== undefined) updateData.provider = editingUser.value.provider || null
-
-        await updateDoc(doc(db, 'users', userId), updateData)
-        
-        // Log user update
-        await auditLogger.logUserManagement(userId, 'update', {
-          originalData: {
-            name: originalUser?.name,
-            title: originalUser?.title,
-            role: originalUser?.role,
-            provider: originalUser?.provider
-          },
-          updatedData: updateData,
-          changedFields: Object.keys(updateData)
-        })
-        
-        showStatus('✅ User updated.')
-        activeRowId.value = null
-        editingUser.value = null
-        fetchUsers()
-      } catch (error) {
-        console.error('Error updating user:', error)
-        showStatus(`❌ Error updating user: ${error.message}`, true)
-        
-        // Log update failure
-        await auditLogger.logUserManagement(userId, 'update_failed', {
-          error: error.message,
-          attemptedData: updateData
-        })
-      }
-    }
-
-    const deleteUser = async (userId) => {
-      if (!confirm('Are you sure you want to delete this user?')) return
-
-      try {
-        // Get user data before deletion for logging
-        const userToDelete = users.value.find(u => u.id === userId)
-        
-        await deleteDoc(doc(db, 'users', userId))
-        
-        // Log user deletion
-        await auditLogger.logUserManagement(userId, 'delete', {
-          deletedUser: {
-            name: userToDelete?.name,
-            email: userToDelete?.email,
-            role: userToDelete?.role,
-            provider: userToDelete?.provider
-          }
-        })
-        
-        showStatus('✅ User deleted.')
-        activeRowId.value = null
-        editingUser.value = null
-        fetchUsers()
-      } catch (error) {
-        console.error('Error deleting user:', error)
-        showStatus(`❌ Error deleting user: ${error.message}`, true)
-        
-        // Log deletion failure
-        await auditLogger.logUserManagement(userId, 'delete_failed', {
-          error: error.message
-        })
-      }
-    }
-
-    const deleteAllUsers = async () => {
-      const confirmation = prompt('Type DELETE ALL USERS to confirm:')
-      if (confirmation !== 'DELETE ALL USERS') return
-
-      try {
-        const snapAll = await getDocs(collection(db, 'users'))
-        await Promise.all(snapAll.docs.map(d => deleteDoc(doc(db, 'users', d.id))))
-        showStatus('✅ All users deleted.')
-        currentPage.value = 1
-        fetchUsers()
-      } catch (error) {
-        console.error('Error deleting all users:', error)
-        showStatus(`❌ Error deleting all users: ${error.message}`, true)
-      }
-    }
-
-    const loadNextPage = () => {
-      currentPage.value++
-      fetchUsers('next')
-    }
-
-    const loadPreviousPage = () => {
-      if (currentPage.value > 1) {
-        currentPage.value--
-        fetchUsers()
-      }
-    }
-
-    const getProviderLabel = (abbr) => {
-      if (!abbr) return ''
-      
-      // Check custom service providers first
-      const customServiceProviders = appSettings.value?.customServiceProviders || []
-      const customFound = customServiceProviders.find(p => p.abbreviation === abbr)
-      if (customFound) {
-        return `${customFound.name} (${customFound.abbreviation})`
-      }
-      
-      // Default service providers list (matching AppSettings.vue)
-      const defaultList = [
-        { name: 'Speech-Language Therapy', abbreviation: 'SLP' },
-        { name: 'Occupational Therapy', abbreviation: 'OT' },
-        { name: 'Physical Therapy', abbreviation: 'PT' },
-        { name: 'School Counseling', abbreviation: 'SC' },
-        { name: 'School-Based Mental Health Services', abbreviation: 'MH' },
-        { name: 'Transportation', abbreviation: 'TR' },
-        { name: 'Audiology Services', abbreviation: 'AUD' },
-        { name: 'Vision Services', abbreviation: 'VI' },
-        { name: 'Assistive Technology', abbreviation: 'AT' },
-        { name: 'Deaf and Hard of Hearing Services', abbreviation: 'DHH' },
-        { name: 'Orientation and Mobility', abbreviation: 'O&M' },
-        { name: 'Behavioral Intervention Services', abbreviation: 'BIS' },
-        { name: 'Health/Nursing Services', abbreviation: 'HN' },
-        { name: 'Social Work Services', abbreviation: 'SW' }
-      ]
-      const found = defaultList.find(p => p.abbreviation === abbr)
-      return found ? `${found.name} (${found.abbreviation})` : abbr
-    }
-
-    onMounted(async () => {
-      await loadAppSettings()
-      await initializeIfNeeded()
-      fetchUsers()
-    })
-
-    // Cleanup on unmount
-    onUnmounted(() => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer)
-      }
-    })
-
-    return {
-      users,
-      currentPage,
-      searchType,
-      searchTerm,
-      activeRowId,
-      statusMessage,
-      isError,
-      hasNextPage,
-      validRoles,
-      handleSearch,
-      debouncedHandleSearch,
-      startEdit,
-      cancelEdit,
-      updateUserField,
-      saveUser,
-      deleteUser,
-      deleteAllUsers,
-      loadNextPage,
-      loadPreviousPage,
-      getProviderLabel,
-      appSettings,
-      editingUser,
-      providersLoaded,
-      serviceProviders,
-      canDeleteAllUsers
-    }
+const showStatus = (message, error = false) => {
+  statusMessage.value = message
+  isError.value = error
+  if (message) {
+    setTimeout(() => {
+      statusMessage.value = ''
+      isError.value = false
+    }, 5000) // Increased to 5 seconds for better visibility
   }
 }
+
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchUsers()
+}
+
+const fetchUsers = async (pageDirection = 'first') => {
+  const usersRef = collection(db, 'users')
+  let q
+
+  // Client-side name search
+  if (searchTerm.value && searchType.value === 'name') {
+    const snapAll = await getDocs(query(usersRef, orderBy('name'), limit(1000)))
+    const filtered = snapAll.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => (u.name || '').toLowerCase().includes(searchTerm.value.toLowerCase()))
+    activeRowId.value = null
+    users.value = filtered
+    hasNextPage.value = false
+    return
+  }
+
+  // Email or default search
+  if (searchTerm.value && searchType.value === 'email') {
+    q = query(
+      usersRef,
+      orderBy('email'),
+      where('email', '>=', searchTerm.value),
+      where('email', '<=', searchTerm.value + '\uf8ff'),
+      limit(PAGE_SIZE)
+    )
+  } else if (!searchTerm.value) {
+    q = query(usersRef, orderBy('name'), limit(PAGE_SIZE))
+  } else {
+    q = query(
+      usersRef,
+      orderBy('name'),
+      where('name', '>=', searchTerm.value),
+      where('name', '<=', searchTerm.value + '\uf8ff'),
+      limit(PAGE_SIZE)
+    )
+  }
+
+  // Cursor-based paging
+  if (pageDirection === 'next' && usersPageDocs.value.length) {
+    q = query(
+      usersRef,
+      orderBy(searchType.value),
+      startAfter(usersPageDocs.value[usersPageDocs.value.length - 1]),
+      limit(PAGE_SIZE)
+    )
+  }
+
+  const snap = await getDocs(q)
+  usersPageDocs.value = snap.docs
+  activeRowId.value = null
+  users.value = usersPageDocs.value.map(d => ({ id: d.id, ...d.data() }))
+  hasNextPage.value = snap.size === PAGE_SIZE
+}
+
+const startEdit = (userId) => {
+  if (activeRowId.value) return
+  activeRowId.value = userId
+  editingUser.value = { ...users.value.find(u => u.id === userId) }
+}
+
+const cancelEdit = () => {
+  activeRowId.value = null
+  editingUser.value = null
+  fetchUsers()
+}
+
+const updateUserField = (userId, field, value) => {
+  if (editingUser.value && editingUser.value.id === userId) {
+    editingUser.value[field] = value
+  }
+}
+
+const saveUser = async (userId) => {
+  if (!editingUser.value || editingUser.value.id !== userId) return
+
+  try {
+    // Get original user data for logging
+    const originalUser = users.value.find(u => u.id === userId)
+    
+    // Filter out undefined values and prepare the update data
+    const updateData = {}
+    if (editingUser.value.name !== undefined) updateData.name = editingUser.value.name?.trim() || null
+    if (editingUser.value.title !== undefined) updateData.title = editingUser.value.title?.trim() || null
+    if (editingUser.value.role !== undefined) updateData.role = editingUser.value.role
+    if (editingUser.value.provider !== undefined) updateData.provider = editingUser.value.provider || null
+
+    await updateDoc(doc(db, 'users', userId), updateData)
+    
+    // Log user update
+    await auditLogger.logUserManagement(userId, 'update', {
+      originalData: {
+        name: originalUser?.name,
+        title: originalUser?.title,
+        role: originalUser?.role,
+        provider: originalUser?.provider
+      },
+      updatedData: updateData,
+      changedFields: Object.keys(updateData)
+    })
+    
+    showStatus('✅ User updated.')
+    activeRowId.value = null
+    editingUser.value = null
+    fetchUsers()
+  } catch (error) {
+    console.error('Error updating user:', error)
+    showStatus(`❌ Error updating user: ${error.message}`, true)
+    
+    // Log update failure
+    await auditLogger.logUserManagement(userId, 'update_failed', {
+      error: error.message,
+      attemptedData: updateData
+    })
+  }
+}
+
+const deleteUser = async (userId) => {
+  if (!confirm('Are you sure you want to delete this user?')) return
+
+  try {
+    // Get user data before deletion for logging
+    const userToDelete = users.value.find(u => u.id === userId)
+    
+    await deleteDoc(doc(db, 'users', userId))
+    
+    // Log user deletion
+    await auditLogger.logUserManagement(userId, 'delete', {
+      deletedUser: {
+        name: userToDelete?.name,
+        email: userToDelete?.email,
+        role: userToDelete?.role,
+        provider: userToDelete?.provider
+      }
+    })
+    
+    showStatus('✅ User deleted.')
+    activeRowId.value = null
+    editingUser.value = null
+    fetchUsers()
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    showStatus(`❌ Error deleting user: ${error.message}`, true)
+    
+    // Log deletion failure
+    await auditLogger.logUserManagement(userId, 'delete_failed', {
+      error: error.message
+    })
+  }
+}
+
+const deleteAllUsers = async () => {
+  const confirmation = prompt('Type DELETE ALL USERS to confirm:')
+  if (confirmation !== 'DELETE ALL USERS') return
+
+  try {
+    const snapAll = await getDocs(collection(db, 'users'))
+    await Promise.all(snapAll.docs.map(d => deleteDoc(doc(db, 'users', d.id))))
+    showStatus('✅ All users deleted.')
+    currentPage.value = 1
+    fetchUsers()
+  } catch (error) {
+    console.error('Error deleting all users:', error)
+    showStatus(`❌ Error deleting all users: ${error.message}`, true)
+  }
+}
+
+const loadNextPage = () => {
+  currentPage.value++
+  fetchUsers('next')
+}
+
+const loadPreviousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    fetchUsers()
+  }
+}
+
+const getProviderLabel = (abbr) => {
+  if (!abbr) return ''
+  
+  // Check custom service providers first
+  const customServiceProviders = appSettings.value?.customServiceProviders || []
+  const customFound = customServiceProviders.find(p => p.abbreviation === abbr)
+  if (customFound) {
+    return `${customFound.name} (${customFound.abbreviation})`
+  }
+  
+  // Default service providers list (matching AppSettings.vue)
+  const defaultList = [
+    { name: 'Speech-Language Therapy', abbreviation: 'SLP' },
+    { name: 'Occupational Therapy', abbreviation: 'OT' },
+    { name: 'Physical Therapy', abbreviation: 'PT' },
+    { name: 'School Counseling', abbreviation: 'SC' },
+    { name: 'School-Based Mental Health Services', abbreviation: 'MH' },
+    { name: 'Transportation', abbreviation: 'TR' },
+    { name: 'Audiology Services', abbreviation: 'AUD' },
+    { name: 'Vision Services', abbreviation: 'VI' },
+    { name: 'Assistive Technology', abbreviation: 'AT' },
+    { name: 'Deaf and Hard of Hearing Services', abbreviation: 'DHH' },
+    { name: 'Orientation and Mobility', abbreviation: 'O&M' },
+    { name: 'Behavioral Intervention Services', abbreviation: 'BIS' },
+    { name: 'Health/Nursing Services', abbreviation: 'HN' },
+    { name: 'Social Work Services', abbreviation: 'SW' }
+  ]
+  const found = defaultList.find(p => p.abbreviation === abbr)
+  return found ? `${found.name} (${found.abbreviation})` : abbr
+}
+
+onMounted(async () => {
+  await loadAppSettings()
+  await initializeIfNeeded()
+  fetchUsers()
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+  }
+})
 </script>
 
 <style scoped>
@@ -660,6 +630,9 @@ export default {
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.15s ease;
+  /* Ensure icons are visible */
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .admin-action-btn:hover {
@@ -670,46 +643,54 @@ export default {
 }
 
 .admin-action-btn.save {
-
+  background: #28a745;
   border-color: #28a745;
   color: white;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .admin-action-btn.save:hover {
-  background: #acd1b4;
+  background: #218838;
   border-color: #1e7e34;
 }
 
 .admin-action-btn.cancel {
- 
+  background: #6c757d;
   border-color: #6c757d;
   color: white;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .admin-action-btn.cancel:hover {
-  background: #b5b6b8;
+  background: #545b62;
   border-color: #545b62;
 }
 
 .admin-action-btn.delete.red {
-
+  background: #dc3545;
   border-color: #dc3545;
   color: white;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .admin-action-btn.delete.red:hover {
-  background: #e6b5ba;
+  background: #c82333;
   border-color: #bd2130;
 }
 
 .admin-action-btn.edit {
-
+  background: #007bff;
   border-color: #007bff;
   color: white;
+  fill: currentColor;
+  stroke: currentColor;
 }
 
 .admin-action-btn.edit:hover {
-  background: #b3d2f5;
+  background: #0069d9;
   border-color: #0062cc;
 }
 
