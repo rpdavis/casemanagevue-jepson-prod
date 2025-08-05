@@ -302,6 +302,8 @@ const statusError = ref(false)
 const customServiceProviderName = ref('')
 const customServiceProviderAbbr = ref('')
 
+
+
 // Initialize default settings structure
 const settings = ref({
   grades: ['7', '8'],
@@ -506,6 +508,8 @@ const serviceProviders = computed(() => {
 const allGradesSelected = computed(() => {
   return gradeOptions.every(grade => settings.value.grades.includes(grade.value))
 })
+
+
 
 const toggleAllGrades = (event) => {
   if (event.target.checked) {
@@ -1036,5 +1040,252 @@ button:disabled {
 .gmail-api-actions button:disabled {
   background: var(--bg-muted);
   cursor: not-allowed;
+}
+
+/* Domain Validation Settings */
+.domain-validation-settings {
+  padding: 1rem;
+}
+
+.domain-validation-header {
+  margin-bottom: 1.5rem;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle-checkbox {
+  cursor: pointer;
+}
+
+.help-text {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.domain-config {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.domain-options h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+}
+
+.domain-item {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.domain-header {
+  margin-bottom: 0.5rem;
+}
+
+.domain-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.domain-name {
+  color: var(--text-primary);
+}
+
+.required-badge {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--border-radius-pill);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.domain-config-details {
+  margin-top: 1rem;
+}
+
+.domain-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.domain-input-group label {
+  font-weight: 500;
+  min-width: 60px;
+}
+
+.domain-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-family: monospace;
+}
+
+.domain-input.error {
+  border-color: var(--error-color);
+  background: var(--error-bg);
+}
+
+.domain-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0.5rem 0;
+}
+
+.domain-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg-muted);
+  border-radius: var(--border-radius-sm);
+}
+
+.preview-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.domain-preview code {
+  background: var(--primary-color);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+}
+
+.domain-summary {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.domain-summary h4 {
+  margin: 0 0 0.5rem 0;
+}
+
+.summary-warning {
+  color: var(--warning-color);
+  font-weight: 500;
+}
+
+.summary-info p {
+  margin: 0 0 0.5rem 0;
+}
+
+.domain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.domain-item-summary {
+  padding: 0.25rem 0;
+}
+
+.domain-item-summary code {
+  background: var(--success-color);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.875rem;
+}
+
+.domain-test {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.domain-test h4 {
+  margin: 0 0 1rem 0;
+}
+
+.test-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.test-email-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+.test-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.test-button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.test-button:disabled {
+  background: var(--bg-muted);
+  cursor: not-allowed;
+}
+
+.test-result {
+  padding: 0.75rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.test-result.valid {
+  background: var(--success-bg);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.test-result.invalid {
+  background: var(--error-bg);
+  color: var(--error-color);
+  border: 1px solid var(--error-color);
+}
+
+.domain-disabled-info {
+  padding: 1rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-color);
+  border-radius: var(--border-radius-sm);
+  margin-top: 1rem;
+}
+
+.info-text {
+  margin: 0;
+  color: var(--warning-dark);
 }
 </style> 
