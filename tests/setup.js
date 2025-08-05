@@ -1,5 +1,18 @@
 import { config } from '@vue/test-utils'
 
+// Mock fetch for Firebase rules testing
+if (typeof fetch === 'undefined') {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({}),
+      text: () => Promise.resolve(''),
+      headers: new Map(),
+      status: 200
+    })
+  )
+}
+
 // Mock Firebase
 global.firebase = {
   auth: () => ({
@@ -97,6 +110,41 @@ if (typeof TextDecoder === 'undefined') {
   global.TextDecoder = class TextDecoder {
     decode(buffer) {
       return Buffer.from(buffer).toString('utf8')
+    }
+  }
+}
+
+// Mock ReadableStream for Firebase rules testing
+if (typeof ReadableStream === 'undefined') {
+  global.ReadableStream = class ReadableStream {
+    constructor(source) {
+      this.source = source
+    }
+    
+    getReader() {
+      return {
+        read: () => Promise.resolve({ done: true, value: undefined }),
+        cancel: () => Promise.resolve(),
+        releaseLock: () => {}
+      }
+    }
+  }
+}
+
+// Mock WritableStream for Firebase rules testing
+if (typeof WritableStream === 'undefined') {
+  global.WritableStream = class WritableStream {
+    constructor(sink) {
+      this.sink = sink
+    }
+    
+    getWriter() {
+      return {
+        write: () => Promise.resolve(),
+        close: () => Promise.resolve(),
+        abort: () => Promise.resolve(),
+        releaseLock: () => {}
+      }
     }
   }
 } 
