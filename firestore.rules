@@ -355,6 +355,14 @@ service cloud.firestore {
       allow delete: if isAuth() && isAnyAdmin();
     }
     
+    // Backups collection - Admin only access for backup/restore functionality
+    match /backups/{backupId} {
+      allow read: if isAuth() && isSuperAdmin();
+      allow create: if isAuth() && isSuperAdmin();
+      allow update: if isAuth() && isSuperAdmin();
+      allow delete: if isAuth() && isSuperAdmin();
+    }
+    
     // Default deny
     match /{document=**} {
       allow read, write: if false;
