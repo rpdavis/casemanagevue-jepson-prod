@@ -512,6 +512,9 @@ const parseCSV = (text) => {
 }
 
 const autoMapCommonFields = () => {
+  console.log('🔧 DEBUG: Auto-mapping started')
+  console.log('🔧 DEBUG: csvHeaders.value:', csvHeaders.value)
+  
   const commonMappings = {
     // Basic Student Info - Top Level and App
     'SSID': 'app.studentData.ssid',
@@ -567,11 +570,21 @@ const autoMapCommonFields = () => {
     'Instruction': 'app.accommodations.instruction'
   }
 
+  console.log('🔧 DEBUG: commonMappings keys:', Object.keys(commonMappings))
+  
+  let mappedCount = 0
   csvHeaders.value.forEach(header => {
     if (commonMappings[header]) {
       fieldMapping.value[header] = commonMappings[header]
+      mappedCount++
+      console.log(`🔧 DEBUG: Mapped ${header} -> ${commonMappings[header]}`)
+    } else {
+      console.log(`🔧 DEBUG: No mapping for header: "${header}"`)
     }
   })
+  
+  console.log(`🔧 DEBUG: Auto-mapping complete. Mapped ${mappedCount} fields.`)
+  console.log('🔧 DEBUG: fieldMapping.value:', fieldMapping.value)
 }
 
 const clearAllMappings = () => {

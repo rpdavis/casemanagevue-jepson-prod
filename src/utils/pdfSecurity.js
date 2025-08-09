@@ -111,17 +111,17 @@ class SecurePdfHandler {
       }
       console.log('✅ Access permissions verified')
 
-      // Use HTTP proxy Cloud Function to avoid CORS issues
+      // Use HTTP streaming function (v1.1.6 approach - more secure, no CORS issues)
       console.log('🔑 Getting authentication token...')
       const { auth } = await import('@/firebase');
       const idToken = await auth.currentUser.getIdToken();
       
-      // Use the HTTP proxy function instead of signed URLs
-      const proxyUrl = `https://downloadstudentfile-zr6j2ycwuq-uc.a.run.app/downloadStudentFile?studentId=${studentId}&fileName=${secureFileName}`;
+      // Use the HTTP streaming function instead of signed URLs
+      const streamingUrl = `https://downloadstudentfile-zxuytv4xtq-uc.a.run.app/downloadStudentFile?studentId=${studentId}&fileName=${secureFileName}`;
       
-      console.log('🌐 Downloading encrypted file from secure storage...')
+      console.log('🌐 Downloading encrypted file via secure streaming...')
       
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(streamingUrl, {
         headers: {
           'Authorization': `Bearer ${idToken}`,
           'Content-Type': 'application/json'
@@ -151,9 +151,10 @@ class SecurePdfHandler {
 
       console.log('✅ PDF ready for viewing, size:', pdfBlob.size, 'bytes')
       return pdfBlob;
+
     } catch (error) {
-      console.error('❌ PDF download failed:', error);
-      throw new Error('Failed to retrieve PDF: ' + error.message);
+      console.error('❌ Error in downloadAndDecryptPdf:', error);
+      throw new Error(`PDF download failed: ${error.message}`);
     }
   }
 

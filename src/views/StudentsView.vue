@@ -534,8 +534,7 @@ const selectedRadioText = computed(() => {
 
 <style scoped>
 .students-view {
-  padding: 20px;
-  padding-top: 23px;
+  padding: 23px 10px 10px;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -966,6 +965,66 @@ const selectedRadioText = computed(() => {
   
   .students-view {
     visibility: visible !important;
+  }
+}
+
+/* Mobile/Phone View - Only show student info and accommodation columns */
+@media (max-width: 768px) {
+  /* Hide all columns except student info (1st) and accommodations (4th and 5th) */
+  .students-table th:nth-child(2), /* Services */
+  .students-table td:nth-child(2),
+  .students-table th:nth-child(3), /* Schedule */
+  .students-table td:nth-child(3),
+  .students-table th:nth-child(6), /* Documents */
+  .students-table td:nth-child(6),
+  .students-table th:nth-child(7), /* Actions */
+  .students-table td:nth-child(7) {
+    display: none !important;
+  }
+  
+  /* Adjust column widths for remaining columns */
+  .students-table th:nth-child(1), /* Student Info */
+  .students-table td:nth-child(1) {
+    width: 35% !important;
+  }
+  
+  .students-table th:nth-child(4), /* Assessment Accommodations */
+  .students-table td:nth-child(4) {
+    width: 32.5% !important;
+  }
+  
+  .students-table th:nth-child(5), /* Instruction Accommodations */
+  .students-table td:nth-child(5) {
+    width: 32.5% !important;
+  }
+  
+  /* Reduce table font size for mobile */
+  .students-table {
+    font-size: 0.8rem;
+  }
+  
+  /* Reduce cell padding */
+  .students-table th,
+  .students-table td {
+    padding: 4px;
+  }
+  
+  /* Adjust row height for mobile */
+  .students-table tbody tr {
+    height: 8rem;
+  }
+  
+  .students-table tbody td {
+    height: 8rem;
+  }
+}
+
+/* Search bar full width on mobile */
+@media (max-width: 768px) {
+  .search-bar,
+  .search-bar input {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 
