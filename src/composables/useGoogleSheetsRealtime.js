@@ -9,24 +9,35 @@ const SHEET_NAME = 'Student Data'
 // Get Google API configuration from centralized config
 const googleConfig = getGoogleApiConfig()
 
+// Global state that persists across component instances
+const globalAuthState = {
+  isInitialized: ref(false),
+  tokenClient: ref(null),
+  accessToken: ref(''),
+  tokenResolve: null
+}
+
+// Export global auth state for other composables
+export { globalAuthState }
+
 export function useGoogleSheetsRealtime() {
-  const isInitialized = ref(false)
   const linkedSheetId = ref(localStorage.getItem(SPREADSHEET_ID_KEY) || '')
   const linkedSheetUrl = ref('')
   const lastSyncTime = ref(null)
   const syncStatus = ref('idle') // idle, syncing, success, error
   const syncMessage = ref('')
   
-  // Google Sign-In configuration
-  const tokenClient = ref(null)
-  const accessToken = ref('')
-  let tokenResolve = null // Store the resolve function for the token promise
+  // Use global authentication state
+  const isInitialized = globalAuthState.isInitialized
+  const tokenClient = globalAuthState.tokenClient
+  const accessToken = globalAuthState.accessToken
   
   // Initialize Google Identity Services (new OAuth approach)
   const initializeGoogleAuth = () => {
     return new Promise((resolve, reject) => {
-      // Check if already loaded
-      if (window.google?.accounts?.oauth2 && window.gapi?.client) {
+      // Check if already initialized with valid token client
+      if (window.google?.accounts?.oauth2 && window.gapi?.client && tokenClient.value) {
+        console.log('🔍 Google Auth already initialized, reusing existing token client')
         resolve()
         return
       }
@@ -35,8 +46,9 @@ export function useGoogleSheetsRealtime() {
       const script = document.createElement('script')
       script.src = 'https://accounts.google.com/gsi/client'
       script.onload = () => {
-        // Initialize the token client
-        tokenClient.value = window.google.accounts.oauth2.initTokenClient({
+        // Initialize the token client only if it doesn't exist
+        if (!tokenClient.value) {
+          tokenClient.value = window.google.accounts.oauth2.initTokenClient({
           client_id: googleConfig.clientId,
           scope: googleConfig.scope,
           callback: (response) => {
@@ -46,19 +58,20 @@ export function useGoogleSheetsRealtime() {
               // Set the token for gapi client
               window.gapi.client.setToken({ access_token: response.access_token })
               // Resolve the token promise if it exists
-              if (tokenResolve) {
-                tokenResolve(response)
-                tokenResolve = null
+              if (globalAuthState.tokenResolve) {
+                globalAuthState.tokenResolve(response)
+                globalAuthState.tokenResolve = null
               }
             } else {
               console.error('Failed to get access token')
-              if (tokenResolve) {
-                tokenResolve(null)
-                tokenResolve = null
+              if (globalAuthState.tokenResolve) {
+                globalAuthState.tokenResolve(null)
+                globalAuthState.tokenResolve = null
               }
             }
           },
         })
+        }
         
         // Load Google API client library
         const gapiScript = document.createElement('script')
@@ -103,11 +116,11 @@ export function useGoogleSheetsRealtime() {
     // Only request new token if we don't have one or it's invalid
     return new Promise((resolve, reject) => {
       // Store the resolve function
-      tokenResolve = resolve
+      globalAuthState.tokenResolve = resolve
       
       // Set a timeout to prevent hanging
       const timeout = setTimeout(() => {
-        tokenResolve = null
+        globalAuthState.tokenResolve = null
         reject(new Error('Token request timed out'))
       }, 30000) // 30 second timeout
       
@@ -121,15 +134,15 @@ export function useGoogleSheetsRealtime() {
           accessToken.value = response.access_token
           isInitialized.value = true
           window.gapi.client.setToken({ access_token: response.access_token })
-          if (tokenResolve) {
-            tokenResolve(response)
-            tokenResolve = null
+          if (globalAuthState.tokenResolve) {
+            globalAuthState.tokenResolve(response)
+            globalAuthState.tokenResolve = null
           }
         } else {
           console.error('Failed to get access token:', response)
-          if (tokenResolve) {
-            tokenResolve(null)
-            tokenResolve = null
+          if (globalAuthState.tokenResolve) {
+            globalAuthState.tokenResolve(null)
+            globalAuthState.tokenResolve = null
           }
         }
       }
