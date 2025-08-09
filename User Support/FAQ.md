@@ -7,7 +7,7 @@
 ## 🔐 Login and Access
 
 ### Q: How do I log into the system?
-**A:** Go to [https://casemangervue.web.app](https://casemangervue.web.app) and click "Sign in with Google." Use your district Google account credentials.
+**A:** Go to [https://casemanagevue-jepson-prod.web.app](https://casemanagevue-jepson-prod.web.app) and click "Sign in with Google." Use your district Google account credentials.
 
 ### Q: I can't log in. What should I do?
 **A:** Try these steps:

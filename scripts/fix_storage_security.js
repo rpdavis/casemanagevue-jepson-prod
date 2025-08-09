@@ -4,7 +4,7 @@ const { getStorage } = require('firebase-admin/storage');
 // Initialize Firebase Admin (make sure to set up credentials)
 if (!admin.apps.length) {
   admin.initializeApp({
-    projectId: 'casemangervue',
+    projectId: 'casemanagevue-jepson-prod',
     // Add your service account key path here if needed
   });
 }
@@ -109,7 +109,7 @@ async function main() {
   console.log('1. Verify the problematic file is no longer publicly accessible');
   console.log('2. Test that authenticated users can still access files appropriately');
   console.log('3. Check Firebase Console > Storage > Rules to confirm deployment');
-  console.log('\n🔗 Firebase Console: https://console.firebase.google.com/project/casemangervue/storage');
+  console.log('\n🔗 Firebase Console: https://console.firebase.google.com/project/casemanagevue-jepson-prod/storage');
 }
 
 if (require.main === module) {

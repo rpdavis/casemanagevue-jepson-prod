@@ -1,10 +1,9 @@
 # Firebase build and deployment files
 /firebase-debug.log
 /firebase-debug.*.log
-.firebaserc
 
 # Firebase Hosting
-/firebase.json
+# Note: .firebaserc and firebase.json are included for production deployment
 *.cache
 hosting/.cache
 
@@ -86,4 +85,20 @@ node_modules/
 .dataconnect
 
 # macOS system files
-.DS_Storefunctions/service-account.json
+.DS_Store
+
+# Service account keys (security)
+functions/service-account.json
+**/service-account*.json
+
+# Temporary and backup files
+*-backup-*/
+temp-*/
+*.temp
+*.backup
+Trace-*.json
+
+# Development documentation
+*_SUMMARY.md
+*_PLAN.md
+CURRENT_STATE_ANALYSIS.md

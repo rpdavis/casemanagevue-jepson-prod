@@ -1,8 +1,8 @@
 import { ref } from 'vue'
 
-// Google API configuration - Original from repository
-const CLIENT_ID = '756483333257-kh1cv865e0buv0cv9g0v1h7ghq7s0e70.apps.googleusercontent.com'
-const API_KEY = 'AIzaSyDx1jbQT-FzgzjASFqVA2kbAHWJ_TeUzdY'
+// Google API configuration - Jepson Project
+const CLIENT_ID = '1017885957186-qe35vm8cv3jrdqhut23418a7ghfpafk5.apps.googleusercontent.com'
+const API_KEY = 'AIzaSyDXMm_ZBTXOd7k0e9FqQkvRRBOWfMUtGZ8'
 const DISCOVERY_DOCS = [
   'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ]

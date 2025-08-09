@@ -5,7 +5,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const db = getFirestore();
 
 // ─── AUTHENTICATION & AUTHORIZATION ───────────────────────────────────────────
-const ADMIN_ROLES = ['admin', 'school_admin', 'admin_504', 'sped_chair'];
+// Note: ADMIN_ROLES is now imported from config helper in the main index.js file
 
 function requireAuth(request) {
   if (!request.auth) {
@@ -191,7 +191,6 @@ module.exports = {
   getDriveConfig,
   isUsingSharedDrive,
   requiresPersonalDriveSharing,
-  ADMIN_ROLES,
   requireAuth,
   requireRole,
   validateRequired,

@@ -10,7 +10,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 const serviceAccount = require('../functions/service-account.json');
 initializeApp({
   credential: cert(serviceAccount),
-  projectId: 'casemangervue'
+  projectId: 'casemanagevue-jepson-prod'
 });
 
 const db = getFirestore();

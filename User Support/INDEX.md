@@ -80,7 +80,7 @@ Welcome to CaseManageVue user support documentation. Find the help you need base
 ## 🎯 Quick Reference
 
 ### Essential Links
-- **System URL**: [https://casemangervue.web.app](https://casemangervue.web.app)
+- **System URL**: [https://casemanagevue-jepson-prod.web.app](https://casemanagevue-jepson-prod.web.app)
 - **Login**: Use your district Google account
 - **Support**: Contact your school administrator
 

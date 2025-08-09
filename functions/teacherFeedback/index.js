@@ -6,13 +6,16 @@ const { getFirestore } = require("firebase-admin/firestore");
 
 // Import modular components
 const {
-  ADMIN_ROLES,
   requireAuth,
   requireRole,
   sanitizeString,
   validateRequired,
   extractFormId
 } = require("./helpers");
+
+// Import configuration helper
+// Import configuration helper
+const config = require("../utils/config-helper");
 
 const {
   createGoogleSheet,
@@ -33,10 +36,9 @@ const db = getFirestore();
 // ─── CLOUD FUNCTIONS ─────────────────────────────────────────────────────────
 
 // Get or create school for user
-exports.getOrCreateSchool = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
+exports.getOrCreateSchool = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
   try {
     requireAuth(request);
     
@@ -60,10 +62,9 @@ exports.getOrCreateSchool = onCall({
 });
 
 // Add school admin
-exports.addSchoolAdmin = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
+exports.addSchoolAdmin = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
   try {
     requireAuth(request);
     
@@ -84,10 +85,9 @@ exports.addSchoolAdmin = onCall({
 });
 
 // Get school templates
-exports.getSchoolTemplates = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
+exports.getSchoolTemplates = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
   try {
     requireAuth(request);
     
@@ -108,10 +108,9 @@ exports.getSchoolTemplates = onCall({
 });
 
 // Create school template
-exports.createSchoolTemplate = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
+exports.createSchoolTemplate = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
   try {
     requireAuth(request);
     
@@ -132,10 +131,9 @@ exports.createSchoolTemplate = onCall({
 });
 
 // Get user's school information
-exports.getUserSchool = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
+exports.getUserSchool = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
   try {
     requireAuth(request);
     
@@ -153,68 +151,21 @@ exports.getUserSchool = onCall({
   }
 });
 
-// Create Google Sheet with service account (for shared drive)
-exports.createFeedbackFormSheet = onCall({
-  region: "us-central1",
-  maxInstances: 10,
-  serviceAccount: "casemanagevue@casemangervue.iam.gserviceaccount.com"
-}, async (request) => {
-  try {
-    requireRole(request, ADMIN_ROLES);
-    
-    const { title, description, formUrl, studentId, studentName, folderId } = request.data;
-    
-    // Validate input
-    validateRequired(title, 'title');
-    validateRequired(formUrl, 'formUrl');
-    
-    // Get user information
-    const userEmail = request.auth.token.email;
-    const userName = request.auth.token.name || userEmail;
-    
-    // Sanitize input
-    const sanitizedTitle = sanitizeString(title, 100);
-    const sanitizedDescription = sanitizeString(description || '', 500);
-    const sanitizedStudentId = studentId ? sanitizeString(studentId, 50) : null;
-    const sanitizedStudentName = studentName ? sanitizeString(studentName, 100) : null;
-    
-    // Create Google Sheet in Shared Drive
-    const sheetResult = await createGoogleSheet(
-      sanitizedTitle, 
-      sanitizedDescription, 
-      userEmail, 
-      userName,
-      null, // Will use environment variable for Shared Drive ID
-      sanitizedStudentId,
-      sanitizedStudentName,
-      folderId
-    );
-    
-    // Extract form ID from URL
-    const formId = extractFormId(formUrl);
-    
-    return {
-      success: true,
-      message: 'Google Sheet created successfully in the Shared Drive',
-      spreadsheetId: sheetResult.spreadsheetId,
-      spreadsheetUrl: sheetResult.spreadsheetUrl,
-      sharedDriveId: sheetResult.sharedDriveId,
-      formId: formId
-    };
-    
-  } catch (error) {
-    console.error('Error in createFeedbackFormSheet:', error);
-    throw new HttpsError('internal', error.message);
-  }
-});
+// DISABLED: Create Google Sheet with service account (for shared drive)
+// This function was defunct and has been disabled
+// exports.createFeedbackFormSheet = onCall(
+//   config.createFunctionOptions(),
+//   async (request) => {
+//     // Function disabled - was using outdated service account approach
+//   }
+// );
 
 // Create Google Sheet using user's personal Google account
-exports.createFeedbackFormSheetWithUserAuth = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
-  try {
-    requireRole(request, ADMIN_ROLES);
+exports.createFeedbackFormSheetWithUserAuth = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
+    try {
+      requireRole(request, config.getAdminRoles());
     
     const { title, description, formUrl, studentId, studentName, folderId, accessToken } = request.data;
     
@@ -261,33 +212,134 @@ exports.createFeedbackFormSheetWithUserAuth = onCall({
   }
 });
 
-// Check service account's Drive storage quota
-exports.checkServiceAccountStorage = onCall({
-  region: "us-central1",
-  maxInstances: 10
-}, async (request) => {
-  try {
-    requireRole(request, ADMIN_ROLES);
-    
-    const { checkServiceAccountStorage } = require("./sheets");
-    const result = await checkServiceAccountStorage();
-    
-    return result;
-    
-  } catch (error) {
-    console.error('Error in checkServiceAccountStorage:', error);
-    throw new HttpsError('internal', error.message);
+// DISABLED: Check service account's Drive storage quota
+// This function has been disabled as we're no longer using service accounts for feedback forms
+// exports.checkServiceAccountStorage = onCall(
+//   config.createFunctionOptions(),
+//   async (request) => {
+//     // Function disabled - service account approach removed
+//   }
+// );
+
+// ─── CASE MANAGER FEEDBACK SYSTEM FUNCTIONS ──────────────────────────────────
+
+// Create case manager feedback system (creates linked Google Sheets for students)
+exports.createCaseManagerFeedbackSystem = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
+    try {
+      requireRole(request, config.getAdminRoles());
+      
+      const { formId, formTitle, caseManagerId, caseManagerName } = request.data;
+      
+      // Validate input
+      validateRequired(formId, 'Form ID');
+      validateRequired(formTitle, 'Form Title');
+      validateRequired(caseManagerId, 'Case Manager ID');
+      validateRequired(caseManagerName, 'Case Manager Name');
+      
+      const { getOrCreateCaseManagerSpreadsheet } = require("./sheets");
+      const result = await getOrCreateCaseManagerSpreadsheet(formId, formTitle, caseManagerId, caseManagerName);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Error in createCaseManagerFeedbackSystem:', error);
+      throw new HttpsError('internal', error.message);
+    }
   }
-});
+);
+
+// Get case manager feedback system
+exports.getCaseManagerFeedbackSystem = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
+    try {
+      requireRole(request, config.getAdminRoles());
+      
+      const { spreadsheetId } = request.data;
+      validateRequired(spreadsheetId, 'Spreadsheet ID');
+      
+      const { getResponsesForCaseManagerSpreadsheet } = require("./sheets");
+      const result = await getResponsesForCaseManagerSpreadsheet(spreadsheetId);
+      
+      return {
+        success: true,
+        responses: result
+      };
+      
+    } catch (error) {
+      console.error('Error in getCaseManagerFeedbackSystem:', error);
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
+
+// Update case manager document
+exports.updateCaseManagerDocument = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
+    try {
+      requireRole(request, config.getAdminRoles());
+      
+      const { documentId, responses, formTitle, caseManagerName } = request.data;
+      
+      // Validate input
+      validateRequired(documentId, 'Document ID');
+      validateRequired(responses, 'Responses');
+      validateRequired(formTitle, 'Form Title');
+      validateRequired(caseManagerName, 'Case Manager Name');
+      
+      const { updateCaseManagerDocument } = require("./sheets");
+      const result = await updateCaseManagerDocument(documentId, responses, formTitle, caseManagerName);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Error in updateCaseManagerDocument:', error);
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
+
+// Generate feedback document
+exports.generateFeedbackDocument = onCall(
+  config.createFunctionOptions(),
+  async (request) => {
+    try {
+      requireRole(request, config.getAdminRoles());
+      
+      const { formTitle, caseManagerName, spreadsheetId } = request.data;
+      
+      // Validate input
+      validateRequired(formTitle, 'Form Title');
+      validateRequired(caseManagerName, 'Case Manager Name');
+      validateRequired(spreadsheetId, 'Spreadsheet ID');
+      
+      const { createCaseManagerDocument } = require("./sheets");
+      const result = await createCaseManagerDocument(null, formTitle, caseManagerName, spreadsheetId);
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Error in generateFeedbackDocument:', error);
+      throw new HttpsError('internal', error.message);
+    }
+  }
+);
 
 // Export all functions
 module.exports = {
-  createFeedbackFormSheet: exports.createFeedbackFormSheet,
+  // createFeedbackFormSheet: exports.createFeedbackFormSheet, // DISABLED - service account approach removed
   createFeedbackFormSheetWithUserAuth: exports.createFeedbackFormSheetWithUserAuth,
   getOrCreateSchool: exports.getOrCreateSchool,
   addSchoolAdmin: exports.addSchoolAdmin,
   getSchoolTemplates: exports.getSchoolTemplates,
   createSchoolTemplate: exports.createSchoolTemplate,
   getUserSchool: exports.getUserSchool,
-  checkServiceAccountStorage: exports.checkServiceAccountStorage
+  createCaseManagerFeedbackSystem: exports.createCaseManagerFeedbackSystem,
+  getCaseManagerFeedbackSystem: exports.getCaseManagerFeedbackSystem,
+  updateCaseManagerDocument: exports.updateCaseManagerDocument,
+  generateFeedbackDocument: exports.generateFeedbackDocument
+  // checkServiceAccountStorage: exports.checkServiceAccountStorage // DISABLED - service account approach removed
 }; 

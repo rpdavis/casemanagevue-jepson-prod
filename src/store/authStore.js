@@ -90,9 +90,9 @@ export const useAuthStore = defineStore('auth', () => {
       } else {
         console.log('⚠️ No current user during token refresh attempt')
       }
-    }, 2 * 60 * 1000) // 2 minutes for debugging - much shorter to trigger the issue faster
+    }, 45 * 60 * 1000) // 45 minutes in milliseconds - refresh BEFORE token expires (Firebase tokens last ~60 minutes)
     
-    console.log('⏰ Token auto-refresh set up (every 2 minutes) - DEBUG MODE')
+    console.log('⏰ Token auto-refresh set up (every 45 minutes) - PROACTIVE MODE')
     
     // Remove the immediate token refresh test to avoid conflicts
     // setTimeout(async () => {
@@ -174,22 +174,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Force refresh user token
   const refreshToken = async () => {
-    console.log('🔄 DEBUG: refreshToken() called')
-    console.log('🔄 DEBUG: auth.currentUser exists?', !!auth.currentUser)
-    console.log('🔄 DEBUG: auth.currentUser uid:', auth.currentUser?.uid)
-    
     if (auth.currentUser) {
       try {
-        console.log('🔄 DEBUG: About to call getIdToken()...')
         const token = await getIdToken(auth.currentUser, true)
         console.log('✅ Token refreshed successfully')
         console.log('🔍 New token length:', token.length)
-        console.log('🔍 Token preview:', token.substring(0, 50) + '...')
         return true
       } catch (error) {
         console.error('❌ Error refreshing token:', error)
         console.error('❌ Error details:', error.code, error.message)
-        console.error('❌ Error stack:', error.stack)
         return false
       }
     }
@@ -199,25 +192,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Check if current token is valid
   const checkTokenValidity = async () => {
-    console.log('🔍 DEBUG: checkTokenValidity() called')
-    console.log('🔍 DEBUG: auth.currentUser exists?', !!auth.currentUser)
-    console.log('🔍 DEBUG: auth.currentUser uid:', auth.currentUser?.uid)
-    
     if (!auth.currentUser) {
       console.log('⚠️ No current user to check token')
       return false
     }
 
     try {
-      console.log('🔍 DEBUG: About to get current token...')
       const token = await getIdToken(auth.currentUser, false) // Don't force refresh, just get current
       console.log('🔍 Current token exists, length:', token.length)
-      console.log('🔍 Token preview:', token.substring(0, 50) + '...')
       return true
     } catch (error) {
       console.error('❌ Current token is invalid:', error)
-      console.error('❌ Error details:', error.code, error.message)
-      console.error('❌ Error stack:', error.stack)
       return false
     }
   }

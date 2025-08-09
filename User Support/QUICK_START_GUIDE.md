@@ -9,7 +9,7 @@ This guide helps you get up and running quickly with the essential features you 
 ## 1️⃣ First Login
 
 ### Access the System
-1. **Go to**: [https://casemangervue.web.app](https://casemangervue.web.app)
+1. **Go to**: [https://casemanagevue-jepson-prod.web.app](https://casemanagevue-jepson-prod.web.app)
 2. **Click**: "Sign in with Google"
 3. **Use**: Your district Google account
 4. **Wait**: System loads your role and permissions
@@ -171,7 +171,7 @@ This guide helps you get up and running quickly with the essential features you 
 
 ### Phone/Tablet Access
 1. **Open Browser**: Use Chrome, Safari, or Firefox
-2. **Go to Site**: [https://casemangervue.web.app](https://casemangervue.web.app)
+2. **Go to Site**: [https://casemanagevue-jepson-prod.web.app](https://casemanagevue-jepson-prod.web.app)
 3. **Login**: Same Google account as desktop
 4. **Navigate**: Touch-friendly interface
 

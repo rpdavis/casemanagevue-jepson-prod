@@ -9,7 +9,7 @@ CaseManageVue is a comprehensive special education case management system design
 ## 🚀 Getting Started
 
 ### Accessing the System
-1. **Website**: Visit [https://casemangervue.web.app](https://casemangervue.web.app)
+1. **Website**: Visit [https://casemanagevue-jepson-prod.web.app](https://casemanagevue-jepson-prod.web.app)
 2. **Login**: Click "Sign in with Google" 
 3. **First Time**: Contact your administrator for account setup
 

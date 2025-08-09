@@ -130,13 +130,8 @@ class SessionTimeoutManager {
   }
 
   resetTimeout() {
-    console.log('🔒 DEBUG: resetTimeout() called')
-    console.log('🔒 DEBUG: isEnabled.value:', this.isEnabled.value)
-    console.log('🔒 DEBUG: auth.currentUser exists?', !!auth.currentUser)
-    console.log('🔒 DEBUG: auth.currentUser uid:', auth.currentUser?.uid)
     
     if (!this.isEnabled.value || !auth.currentUser) {
-      console.log('🔒 DEBUG: resetTimeout() early return - not enabled or no user')
       return
     }
     
@@ -145,7 +140,7 @@ class SessionTimeoutManager {
     
     const now = Date.now()
     const timeoutMs = Math.round(this.timeoutMinutes.value * 60 * 1000)
-    const warningMs = Math.max(1000, timeoutMs - (1 * 60 * 1000)) // Show warning 1 minute before timeout for debugging
+    const warningMs = Math.max(1000, timeoutMs - (2 * 60 * 1000)) // Show warning 2 minutes before timeout, minimum 1 second
     
     // Reduce console spam - only log every 5 minutes or when warning shows
     const shouldLog = !this.lastLogTime || (now - this.lastLogTime > 300000) || this.showWarning.value
@@ -202,9 +197,6 @@ class SessionTimeoutManager {
   }
 
   async handleSessionTimeout() {
-    console.log('🔒 DEBUG: handleSessionTimeout() called')
-    console.log('🔒 DEBUG: auth.currentUser exists?', !!auth.currentUser)
-    console.log('🔒 DEBUG: auth.currentUser uid:', auth.currentUser?.uid)
     
     console.log('🔒 Handling session timeout')
     
