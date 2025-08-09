@@ -1,9 +1,13 @@
 import { ref, watch } from 'vue'
 import { getAuth } from 'firebase/auth'
+import { getGoogleApiConfig } from '@/config/googleApiConfig'
 
 // Google Sheets API configuration
 const SPREADSHEET_ID_KEY = 'casemanage_linked_sheet_id'
 const SHEET_NAME = 'Student Data'
+
+// Get Google API configuration from centralized config
+const googleConfig = getGoogleApiConfig()
 
 export function useGoogleSheetsRealtime() {
   const isInitialized = ref(false)
@@ -33,8 +37,8 @@ export function useGoogleSheetsRealtime() {
       script.onload = () => {
         // Initialize the token client
         tokenClient.value = window.google.accounts.oauth2.initTokenClient({
-          client_id: '1017885957186-qe35vm8cv3jrdqhut23418a7ghfpafk5.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/spreadsheets',
+          client_id: googleConfig.clientId,
+          scope: googleConfig.scope,
           callback: (response) => {
             if (response.access_token) {
               accessToken.value = response.access_token
@@ -62,8 +66,8 @@ export function useGoogleSheetsRealtime() {
         gapiScript.onload = () => {
           window.gapi.load('client', async () => {
             await window.gapi.client.init({
-              apiKey: 'AIzaSyDXMm_ZBTXOd7k0e9FqQkvRRBOWfMUtGZ8',
-              discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+              apiKey: googleConfig.apiKey,
+              discoveryDocs: googleConfig.discoveryDocs,
             })
             resolve()
           })
