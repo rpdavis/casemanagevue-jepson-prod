@@ -274,6 +274,12 @@ service cloud.firestore {
       allow write: if isAuth() && isAnyAdmin();
     }
     
+    // Aide assignments - Admin access for managing paraeducator assignments
+    match /aideAssignments/{assignmentId} {
+      allow read: if isAuth() && isAnyAdmin();
+      allow write: if isAuth() && isAnyAdmin();
+    }
+    
     // Config collection (permissions matrix and other config)
     match /config/{document} {
       allow read: if isAuth() && hasValidRole();
