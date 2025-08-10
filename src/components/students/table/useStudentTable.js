@@ -65,8 +65,10 @@ export function useStudentTable(props) {
 
   // Date formatting and urgency functions
   const formatDate = (dateString) => {
-    if (!dateString) return ''
+    if (!dateString || dateString === '' || dateString === null || dateString === undefined) return ''
     const date = new Date(dateString)
+    // Check if the date is valid
+    if (isNaN(date.getTime())) return ''
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
