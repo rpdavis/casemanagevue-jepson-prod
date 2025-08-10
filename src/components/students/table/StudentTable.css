@@ -1,5 +1,128 @@
 /* StudentTable Component Styles */
 
+/* Custom Flags Styles */
+.custom-flags {
+  display: flex !important;
+  gap: 6px !important;
+  align-items: center !important;
+  margin-top: 4px !important;
+  flex-wrap: wrap !important;
+}
+
+.flag-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+ 
+  border-radius: 16px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+ 
+}
+
+/* Blue flags - Info (matches app's primary blue theme) */
+.flag-chip.flag-blue {
+
+  color: #1565c0 !important;
+  border-color: #90caf9 !important;
+}
+
+/* Yellow flags - Caution (matches app's warning colors) */
+.flag-chip.flag-yellow {
+
+  color: #ef6c00 !important;
+  border-color: #ffb74d !important;
+}
+
+/* Red flags - Alert (matches app's error colors) */
+.flag-chip.flag-red {
+
+  color: #d32f2f !important;
+  border-color: #ef9a9a !important;
+}
+
+/* Make Lucide flag icons solid */
+.flag-chip .lucide-flag {
+  fill: currentColor !important;
+ 
+}
+
+.flag-count {
+  font-weight: 600 !important;
+  line-height: 1 !important;
+}
+
+/* Custom Tooltip Styles for Flags */
+.flag-chip[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+    position: absolute;
+    bottom: 1%;
+    right: %;
+    transform: translate(-50%);
+    margin-bottom: 2px;
+    margin-left: 9.6rem;
+    padding: 3px 3px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: pre-line;
+    z-index: 1000;
+    box-shadow: 0 2px 8px #00000026;
+    width: 260px;
+    word-wrap: normal;
+}
+
+/* Tooltip arrow */
+.flag-chip[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  border: 5px solid transparent;
+  z-index: 1001;
+}
+
+/* Blue flag tooltip */
+.flag-chip.flag-blue[data-tooltip]:hover::after {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+.flag-chip.flag-blue[data-tooltip]:hover::before {
+  
+}
+
+/* Yellow flag tooltip */
+.flag-chip.flag-yellow[data-tooltip]:hover::after {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffb74d;
+}
+
+.flag-chip.flag-yellow[data-tooltip]:hover::before {
+   
+}
+
+/* Red flag tooltip */
+.flag-chip.flag-red[data-tooltip]:hover::after {
+  background: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #ef9a9a;
+}
+
+.flag-chip.flag-red[data-tooltip]:hover::before {
+  
+}
+
+/* Position tooltip container */
+.flag-chip {
+  position: relative !important;
+}
+
 .students-table {
   width: 100%;
   border-collapse: collapse;
@@ -391,7 +514,7 @@
   list-style: disc !important;
   background: transparent !important;
   
-  padding: 0 10px!important;
+  padding: 0 20px!important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -525,7 +648,7 @@
 
 /* Minimum row height (rows will grow if content is taller) */
 .students-table tbody tr {
-  height: 11rem; /* Acts as min-height for table rows */
+  height: 12rem; /* Acts as min-height for table rows */
 }
 
 .students-table tbody td {

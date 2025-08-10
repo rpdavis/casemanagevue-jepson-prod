@@ -132,6 +132,12 @@ export function useStudentForm(props, emit) {
       assessment: getDisplayValue(student, 'assessment') || '',
       flag1: student.app?.flags?.flag1 || student.flag1 || false,
       flag2: student.app?.flags?.flag2 || student.flag2 || false,
+      // Initialize app structure for custom flags
+      app: {
+        flags: {
+          customFlags: student.app?.flags?.customFlags || []
+        }
+      },
       ataglancePdfUrl: student.app?.documents?.ataglancePdfUrl || student.ataglancePdfUrl || student.ataglance_pdf_url || '',
       bipPdfUrl: student.app?.documents?.bipPdfUrl || student.bipPdfUrl || student.bip_pdf_url || '',
       ataglanceFileName: student.app?.documents?.ataglanceFileName || student.ataglanceFileName || '',
@@ -675,7 +681,8 @@ export function useStudentForm(props, emit) {
         // Flags
         flags: {
           flag1: form.flag1,
-          flag2: form.flag2
+          flag2: form.flag2,
+          customFlags: form.app?.flags?.customFlags || []
         },
         
         // Documents - secure PDF references

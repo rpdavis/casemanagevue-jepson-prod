@@ -48,6 +48,18 @@ export function useStudentQueries() {
       const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       console.log('🔍 Admin query result:', students.length, 'students')
       
+      // Debug: Check for custom flags
+      const studentsWithCustomFlags = students.filter(s => s.app?.flags?.customFlags?.length > 0)
+      if (studentsWithCustomFlags.length > 0) {
+        console.log('🏷️ QUERY DEBUG - Found students with custom flags:', studentsWithCustomFlags.map(s => ({
+          id: s.id,
+          name: `${s.app?.studentData?.firstName || 'Unknown'} ${s.app?.studentData?.lastName || 'Unknown'}`,
+          flags: s.app?.flags?.customFlags
+        })))
+      } else {
+        console.log('🏷️ QUERY DEBUG - No students with custom flags found')
+      }
+      
       if (students.length > 0) {
         console.log('🔍 First student structure:', students[0])
       } else {

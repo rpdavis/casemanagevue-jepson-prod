@@ -30,6 +30,18 @@
             <div class="std-info-subheading">
               <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
               <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
+              <div v-if="(student.app?.flags?.customFlags || []).length" class="custom-flags">
+              <span
+                v-for="color in ['blue', 'yellow', 'red']"
+                v-if="(student.app?.flags?.customFlags || []).filter(f => f.color === color).length"
+                :key="color"
+                class="flag-chip"
+                :class="color"
+                :data-tooltip="(student.app?.flags?.customFlags || []).filter(f => f.color === color).map(f => `• ${f.text}`).join('\n')"
+              >
+                <span class="flag-dot"></span>{{ (student.app?.flags?.customFlags || []).filter(f => f.color === color).length }}
+              </span>
+            </div>
             </div>
           </td>
           
@@ -76,7 +88,7 @@
               <strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong>
               <span class="data-source" :title="`Data source: ${getSourceValue(student, 'firstName')}`">
                 {{ getSourceValue(student, 'firstName') === 'Override' ? '🔒' : 
-                   getSourceValue(student, 'firstName') === 'App' ? '📱' :
+                   getSourceValue(student, 'firstName') === 'App' ? '' :
                    getSourceValue(student, 'firstName') === 'Aeries' ? '📊' :
                    getSourceValue(student, 'firstName') === 'SEIS' ? '📋' : '' }}
               </span>
@@ -84,6 +96,20 @@
             <div class="std-info-subheading">
               <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
               <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
+              <div v-if="(student.app?.flags?.customFlags || []).length" class="custom-flags">
+                <template v-for="color in ['blue', 'yellow', 'red']" :key="color">
+                  {{ console.log('🏷️ COLOR DEBUG:', color, 'count:', (student.app?.flags?.customFlags || []).filter(f => f.color === color).length, 'flags:', (student.app?.flags?.customFlags || []).map(f => f.color)) }}
+                  <span
+                    v-if="(student.app?.flags?.customFlags || []).filter(f => f.color === color).length"
+                    class="flag-chip"
+                    :class="`flag-${color}`"
+                    :data-tooltip="(student.app?.flags?.customFlags || []).filter(f => f.color === color).map(f => `• ${f.text}`).join('\n')"
+                  >
+                    <Flag :size="16" class="lucide-flag" />
+                    <span class="flag-count">{{ (student.app?.flags?.customFlags || []).filter(f => f.color === color).length }}</span>
+                  </span>
+                </template>
+              </div>
             </div>
             <div class="student-dates print">
               <span class="badge badge-review plan-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
@@ -175,6 +201,7 @@ import ActionsCell from './table/StudentActionsCell.vue'
 import ScheduleCell from './table/StudentScheduleCell.vue'
 import ServicesCell from './table/StudentServicesCell.vue'
 import AccommodationsCell from './table/AccommodationsCell.vue'
+import { Flag } from 'lucide-vue-next'
 
 const props = defineProps({
   students: {
@@ -249,27 +276,4 @@ const isCoTeaching = (periodData) => {
 
 
 
-// DEBUG: Check schedule data sources (moved to StudentForm.vue)
-
-watch(() => props.student, (newStudent) => {
-  if (newStudent && Object.keys(newStudent).length > 0) {
-    // ... other fields ...
-    form.schedule =
-      newStudent.app?.schedule?.periods ||
-      newStudent.schedule ||
-      newStudent.aeries?.schedule?.periods ||
-      {};
-    console.log('StudentForm DEBUG - form.schedule:', form.schedule);
-    console.log('StudentForm DEBUG - aeries.schedule:', props.student.aeries?.schedule);
-    console.log('StudentForm DEBUG - app.schedule.periods:', props.student.app?.schedule?.periods);
-    // ... other fields ...
-
-    // DEBUG: Check schedule data in watcher (moved to StudentForm.vue)
-  }
-}, { immediate: true, deep: true })
 </script>
-
-<!-- Styles now imported from ./table/StudentTable.css -->
-
-// Styles removed for migration to external CSS files
-// Styles removed for migration to external CSS files
