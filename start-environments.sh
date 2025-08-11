@@ -24,7 +24,7 @@ start_dev() {
 # Function to start production environment
 start_prod() {
     echo "🏭 Starting Production Environment..."
-    echo "   - Firebase Project: casemangervue"
+    echo "   - Firebase Project: casemanagevue-jepson-prod"
     echo "   - Environment: production"
     echo "   - Features: Optimized build, no debug features"
     echo ""

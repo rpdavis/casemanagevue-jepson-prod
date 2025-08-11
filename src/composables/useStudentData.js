@@ -59,7 +59,14 @@ export function useStudentData() {
 
   // Get paraeducators for filter dropdown
   const paraeducators = computed(() => {
-    return userList.value?.filter(user => user.role === 'paraeducator') || []
+    return userList.value?.filter(user => user.role === 'paraeducator')
+      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id)) || []
+  })
+
+  // Get service providers for filter dropdown
+  const serviceProviders = computed(() => {
+    return userList.value?.filter(user => user.role === 'service_provider')
+      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id)) || []
   })
 
   // Data fetching with role-based security
@@ -262,6 +269,7 @@ export function useStudentData() {
     feedbackForms,
     formsLoading,
     paraeducators,
+    serviceProviders,
     
     // Computed
     currentUser,

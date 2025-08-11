@@ -59,8 +59,8 @@ export function useUnifiedRoleView(studentData, filterData) {
     })
 
     // Special handling for roles that use database-level filtering (Pattern 1)
-    // Paraeducators and teachers get their students from database queries - no additional filtering needed
-    if (role === 'paraeducator' || role === 'teacher') {
+    // Paraeducators, teachers, and service providers get their students from database queries - no additional filtering needed
+    if (role === 'paraeducator' || role === 'teacher' || role === 'service_provider') {
       console.log(`🔍 ${role.toUpperCase()} ROLE VIEW: Received ${baseStudents.length} students from database`)
       console.log(`🔍 ${role.toUpperCase()} ROLE VIEW: Student names:`, baseStudents.map(s =>
         `${s.app?.studentData?.firstName || 'Unknown'} ${s.app?.studentData?.lastName || 'Unknown'}`

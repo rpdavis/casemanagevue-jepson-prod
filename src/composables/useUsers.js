@@ -47,32 +47,36 @@ export default function useUsers() {
   }
 
   const userRoles = computed(() => {
+    const sortByName = (users) => users.sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
+    
     return {
-      teachers: userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role)),
-      caseManagers: userList.value.filter(u => ["case_manager", "sped_chair", "admin_504"].includes(u.role)),
-      speech: userList.value.filter(u => u.provider === 'SLP'),
-      ot: userList.value.filter(u => u.provider === 'OT'),
-      mh: userList.value.filter(u => u.provider === 'MH'),
-      pt: userList.value.filter(u => u.provider === 'PT'),
-      sc: userList.value.filter(u => u.provider === 'SC'),
-      tr: userList.value.filter(u => u.provider === 'TR'),
-      aud: userList.value.filter(u => u.provider === 'AUD'),
-      vi: userList.value.filter(u => u.provider === 'VI'),
-      at: userList.value.filter(u => u.provider === 'AT'),
-      dhh: userList.value.filter(u => u.provider === 'DHH'),
-      om: userList.value.filter(u => u.provider === 'O&M'),
-      bis: userList.value.filter(u => u.provider === 'BIS'),
-      hn: userList.value.filter(u => u.provider === 'HN'),
-      sw: userList.value.filter(u => u.provider === 'SW')
+      teachers: sortByName(userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role))),
+      caseManagers: sortByName(userList.value.filter(u => ["case_manager", "sped_chair", "admin_504"].includes(u.role))),
+      speech: sortByName(userList.value.filter(u => u.provider === 'SLP')),
+      ot: sortByName(userList.value.filter(u => u.provider === 'OT')),
+      mh: sortByName(userList.value.filter(u => u.provider === 'MH')),
+      pt: sortByName(userList.value.filter(u => u.provider === 'PT')),
+      sc: sortByName(userList.value.filter(u => u.provider === 'SC')),
+      tr: sortByName(userList.value.filter(u => u.provider === 'TR')),
+      aud: sortByName(userList.value.filter(u => u.provider === 'AUD')),
+      vi: sortByName(userList.value.filter(u => u.provider === 'VI')),
+      at: sortByName(userList.value.filter(u => u.provider === 'AT')),
+      dhh: sortByName(userList.value.filter(u => u.provider === 'DHH')),
+      om: sortByName(userList.value.filter(u => u.provider === 'O&M')),
+      bis: sortByName(userList.value.filter(u => u.provider === 'BIS')),
+      hn: sortByName(userList.value.filter(u => u.provider === 'HN')),
+      sw: sortByName(userList.value.filter(u => u.provider === 'SW'))
     }
   })
 
   const caseManagers = computed(() => {
     return userList.value.filter(u => ["case_manager", "sped_chair", "admin_504"].includes(u.role))
+      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
   })
 
   const teacherList = computed(() => {
     return userList.value.filter(u => ["teacher", "case_manager", "sped_chair"].includes(u.role))
+      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
   })
 
   return { 

@@ -13,7 +13,7 @@
               class="teacher-select"
             >
             <option value="">--</option>
-            <option v-for="teacher in userRoles.teachers" :key="teacher.id" :value="teacher.id">
+            <option v-for="teacher in sortedTeachers" :key="teacher.id" :value="teacher.id">
               {{ teacher.name || teacher.email || teacher.id }}
             </option>
           </select>
@@ -100,6 +100,12 @@ const props = defineProps({
 // Period labels composable
 const { getLabel } = usePeriodLabels()
 
+// Sorted teachers for dropdown (alphabetical order)
+const sortedTeachers = computed(() => {
+  const teachers = props.userRoles.teachers || []
+  return teachers.sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
+})
+
 // Available case managers (filter to only those with case_manager role)
 const availableCaseManagers = computed(() => {
   const caseManagers = props.userRoles.caseManagers || []
@@ -109,7 +115,7 @@ const availableCaseManagers = computed(() => {
              cm.role === 'admin_504' || cm.role === 'administrator_504_CM' ||
      cm.role === 'sped_chair' ||
      (cm.roles && cm.roles.includes('case_manager')))
-  )
+  ).sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
 })
 
 // Co-teach subjects from app settings (only from Co-teach class service)

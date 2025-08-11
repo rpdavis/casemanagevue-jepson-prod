@@ -55,22 +55,22 @@
 /* Custom Tooltip Styles for Flags */
 .flag-chip[data-tooltip]:hover::after {
   content: attr(data-tooltip);
-    position: absolute;
-    bottom: 1%;
-    right: %;
-    transform: translate(-50%);
-    margin-bottom: 2px;
-    margin-left: 9.6rem;
-    padding: 3px 3px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1;
-    white-space: pre-line;
-    z-index: 1000;
-    box-shadow: 0 2px 8px #00000026;
-    width: 260px;
-    word-wrap: normal;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  transform: translate(-50%);
+
+  margin-left: 11rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: pre-line;
+  z-index: 1000;
+  box-shadow: 0 2px 8px #00000026;
+  width: 320px;
+  word-wrap: break-word;
 }
 
 /* Tooltip arrow */
@@ -81,7 +81,7 @@
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 2px;
-  border: 5px solid transparent;
+ 
   z-index: 1001;
 }
 
@@ -93,7 +93,7 @@
 }
 
 .flag-chip.flag-blue[data-tooltip]:hover::before {
-  
+  border-top-color: #90caf9;
 }
 
 /* Yellow flag tooltip */
@@ -104,7 +104,7 @@
 }
 
 .flag-chip.flag-yellow[data-tooltip]:hover::before {
-   
+  border-top-color: #ffb74d;
 }
 
 /* Red flag tooltip */
@@ -115,7 +115,96 @@
 }
 
 .flag-chip.flag-red[data-tooltip]:hover::before {
+  border-top-color: #ef9a9a;
+}
+
+/* Case Manager Tooltip Styles */
+.case-manager-name {
+  position: relative;
+  cursor: help;
+}
+
+.case-manager-name[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #333;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Tooltip arrow */
+.case-manager-name[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  border: 4px solid transparent;
+  border-top-color: #333;
+  z-index: 1001;
+}
+
+/* Hide tooltip if no content */
+.case-manager-name[data-tooltip=""]:hover::after,
+.case-manager-name[data-tooltip=""]:hover::before {
+  display: none;
+}
+
+/* Teacher Name Tooltip Styles */
+.teacher-name {
+  position: relative;
+  cursor: help;
   
+}
+
+.teacher-name[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #333;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Teacher tooltip arrow */
+.teacher-name[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 2px;
+  border: 4px solid transparent;
+  border-top-color: #333;
+  z-index: 1001;
+}
+
+/* Hide teacher tooltip if no content */
+.teacher-name[data-tooltip=""]:hover::after,
+.teacher-name[data-tooltip=""]:hover::before {
+  display: none;
 }
 
 /* Position tooltip container */
@@ -280,6 +369,7 @@
   position: relative;
   margin-right: 1em;
   cursor: help;
+  min-width: 7.9rem;
 }
 
 /* Student Table Badges - Date-related badges */

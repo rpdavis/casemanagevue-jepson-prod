@@ -63,6 +63,20 @@ export function useStudentTable(props) {
     return userId
   }
 
+  const getUserTooltip = (userId) => {
+    const user = props.userMap[userId]
+    if (!user) return ''
+    
+    const parts = []
+    if (user.rm) parts.push(`Rm: ${user.rm}`)
+    if (user.ext) parts.push(`Ext: ${user.ext}`)
+    
+    return parts.length > 0 ? parts.join(' | ') : ''
+  }
+
+  // Alias for backward compatibility
+  const getCaseManagerTooltip = getUserTooltip
+
   // Date formatting and urgency functions
   const formatDate = (dateString) => {
     if (!dateString || dateString === '' || dateString === null || dateString === undefined) return ''
@@ -433,6 +447,8 @@ export function useStudentTable(props) {
     getUserName,
     getUserInitials,
     getUserInitialLastName,
+    getUserTooltip,
+    getCaseManagerTooltip,
     
     // Date functions
     formatDate,

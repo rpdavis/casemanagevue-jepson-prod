@@ -23,6 +23,7 @@ export function useStudentFilters(studentData) {
     teacher: 'all',
     paraeducator: 'all',
     plan: 'all',
+    serviceProvider: 'all',
     search: '',
     providerView: 'all',
     viewMode: 'list'
@@ -52,6 +53,7 @@ export function useStudentFilters(studentData) {
     currentFilters.teacher = 'all'
     currentFilters.paraeducator = 'all'
     currentFilters.plan = 'all'
+    currentFilters.serviceProvider = 'all'
     currentFilters.search = ''
     currentFilters.providerView = 'all'
     currentFilters.viewMode = 'list'
@@ -196,6 +198,32 @@ export function useStudentFilters(studentData) {
       result = result.filter(s => {
         const studentPlan = getDisplayValue(s, 'plan')
         return studentPlan === filters.plan
+      })
+    }
+
+    // Apply service provider filter
+    if (filters.serviceProvider && filters.serviceProvider !== 'all') {
+      result = result.filter(s => {
+        // Check if the student has the selected service provider assigned
+        const providers = s.app?.providers || {}
+        
+        // Look through all provider fields to see if the selected provider is assigned
+        for (const [fieldName, providerId] of Object.entries(providers)) {
+          if (providerId === filters.serviceProvider) {
+            return true
+          }
+        }
+        
+        // Also check legacy provider fields (for backward compatibility)
+        const legacyFields = [
+          'speechId', 'speech_id', 'otId', 'ot_id', 'mhId', 'mh_id', 
+          'ptId', 'pt_id', 'scId', 'sc_id', 'trId', 'tr_id',
+          'audId', 'aud_id', 'viId', 'vi_id', 'atId', 'at_id',
+          'dhhId', 'dhh_id', 'omId', 'om_id', 'bisId', 'bis_id',
+          'hnId', 'hn_id', 'swId', 'sw_id'
+        ]
+        
+        return legacyFields.some(field => s[field] === filters.serviceProvider)
       })
     }
 

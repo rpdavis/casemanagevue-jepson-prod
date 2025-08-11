@@ -8,8 +8,7 @@ const DEFAULT_SETTINGS = {
     { name: 'SDC', subcategories: ['English', 'Math', 'History', 'Science'], enabledSubcategories: ['English', 'Math', 'History', 'Science'] },
     { name: 'Co-teach', subcategories: ['English', 'Math', 'History', 'Science'], enabledSubcategories: ['English', 'Math', 'History', 'Science'] },
     { name: 'RSP', subcategories: ['English', 'Math', 'History', 'Science'], enabledSubcategories: ['English', 'Math', 'History', 'Science'] },
-    { name: 'Directed Studies', subcategories: ['Directed Studies'], enabledSubcategories: ['Directed Studies'] },
-    { name: 'FA', subcategories: ['FA'], enabledSubcategories: ['FA'] }
+    { name: 'Other', subcategories: ['FA', 'Directed Studies', 'DS: Reading Intv'], enabledSubcategories: ['FA', 'Directed Studies', 'DS: Reading Intv'] }
   ],
   sdcSubcategories: [],
   customClassServices: [],

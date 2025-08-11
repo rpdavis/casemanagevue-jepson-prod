@@ -56,38 +56,27 @@
         </div>
         <div class="class-service-fieldset" v-if="settings.classServices[3] && settings.classServices[3].enabledSubcategories">
           <fieldset>
-            <legend>Directed Studies</legend>
+            <legend>Other</legend>
             <div class="checkbox-inline-group">
-              <label>
-                <input type="checkbox" v-model="settings.classServices[3].enabledSubcategories" value="Directed Studies" />
-                Directed Studies
+              <label v-for="sub in ['FA', 'Directed Studies', 'DS: Reading Intv']" :key="sub">
+                <input type="checkbox" v-model="settings.classServices[3].enabledSubcategories" :value="sub" />
+                {{ sub }}
               </label>
             </div>
           </fieldset>
         </div>
-        <div class="class-service-fieldset" v-if="settings.classServices[4] && settings.classServices[4].enabledSubcategories">
-          <fieldset>
-            <legend>FA</legend>
-            <div class="checkbox-inline-group">
-              <label>
-                <input type="checkbox" v-model="settings.classServices[4].enabledSubcategories" value="FA" />
-                FA
-              </label>
-            </div>
-          </fieldset>
-        </div>
-        <div v-for="(service, sIdx) in settings.classServices.slice(5)" :key="service.name" class="class-service-fieldset">
+        <div v-for="(service, sIdx) in settings.classServices.slice(4)" :key="service.name" class="class-service-fieldset">
           <fieldset>
             <legend>{{ service.name }}
-              <button type="button" @click="removeClassService(sIdx + 5)" title="Remove Service">×</button>
+              <button type="button" @click="removeClassService(sIdx + 4)" title="Remove Service">×</button>
             </legend>
             <div class="checkbox-inline-group">
               <label v-for="(sub, subIdx) in service.subcategories" :key="sub">
                 <input type="checkbox" :checked="true" disabled />
                 {{ sub }}
-                <button type="button" @click="removeSubcategory(sIdx + 5, subIdx)" title="Remove Subcategory">×</button>
+                <button type="button" @click="removeSubcategory(sIdx + 4, subIdx)" title="Remove Subcategory">×</button>
               </label>
-              <button type="button" @click="addSubcategory(sIdx + 5)">+ Add Subcategory</button>
+              <button type="button" @click="addSubcategory(sIdx + 4)">+ Add Subcategory</button>
             </div>
           </fieldset>
         </div>
@@ -137,14 +126,10 @@
           <div class="periods-controls">
             <div class="period-number-control">
               <label>
-                Number of Periods (max 15):
-                <input 
-                  type="number" 
-                  v-model="settings.numPeriods" 
-                  min="1" 
-                  max="15" 
-                  class="period-number-input"
-                />
+                Number of Periods:
+                <select v-model="settings.numPeriods" class="period-number-select">
+                  <option v-for="n in 15" :key="n" :value="n">{{ n }}</option>
+                </select>
               </label>
             </div>
             
@@ -302,17 +287,34 @@ const statusError = ref(false)
 const customServiceProviderName = ref('')
 const customServiceProviderAbbr = ref('')
 
+// Variables for adding new class services
+const newServiceName = ref('')
+const newServiceSubcat = ref('')
+const newServiceSubcats = ref([])
+
 // Initialize default settings structure
 const settings = ref({
   grades: ['7', '8'],
   classServices: [
     {
       name: 'SDC',
+      subcategories: [...CORE_SUBCATEGORIES],
       enabledSubcategories: [...CORE_SUBCATEGORIES]
     },
     {
       name: 'Co-teach',
+      subcategories: [...CORE_SUBCATEGORIES],
       enabledSubcategories: [...CORE_SUBCATEGORIES]
+    },
+    {
+      name: 'RSP',
+      subcategories: [...CORE_SUBCATEGORIES],
+      enabledSubcategories: [...CORE_SUBCATEGORIES]
+    },
+    {
+      name: 'Other',
+      subcategories: ['FA', 'Directed Studies', 'DS: Reading Intv'],
+      enabledSubcategories: ['FA', 'Directed Studies', 'DS: Reading Intv']
     }
   ],
   serviceProviders: ['SLP', 'OT', 'MH'],
@@ -765,11 +767,23 @@ const resetSettings = () => {
       classServices: [
         {
           name: 'SDC',
+          subcategories: [...CORE_SUBCATEGORIES],
           enabledSubcategories: [...CORE_SUBCATEGORIES]
         },
         {
           name: 'Co-teach',
+          subcategories: [...CORE_SUBCATEGORIES],
           enabledSubcategories: [...CORE_SUBCATEGORIES]
+        },
+        {
+          name: 'RSP',
+          subcategories: [...CORE_SUBCATEGORIES],
+          enabledSubcategories: [...CORE_SUBCATEGORIES]
+        },
+        {
+          name: 'Other',
+          subcategories: ['FA', 'Directed Studies', 'DS: Reading Intv'],
+          enabledSubcategories: ['FA', 'Directed Studies', 'DS: Reading Intv']
         }
       ],
       serviceProviders: ['SLP', 'OT', 'MH'],
@@ -779,6 +793,119 @@ const resetSettings = () => {
       periodLabels: ['1', '2', '3', '4', '5', '6', 'sh']
     }
     showStatus('Settings reset to defaults')
+  }
+}
+
+// Functions for adding/removing subcategories and class services
+const addSubcategory = (serviceIndex) => {
+  const newSubcat = prompt('Enter new subcategory name:')
+  if (newSubcat && newSubcat.trim()) {
+    const sanitized = sanitizeString(newSubcat.trim(), {
+      maxLength: 18,
+      removeDangerous: true
+    })
+    
+    if (sanitized) {
+      // Add to the specific service's subcategories
+      if (!settings.value.classServices[serviceIndex]) {
+        settings.value.classServices[serviceIndex] = { name: '', subcategories: [], enabledSubcategories: [] }
+      }
+      
+      if (!settings.value.classServices[serviceIndex].subcategories.includes(sanitized)) {
+        settings.value.classServices[serviceIndex].subcategories.push(sanitized)
+        settings.value.classServices[serviceIndex].enabledSubcategories.push(sanitized)
+        showStatus('Subcategory added successfully')
+      } else {
+        showStatus('Subcategory already exists', true)
+      }
+    }
+  }
+}
+
+const removeSubcategory = (serviceIndex, subcategoryIndex) => {
+  if (confirm('Are you sure you want to remove this subcategory?')) {
+    const service = settings.value.classServices[serviceIndex]
+    const subcatName = service.subcategories[subcategoryIndex]
+    
+    // Remove from subcategories array
+    service.subcategories.splice(subcategoryIndex, 1)
+    
+    // Remove from enabled subcategories array
+    const enabledIndex = service.enabledSubcategories.indexOf(subcatName)
+    if (enabledIndex > -1) {
+      service.enabledSubcategories.splice(enabledIndex, 1)
+    }
+    
+    showStatus('Subcategory removed successfully')
+  }
+}
+
+const addNewServiceSubcat = () => {
+  if (newServiceSubcat.value && newServiceSubcat.value.trim()) {
+    const sanitized = sanitizeString(newServiceSubcat.value.trim(), {
+      maxLength: 18,
+      removeDangerous: true
+    })
+    
+    if (sanitized && !newServiceSubcats.value.includes(sanitized)) {
+      newServiceSubcats.value.push(sanitized)
+      newServiceSubcat.value = ''
+    } else if (newServiceSubcats.value.includes(sanitized)) {
+      showStatus('Subcategory already added', true)
+    }
+  }
+}
+
+const removeNewServiceSubcat = (index) => {
+  newServiceSubcats.value.splice(index, 1)
+}
+
+const addClassService = () => {
+  if (!newServiceName.value || !newServiceName.value.trim()) {
+    showStatus('Please enter a service name', true)
+    return
+  }
+  
+  if (newServiceSubcats.value.length === 0) {
+    showStatus('Please add at least one subcategory', true)
+    return
+  }
+  
+  const sanitizedName = sanitizeString(newServiceName.value.trim(), {
+    maxLength: 18,
+    removeDangerous: true
+  })
+  
+  if (sanitizedName) {
+    // Check if service already exists
+    const existingService = settings.value.classServices.find(service => service.name === sanitizedName)
+    if (existingService) {
+      showStatus('Service with this name already exists', true)
+      return
+    }
+    
+    // Add new service
+    const newService = {
+      name: sanitizedName,
+      subcategories: [...newServiceSubcats.value],
+      enabledSubcategories: [...newServiceSubcats.value]
+    }
+    
+    settings.value.classServices.push(newService)
+    
+    // Clear form
+    newServiceName.value = ''
+    newServiceSubcat.value = ''
+    newServiceSubcats.value = []
+    
+    showStatus('Class service added successfully')
+  }
+}
+
+const removeClassService = (serviceIndex) => {
+  if (confirm('Are you sure you want to remove this class service?')) {
+    settings.value.classServices.splice(serviceIndex, 1)
+    showStatus('Class service removed successfully')
   }
 }
 
@@ -977,12 +1104,14 @@ button:disabled {
   border-radius: 4px;
   font-size: 14px;
 }
-.period-number-input {
+.period-number-select {
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
   width: 100px;
+  background: white;
+  cursor: pointer;
 }
 .period-preview {
   margin-top: 1rem;

@@ -10,13 +10,13 @@
         </template>
         <!-- Regular View Headers -->
         <template v-else>
-          <th class="print">Student Info</th>
-          <th class="print">Services</th>
-          <th class="print">Schedule</th>
-          <th class="print">Instruction Accommodations</th>
-          <th class="print">Assessment Accommodations</th>
-          <th class="print">Docs</th>
-          <th class="print">Actions</th>
+          <th class="print student-info-column">Student Info</th>
+          <th class="print service-column">Services</th>
+          <th class="print schedule-column">Schedule</th>
+          <th class="print instruction-column">Instruction Accommodations</th>
+          <th class="print assessment-column">Assessment Accommodations</th>
+          <th class="print documents-column">Docs</th>
+          <th class="print actions-column">Actions</th>
         </template>
       </tr>
     </thead>
@@ -29,7 +29,12 @@
             <div class="student-name"><strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong></div>
             <div class="std-info-subheading">
               <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
-              <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
+              <div>CM: <span 
+                class="case-manager-name" 
+                :data-tooltip="getCaseManagerTooltip(getCaseManagerId(student))"
+                @mouseenter="$event.target.classList.add('tooltip-active')"
+                @mouseleave="$event.target.classList.remove('tooltip-active')"
+              >{{ getUserName(getCaseManagerId(student)) }}</span></div>
               <div v-if="(student.app?.flags?.customFlags || []).length" class="custom-flags">
               <span
                 v-for="color in ['blue', 'yellow', 'red']"
@@ -53,12 +58,20 @@
                   <div class="period-assignment">
                     <div class="primary-line">
                       <span class="period-label">{{ getPeriodLabel ? getPeriodLabel(period) : period }}:</span>
-                      <span class="primary-teacher">{{ getUserInitialLastName(periodData.teacherId || periodData) }}</span>
+                      <span 
+                        class="primary-teacher teacher-name" 
+                        :data-tooltip="getUserTooltip(periodData.teacherId || periodData)"
+                        @mouseenter="$event.target.classList.add('tooltip-active')"
+                        @mouseleave="$event.target.classList.remove('tooltip-active')"
+                      >{{ getUserInitialLastName(periodData.teacherId || periodData) }}</span>
                     </div>
                     <div v-if="isCoTeaching(periodData)" class="coteaching-info">
                       <span 
-                        class="coteaching-indicator"
+                        class="coteaching-indicator teacher-name"
                         :title="`Co-teach ${periodData.coTeaching.subject}`"
+                        :data-tooltip="getUserTooltip(periodData.coTeaching.caseManagerId)"
+                        @mouseenter="$event.target.classList.add('tooltip-active')"
+                        @mouseleave="$event.target.classList.remove('tooltip-active')"
                       >
                         {{ getUserInitialLastName(periodData.coTeaching.caseManagerId) }} (C{{ periodData.coTeaching.subject.charAt(0) }})
                       </span>
@@ -83,7 +96,7 @@
         <!-- Regular View Cells -->
         <template v-else>
           <!-- Student Info Cell -->
-          <td>
+          <td class="student-info-column">
             <div class="student-name">
               <strong>{{ getDisplayValue(student, 'firstName') }} {{ getDisplayValue(student, 'lastName') }}</strong>
               <span class="data-source" :title="`Data source: ${getSourceValue(student, 'firstName')}`">
@@ -95,7 +108,12 @@
             </div>
             <div class="std-info-subheading">
               <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
-              <div>CM: {{ getUserName(getCaseManagerId(student)) }}</div>
+              <div>CM: <span 
+                class="case-manager-name" 
+                :data-tooltip="getCaseManagerTooltip(getCaseManagerId(student))"
+                @mouseenter="$event.target.classList.add('tooltip-active')"
+                @mouseleave="$event.target.classList.remove('tooltip-active')"
+              >{{ getUserName(getCaseManagerId(student)) }}</span></div>
               <div v-if="(student.app?.flags?.customFlags || []).length" class="custom-flags">
                 <template v-for="color in ['blue', 'yellow', 'red']" :key="color">
                   {{ console.log('🏷️ COLOR DEBUG:', color, 'count:', (student.app?.flags?.customFlags || []).filter(f => f.color === color).length, 'flags:', (student.app?.flags?.customFlags || []).map(f => f.color)) }}
@@ -143,6 +161,7 @@
             :get-schedule="getSchedule"
             :get-user-initial-last-name="getUserInitialLastName"
             :get-period-label="getPeriodLabel"
+            :get-user-tooltip="getUserTooltip"
           />
           
           <!-- Instruction Accom. Cell -->
@@ -243,6 +262,8 @@ const {
   getUserName,
   getUserInitials,
   getUserInitialLastName,
+  getUserTooltip,
+  getCaseManagerTooltip,
   formatDate,
   getFlagClass,
   hasFlags,

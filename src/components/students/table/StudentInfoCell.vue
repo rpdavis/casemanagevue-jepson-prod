@@ -11,22 +11,12 @@
     </div>
     <div class="std-info-subheading">
       <div>Grd: {{ getDisplayValue(student, 'grade') }} | Prg: {{ getDisplayValue(student, 'plan') }}</div>
-      <div class="case-manager-line">
-        CM: {{ getUserName(getCaseManagerId(student)) }}
-        <span v-if="getCustomFlags(student).length" class="custom-flags">
-          <span
-            v-for="(list, color) in groupByColor(getCustomFlags(student))"
-            v-if="list.length"
-            :key="color"
-            class="flag-chip"
-            :class="color"
-            :title="tooltipFor(list)"
-            @click="showFlagsDialog(list, color)"
-          >
-            <span class="flag-dot"></span>{{ list.length }}
-          </span>
-        </span>
-      </div>
+      <div>CM: <span 
+        class="case-manager-name" 
+        :data-tooltip="getCaseManagerTooltip(getCaseManagerId(student))"
+        @mouseenter="$event.target.classList.add('tooltip-active')"
+        @mouseleave="$event.target.classList.remove('tooltip-active')"
+      >{{ getUserName(getCaseManagerId(student)) }}</span></div>
     </div>
     <div class="student-dates print">
       <span class="badge badge-review" :class="getReviewUrgencyClass(student)">PR: {{ formatDate(getDisplayValue(student, 'reviewDate')) }}</span>
@@ -97,11 +87,21 @@ const props = defineProps({
   isDirectAssignment: {
     type: Function,
     required: true
+  },
+  getCaseManagerTooltip: {
+    type: Function,
+    required: true
   }
 })
 
 // Custom flags functions
-const getCustomFlags = (student) => student.app?.flags?.customFlags || []
+const getCustomFlags = (student) => {
+  const flags = student.app?.flags?.customFlags || []
+  if (student.app?.studentData?.firstName === 'Aidan') {
+    console.log('🏷️ StudentInfoCell - Aidan flags:', flags)
+  }
+  return flags
+}
 
 const groupByColor = (flags) => ({
   blue: flags.filter(f => f.color === 'blue'),
@@ -149,19 +149,19 @@ const showFlagsDialog = (list, color) => {
 }
 
 .flag-chip.blue {
-  background: #e3f2fd;
+  
   color: #1565c0;
   border: 1px solid #bbdefb;
 }
 
 .flag-chip.yellow {
-  background: #fff8e1;
+ 
   color: #f57f17;
   border: 1px solid #ffecb3;
 }
 
 .flag-chip.red {
-  background: #ffebee;
+ 
   color: #d32f2f;
   border: 1px solid #ffcdd2;
 }

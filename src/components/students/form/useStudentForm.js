@@ -781,6 +781,7 @@ export function useStudentForm(props, emit) {
         message: error.message,
         stack: error.stack
       })
+      
       alert(`Error saving student: ${error.message || error}. Please try again.`)
     } finally {
       isSaving.value = false

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-31
+
+### Added
+- **Teacher/Staff Contact Tooltips**: Added hover tooltips to display room number and phone extension for all teacher and case manager names in the student table
+  - Shows format "Rm: A23 | Ext: 665432" when hovering over any teacher/case manager name
+  - Works for both full names (case managers) and abbreviated names (schedule teachers)
+  - Includes co-teaching case managers and all schedule period teachers
+  - Professional dark tooltip styling with arrows
+  - Automatically hides when no room/extension data is available
+
+### Enhanced
+- **User Experience**: Improved accessibility by providing quick access to teacher contact information without leaving the student table
+- **Tooltip System**: Extended existing tooltip architecture to support multiple tooltip types (flags, dates, and now user contact info)
+
 ## [1.1.2] - 2025-01-31
 
 ### Fixed

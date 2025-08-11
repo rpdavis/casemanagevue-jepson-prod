@@ -17,9 +17,9 @@ class SessionTimeoutManager {
     this.router = null
     this.unsubscribeSettings = null
     
-    // Activity events to monitor
+    // Activity events to monitor (removed mousemove for performance)
     this.activityEvents = [
-      'mousedown', 'mousemove', 'keypress', 'scroll', 
+      'mousedown', 'keypress', 'scroll', 
       'touchstart', 'click', 'keydown'
     ]
     
@@ -58,24 +58,25 @@ class SessionTimeoutManager {
     try {
       const settingsRef = doc(db, 'app_settings', 'security')
       
-      // Listen for real-time changes to security settings
-      this.unsubscribeSettings = onSnapshot(settingsRef, (doc) => {
-        if (doc.exists()) {
-          const data = doc.data()
-          const wasEnabled = this.isEnabled.value
-          this.isEnabled.value = data.sessionTimeoutEnabled || false
-          this.timeoutMinutes.value = data.sessionTimeoutMinutes || 30
-          
-          // Restart timeout with new settings if user is logged in
-          if (auth.currentUser) {
-            this.resetTimeout()
-          }
-        } else {
-          // No settings document exists, create default
-          this.isEnabled.value = false
-          this.timeoutMinutes.value = 30
+      // Load settings once for better performance (instead of real-time listener)
+      const settingsDoc = await getDoc(settingsRef)
+      
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data()
+        this.isEnabled.value = data.sessionTimeoutEnabled || false
+        this.timeoutMinutes.value = data.sessionTimeoutMinutes || 30
+        
+        // Restart timeout with new settings if user is logged in
+        if (auth.currentUser) {
+          this.resetTimeout()
         }
-      })
+      } else {
+        // No settings document exists, use defaults
+        this.isEnabled.value = false
+        this.timeoutMinutes.value = 30
+      }
+      
+      console.log(`🔧 Session timeout settings loaded: enabled=${this.isEnabled.value}, timeout=${this.timeoutMinutes.value}min`)
     } catch (error) {
       console.error('Failed to load session timeout settings:', error)
     }
@@ -105,21 +106,20 @@ class SessionTimeoutManager {
   }
 
   handleActivity() {
-    
     if (!this.isEnabled.value) return
     
     const now = Date.now()
     
-    // Throttle activity handling to prevent infinite loops
-    // Only reset timeout if it's been more than 30 seconds since last reset
-    if (now - this.lastActivity < 30000) {
+    // Throttle activity handling more aggressively for performance
+    // Only reset timeout if it's been more than 60 seconds since last reset
+    if (now - this.lastActivity < 60000) {
       this.lastActivity = now
       return
     }
     
     this.lastActivity = now
     
-    // Only extend session if warning is showing or it's been a while
+    // Only extend session if warning is showing
     if (this.showWarning.value) {
       this.hideWarning()
       this.resetTimeout()
@@ -272,10 +272,7 @@ class SessionTimeoutManager {
       })
     }
     
-    // Unsubscribe from settings changes
-    if (this.unsubscribeSettings) {
-      this.unsubscribeSettings()
-    }
+    // Settings loaded once, no unsubscribe needed
   }
 }
 

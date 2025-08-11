@@ -56,6 +56,12 @@ export const useAuthStore = defineStore('auth', () => {
         
         // Clear token refresh when user logs out
         clearTokenRefresh()
+        
+        // Redirect to login if user lost authentication (unless already on login page)
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          console.log('🚪 User lost authentication - redirecting to login')
+          window.location.href = '/login'
+        }
       }
       
       isLoading.value = false
