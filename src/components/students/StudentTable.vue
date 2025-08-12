@@ -116,7 +116,6 @@
               >{{ getUserName(getCaseManagerId(student)) }}</span></div>
               <div v-if="(student.app?.flags?.customFlags || []).length" class="custom-flags">
                 <template v-for="color in ['blue', 'yellow', 'red']" :key="color">
-                  {{ console.log('🏷️ COLOR DEBUG:', color, 'count:', (student.app?.flags?.customFlags || []).filter(f => f.color === color).length, 'flags:', (student.app?.flags?.customFlags || []).map(f => f.color)) }}
                   <span
                     v-if="(student.app?.flags?.customFlags || []).filter(f => f.color === color).length"
                     class="flag-chip"

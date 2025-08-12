@@ -15,9 +15,7 @@ export function useStudentTable(props) {
   
   onMounted(async () => {
     try {
-      console.log('StudentTable: Loading app settings...')
       await loadAppSettings()
-      console.log('StudentTable: App settings loaded successfully')
       
       // Log student table access
       if (props.studentData.students.value.length > 0) {
@@ -80,9 +78,22 @@ export function useStudentTable(props) {
   // Date formatting and urgency functions
   const formatDate = (dateString) => {
     if (!dateString || dateString === '' || dateString === null || dateString === undefined) return ''
-    const date = new Date(dateString)
+    
+    let date
+    
+    // Handle ISO date strings (YYYY-MM-DD) - this fixes the "one day earlier" issue
+    if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10))
+      date = new Date(year, month - 1, day) // month is 0-indexed in JavaScript
+    } 
+    // Handle other date formats (timestamps, etc.)
+    else {
+      date = new Date(dateString)
+    }
+    
     // Check if the date is valid
     if (isNaN(date.getTime())) return ''
+    
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric',
@@ -215,8 +226,6 @@ export function useStudentTable(props) {
               } else {
                 teacherName = teacher.name
               }
-            } else {
-              console.warn(`Teacher not found for ID: ${data.teacherId}`)
             }
           }
           

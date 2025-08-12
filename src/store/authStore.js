@@ -29,13 +29,9 @@ export const useAuthStore = defineStore('auth', () => {
               name: firebaseUser.displayName,
               ...userDoc.data()
             }
-            console.log('✅ User authenticated:', currentUser.value)
-            
             // Set up automatic token refresh BEFORE token expires
-            console.log('🔧 Setting up proactive token refresh for user:', currentUser.value.uid)
             setupTokenRefresh()
           } else {
-            console.log('⚠️ User not found in Firestore')
             currentUser.value = null
           }
         } catch (error) {
@@ -44,22 +40,13 @@ export const useAuthStore = defineStore('auth', () => {
           currentUser.value = null
         }
       } else {
-        // CRITICAL DEBUG: Log what caused the user to become null
-        console.log('🚨 CRITICAL: Firebase user became null - investigating cause...')
-        console.log('🔍 Stack trace:', new Error().stack)
-        console.log('🔍 Previous user was:', currentUser.value?.email || 'None')
-        console.log('🔍 Firebase auth object:', auth)
-        console.log('🔍 Firebase currentUser:', auth.currentUser)
-        
         currentUser.value = null
-        console.log('👤 No user authenticated')
         
         // Clear token refresh when user logs out
         clearTokenRefresh()
         
         // Redirect to login if user lost authentication (unless already on login page)
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          console.log('🚪 User lost authentication - redirecting to login')
           window.location.href = '/login'
         }
       }
@@ -75,30 +62,20 @@ export const useAuthStore = defineStore('auth', () => {
   const setupTokenRefresh = () => {
     clearTokenRefresh() // Clear any existing interval
     
-    console.log('🔧 setupTokenRefresh: Starting token refresh setup...')
-    
     tokenRefreshInterval = setInterval(async () => {
-      console.log('⏰ Token refresh interval triggered')
       if (auth.currentUser) {
-        console.log('🔄 Automatically refreshing Firebase token...')
         try {
           const success = await refreshToken()
           if (!success) {
             console.error('❌ Failed to refresh token - logging user out for security')
-            console.log('🔒 With IEP data, we cannot risk compromised authentication states')
             await logout()
           }
         } catch (error) {
           console.error('❌ Token refresh threw an error:', error)
-          console.log('🔒 Logging user out immediately for IEP data security')
           await logout()
         }
-      } else {
-        console.log('⚠️ No current user during token refresh attempt')
       }
     }, 45 * 60 * 1000) // 45 minutes in milliseconds - refresh BEFORE token expires (Firebase tokens last ~60 minutes)
-    
-    console.log('⏰ Token auto-refresh set up (every 45 minutes) - PROACTIVE MODE')
     
     // Remove the immediate token refresh test to avoid conflicts
     // setTimeout(async () => {
@@ -114,7 +91,6 @@ export const useAuthStore = defineStore('auth', () => {
     if (tokenRefreshInterval) {
       clearInterval(tokenRefreshInterval)
       tokenRefreshInterval = null
-      console.log('⏰ Token auto-refresh cleared')
     }
   }
 
@@ -155,8 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
         })
       }
       
-      console.log('🚨 EXPLICIT LOGOUT: authStore.logout() called')
-      console.log('🔍 Logout stack trace:', new Error().stack)
+
       
       await signOut(auth)
       currentUser.value = null
@@ -182,9 +157,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = async () => {
     if (auth.currentUser) {
       try {
-        const token = await getIdToken(auth.currentUser, true)
-        console.log('✅ Token refreshed successfully')
-        console.log('🔍 New token length:', token.length)
+        await getIdToken(auth.currentUser, true)
         return true
       } catch (error) {
         console.error('❌ Error refreshing token:', error)
@@ -192,20 +165,17 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
     }
-    console.log('⚠️ No current user for token refresh')
     return false
   }
 
   // Check if current token is valid
   const checkTokenValidity = async () => {
     if (!auth.currentUser) {
-      console.log('⚠️ No current user to check token')
       return false
     }
 
     try {
-      const token = await getIdToken(auth.currentUser, false) // Don't force refresh, just get current
-      console.log('🔍 Current token exists, length:', token.length)
+      await getIdToken(auth.currentUser, false) // Don't force refresh, just get current
       return true
     } catch (error) {
       console.error('❌ Current token is invalid:', error)
