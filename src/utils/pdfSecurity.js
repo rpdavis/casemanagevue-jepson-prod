@@ -166,8 +166,13 @@ class SecurePdfHandler {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
 
-      // Check role-based access
-      if (['admin', 'administrator', 'sped_chair'].includes(userData.role)) {
+      // Check admin role access - all admin roles can access all documents
+      if (['admin', 'school_admin', 'administrator', 'sped_chair', 'admin_504'].includes(userData.role)) {
+        return true;
+      }
+
+      // Check staff view/edit roles - can access all documents (especially At-A-Glance)
+      if (['staff_view', 'staff_edit'].includes(userData.role)) {
         return true;
       }
 
@@ -182,6 +187,20 @@ class SecurePdfHandler {
         const studentDoc = await getDoc(doc(db, 'students', studentId));
         const schedule = studentDoc.data()?.app?.schedule?.periods || {};
         return Object.values(schedule).includes(user.uid);
+      }
+
+      // Check service provider access
+      if (userData.role === 'service_provider') {
+        const studentDoc = await getDoc(doc(db, 'students', studentId));
+        const staffIds = studentDoc.data()?.app?.staffIds || [];
+        return staffIds.includes(user.uid);
+      }
+
+      // Check paraeducator access
+      if (userData.role === 'paraeducator') {
+        const studentDoc = await getDoc(doc(db, 'students', studentId));
+        const staffIds = studentDoc.data()?.app?.staffIds || [];
+        return staffIds.includes(user.uid);
       }
 
       return false;

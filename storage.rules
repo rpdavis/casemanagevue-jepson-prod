@@ -7,7 +7,18 @@ service firebase.storage {
       return request.auth.token.role == role;
     }
     function isSuperAdmin() {
-      return userRole('admin') || userRole('sped_chair');
+      return userRole('admin') || userRole('school_admin');
+    }
+    function isAnyAdmin() {
+      return userRole('admin') || userRole('school_admin') || userRole('admin_504') || userRole('sped_chair');
+    }
+    function isStaffEdit() {
+      return userRole('staff_edit');
+    }
+    function hasValidRole() {
+      return userRole('admin') || userRole('school_admin') || userRole('staff_view') || userRole('staff_edit') || 
+             userRole('admin_504') || userRole('sped_chair') || userRole('case_manager') || 
+             userRole('teacher') || userRole('service_provider') || userRole('paraeducator');
     }
 
     // Firestore document getters (cross-service):
@@ -28,20 +39,18 @@ service firebase.storage {
 
     // Match for highly sensitive documents (e.g. IEPs, BIPs, At-A-Glance) stored under a 'sensitive' folder
     match /students/{studentId}/sensitive/{fileName} {
-      // Only authenticated staff can read if they're assigned to this student (or admin/sped chair/504 coordinator)
-      allow read: if request.auth != null && (
-        isSuperAdmin() ||      // super admins can read any file
-        userRole('administrator_504_CM') ||  // 504 coordinators can read all files
-        request.auth.uid in studentStaffIds(studentId)  // user is listed on the student's staffIds
-      );
+      // All authenticated users with valid roles can read student documents
+      // This includes At-A-Glance documents which should be accessible to all staff
+      allow read: if request.auth != null && hasValidRole();
       /* 
-         This uses Firestore data to check permissions: the user's UID must appear in the student document's staffIds array, 
-         or the user is an admin/sped_chair. Unauthenticated requests are always denied.
+         All authenticated users with valid roles can read student documents.
+         This ensures At-A-Glance documents are accessible to all staff members.
       */
 
       // Only users with write access on the student can upload or delete files
       allow write: if request.auth != null && (
-        isSuperAdmin() ||                                     // admins and sped_chairs can manage any files
+        isAnyAdmin() ||                                       // all admin roles can manage any files
+        isStaffEdit() ||                                      // staff_edit can write all files
         (userRole('case_manager') &&                          // case manager can write if they are this student's case manager
            request.auth.uid == studentCaseManagerId(studentId))
       );
@@ -56,30 +65,22 @@ service firebase.storage {
 
     // Match for less sensitive student files (if any) under a 'general' folder 
     match /students/{studentId}/general/{fileName} {
-      // The access rules here mirror the sensitive folder, but could be relaxed if needed for certain file types.
-      allow read: if request.auth != null && (
-        isSuperAdmin() ||
-        userRole('administrator_504_CM') ||  // 504 coordinators can read all files
-        request.auth.uid in studentStaffIds(studentId)
-      );
+      // All authenticated users with valid roles can read general student files
+      allow read: if request.auth != null && hasValidRole();
       allow write: if request.auth != null && (
-        isSuperAdmin() ||
-        (userRole('administrator_504_CM') && studentPlan(studentId) == '504') ||
+        isAnyAdmin() ||
+        isStaffEdit() ||
         (userRole('case_manager') && request.auth.uid == studentCaseManagerId(studentId))
       );
     }
 
     // Match for all other student files (fallback for existing file structure)
     match /students/{studentId}/{filePath=**} {
-      allow read: if request.auth != null && (
-        isSuperAdmin() ||
-        userRole('administrator_504_CM') ||  // 504 coordinators can read all files
-        request.auth.uid in studentStaffIds(studentId)
-      );
+      // All authenticated users with valid roles can read student files
+      allow read: if request.auth != null && hasValidRole();
       allow write: if request.auth != null && (
-        isSuperAdmin() ||
-        userRole('sped_chair') ||                             // SPED chairs can upload files
-        userRole('administrator_504_CM') ||                   // 504 coordinators can upload files
+        isAnyAdmin() ||
+        isStaffEdit() ||                                      // staff_edit can upload files
         userRole('case_manager') ||                           // case managers can upload files
         request.auth.uid in studentStaffIds(studentId)       // users in student's staff list can upload
       );
@@ -98,18 +99,13 @@ service firebase.storage {
 
     // Secure PDF system - encrypted files
     match /encrypted-pdfs/{studentId}/{fileName} {
-      // Only authenticated users can read encrypted PDFs
-      allow read: if request.auth != null && (
-        isSuperAdmin() ||      // super admins can read any file
-        userRole('administrator_504_CM') ||  // 504 coordinators can read all files
-        request.auth.uid in studentStaffIds(studentId)  // user is listed on the student's staffIds
-      );
+      // All authenticated users with valid roles can read encrypted PDFs
+      allow read: if request.auth != null && hasValidRole();
       
-      // Allow write for admins, SPED chairs, case managers, and users in student's staff list
+      // Allow write for admins, staff_edit, case managers, and users in student's staff list
       allow write: if request.auth != null && (
-        isSuperAdmin() ||                                     // admins and sped_chairs can manage any files
-        userRole('sped_chair') ||                             // SPED chairs can upload files
-        userRole('administrator_504_CM') ||                   // 504 coordinators can upload files
+        isAnyAdmin() ||                                       // all admin roles can manage any files
+        isStaffEdit() ||                                      // staff_edit can upload files
         userRole('case_manager') ||                           // case managers can upload files
         request.auth.uid in studentStaffIds(studentId)       // users in student's staff list can upload
       );
