@@ -63,7 +63,7 @@ export default function useStudents() {
       const convertedData = convertFirestoreMaps(data)
       return { id: doc.id, ...convertedData }
     })
-    
+
 
   }
 

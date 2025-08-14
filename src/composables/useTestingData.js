@@ -35,12 +35,8 @@ export function useTestingData(students, users, appSettings) {
       if (student.app?.schedule?.periods) {
         Object.values(student.app.schedule.periods).forEach(teacherId => {
           if (teacherId) {
-            // Handle both string IDs and objects with teacherId property
-            const actualTeacherId = typeof teacherId === 'object' ? teacherId.teacherId : teacherId
-            if (actualTeacherId) {
-              console.log('🔍 Found teacher ID in app.schedule.periods:', actualTeacherId)
-              teacherSet.add(String(actualTeacherId))
-            }
+            console.log('🔍 Found teacher ID in app.schedule.periods:', teacherId)
+            teacherSet.add(String(teacherId))
           }
         })
       }
@@ -163,9 +159,8 @@ export function useTestingData(students, users, appSettings) {
         const periodEntries = Object.entries(student.app.schedule.periods)
         for (let i = 0; i < periodEntries.length; i++) {
           const [periodKey, teacherId] = periodEntries[i]
-          const actualTeacherId = typeof teacherId === 'object' ? teacherId.teacherId : teacherId
-          console.log('🔍 CUSTOM TAB DEBUG: App schedule period', periodKey, ':', teacherId, 'actual teacher ID:', actualTeacherId)
-          if (actualTeacherId && teacherIds.includes(String(actualTeacherId))) {
+          console.log('🔍 CUSTOM TAB DEBUG: App schedule period', periodKey, ':', teacherId)
+          if (teacherId && teacherIds.includes(String(teacherId))) {
             console.log('🔍 CUSTOM TAB DEBUG: Found matching teacher in app schedule!')
             // Use the period key mapping instead of array index
             if (!isPeriodExcluded(periodKey, excludedPeriods)) {
@@ -232,18 +227,17 @@ export function useTestingData(students, users, appSettings) {
       const periodEntries = Object.entries(student.app.schedule.periods)
       for (let i = 0; i < periodEntries.length; i++) {
         const [periodKey, teacherId] = periodEntries[i]
-        const actualTeacherId = typeof teacherId === 'object' ? teacherId.teacherId : teacherId
-        if (actualTeacherId && teacherIds.includes(String(actualTeacherId))) {
+        if (teacherId && teacherIds.includes(String(teacherId))) {
           // Only include if period is not excluded (using period key mapping)
           if (!isPeriodExcluded(periodKey, excludedPeriods)) {
-            const user = users.value.find(u => u.id === String(actualTeacherId))
+            const user = users.value.find(u => u.id === String(teacherId))
             
             // Get the actual period label from helper
             const periodLabel = getLabel(parseInt(periodKey))
             
             periods.push({
               period: periodLabel,
-              teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${actualTeacherId}`
+              teacherName: user ? (user.name || `${user.firstName} ${user.lastName}`) : `Teacher ${teacherId}`
             })
           }
         }

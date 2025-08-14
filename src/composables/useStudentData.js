@@ -69,6 +69,26 @@ export function useStudentData() {
       .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id)) || []
   })
 
+  // Get case managers with student counts for filter dropdown (preserves fallback logic)
+  const caseManagersWithCounts = computed(() => {
+    if (!students.value?.length || !caseManagers.value?.length) return []
+    
+    return caseManagers.value.map(cm => {
+      const studentCount = students.value.filter(student => 
+        getCaseManagerId(student) === cm.id
+      ).length
+      
+      // Keep the same fallback logic as the original template
+      const displayName = cm.name || cm.email || cm.id
+      
+      return {
+        ...cm,
+        displayName: `${displayName} (${studentCount})`,
+        count: studentCount
+      }
+    }).sort((a, b) => a.displayName.localeCompare(b.displayName))
+  })
+
   // Data fetching with role-based security
   const fetchData = async () => {
     isLoading.value = true
@@ -214,6 +234,7 @@ export function useStudentData() {
     userList,
     userMapObj,
     caseManagers,
+    caseManagersWithCounts,
     teacherList,
     userRoles,
     aideAssignment,

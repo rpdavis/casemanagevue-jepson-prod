@@ -126,7 +126,7 @@
                   <option value="app.schedule.periods.4">Period 4 Teacher ID</option>
                   <option value="app.schedule.periods.5">Period 5 Teacher ID</option>
                   <option value="app.schedule.periods.6">Period 6 Teacher ID</option>
-                  <option value="app.schedule.periods.SH">Study Hall Teacher ID</option>
+                  <option value="app.schedule.periods.7">Period 7 Teacher ID</option>
                   <option value="app.schedule.classServices">Class Services (Comma-separated)</option>
                 </optgroup>
                 <optgroup label="Service Providers">
@@ -536,7 +536,7 @@ const autoMapCommonFields = () => {
     'Period4Teacher': 'app.schedule.periods.4',
     'Period5Teacher': 'app.schedule.periods.5',
     'Period6Teacher': 'app.schedule.periods.6',
-    'PeriodSHTeacher': 'app.schedule.periods.SH',
+    'Period7Teacher': 'app.schedule.periods.7',
     
     // Class Services
     'ClassServices': 'app.schedule.classServices',
@@ -1057,7 +1057,7 @@ const importSingleStudent = async (studentData) => {
           meetingDate: studentData.app.dates.meetingDate || ""
         },
         
-        schedule: {
+                schedule: {
           periods: studentData.app.schedule.periods || {
             1: "",
             2: "",
@@ -1065,10 +1065,10 @@ const importSingleStudent = async (studentData) => {
             4: "",
             5: "",
             6: "",
-            SH: ""
+            7: ""
           },
           classServices: Array.isArray(studentData.app.schedule.classServices) ? 
-            studentData.app.schedule.classServices : []
+studentData.app.schedule.classServices : []
         },
         
         providers: studentData.app.providers || {

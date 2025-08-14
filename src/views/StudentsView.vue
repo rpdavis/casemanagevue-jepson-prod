@@ -113,8 +113,8 @@
           <label>Case Manager</label>
           <select v-model="currentFilters.cm" @change="applyFilters()" class="filter-select">
             <option value="all">All Case Managers</option>
-            <option v-for="cm in caseManagers" :key="cm.id" :value="cm.id">
-              {{ cm.name || cm.email || cm.id }}
+            <option v-for="cm in caseManagersWithCounts" :key="cm.id" :value="cm.id">
+              {{ cm.displayName || cm.name || cm.email || cm.id }}
             </option>
           </select>
         </div>
@@ -367,6 +367,7 @@ const {
   students,
   userMapObj,
   caseManagers,
+  caseManagersWithCounts,
   teacherList,
   userRoles,
   aideAssignment,
