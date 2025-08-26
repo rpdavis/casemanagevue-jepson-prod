@@ -64,7 +64,8 @@ export function useStudentFilters(studentData) {
   const getCurrentFilters = () => {
     return {
       paraeducator: currentFilters.paraeducator,
-      teacher: currentFilters.teacher
+      teacher: currentFilters.teacher,
+      providerView: currentFilters.providerView
     }
   }
 
@@ -100,7 +101,8 @@ export function useStudentFilters(studentData) {
           if (typeof data === 'string') {
             return data === currentUser.value?.uid
           } else if (data && typeof data === 'object') {
-            return data.teacherId === currentUser.value?.uid
+            // Treat service providers as teachers in class view: primary or co-teach
+            return data.teacherId === currentUser.value?.uid || (data.coTeaching?.caseManagerId === currentUser.value?.uid)
           }
           return false
         }) : false
@@ -145,14 +147,16 @@ export function useStudentFilters(studentData) {
         const schedule = getSchedule(s)
         if (!schedule) return false
         
-        // Handle both simple schedule structure (period -> teacherId) and complex structure (period -> {teacherId, subject, room})
+        // Match teacher either as primary teacher or co-teacher (case manager in coTeaching)
         return Object.entries(schedule).some(([period, data]) => {
           if (typeof data === 'string') {
             // Simple structure: period -> teacherId
             return data === filters.teacher
           } else if (data && typeof data === 'object') {
-            // Complex structure: period -> {teacherId, subject, room}
-            return data.teacherId === filters.teacher
+            // Complex structure: period -> { teacherId, coTeaching: { caseManagerId } }
+            const primaryMatch = data.teacherId === filters.teacher
+            const coTeachMatch = (data.coTeaching?.caseManagerId) === filters.teacher
+            return primaryMatch || coTeachMatch
           }
           return false
         })

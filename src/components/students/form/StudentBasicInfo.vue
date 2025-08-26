@@ -87,10 +87,18 @@ const props = defineProps({
   userRoles: { type: Object, required: true }
 })
 
-// Sorted case managers for dropdown (alphabetical order)
+// Sorted case managers for dropdown (by last name)
 const sortedCaseManagers = computed(() => {
   const caseManagers = props.userRoles.caseManagers || []
-  return caseManagers.sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
+  return caseManagers.sort((a, b) => {
+    // Extract last names for sorting
+    const getLastName = (user) => {
+      const fullName = user.name || user.email || user.id
+      const nameParts = fullName.split(' ')
+      return nameParts.length > 1 ? nameParts[nameParts.length - 1] : fullName
+    }
+    return getLastName(a).localeCompare(getLastName(b))
+  })
 })
 </script>
 
