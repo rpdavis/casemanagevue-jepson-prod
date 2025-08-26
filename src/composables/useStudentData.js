@@ -60,13 +60,29 @@ export function useStudentData() {
   // Get paraeducators for filter dropdown
   const paraeducators = computed(() => {
     return userList.value?.filter(user => user.role === 'paraeducator')
-      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id)) || []
+      .sort((a, b) => {
+        // Extract last names for sorting
+        const getLastName = (user) => {
+          const fullName = user.name || user.email || user.id
+          const nameParts = fullName.split(' ')
+          return nameParts.length > 1 ? nameParts[nameParts.length - 1] : fullName
+        }
+        return getLastName(a).localeCompare(getLastName(b))
+      }) || []
   })
 
   // Get service providers for filter dropdown
   const serviceProviders = computed(() => {
     return userList.value?.filter(user => user.role === 'service_provider')
-      .sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id)) || []
+      .sort((a, b) => {
+        // Extract last names for sorting
+        const getLastName = (user) => {
+          const fullName = user.name || user.email || user.id
+          const nameParts = fullName.split(' ')
+          return nameParts.length > 1 ? nameParts[nameParts.length - 1] : fullName
+        }
+        return getLastName(a).localeCompare(getLastName(b))
+      }) || []
   })
 
   // Get case managers with student counts for filter dropdown (preserves fallback logic)

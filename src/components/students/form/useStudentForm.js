@@ -1,5 +1,5 @@
 import { ref, computed, watch, reactive, onMounted } from 'vue'
-import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, addDoc, collection, serverTimestamp, deleteField } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage, auth } from '@/firebase'
 import { getDisplayValue } from '@/utils/studentUtils'
@@ -562,6 +562,10 @@ export function useStudentForm(props, emit) {
               schedule[p] = periodData.teacherId || String(periodData) || periodData
             }
           }
+        } else {
+          // IMPORTANT: Use Firebase deleteField() to properly remove deleted periods
+          console.log(`🔍 SCHEDULE DEBUG - Period ${p} was deleted, using deleteField() for database removal`)
+          schedule[p] = deleteField()
         }
       })
       
@@ -756,7 +760,7 @@ export function useStudentForm(props, emit) {
         // Use Firebase auto-generated ID for security
         const docRef = doc(collection(db, 'students'))
         payload.createdAt = serverTimestamp()
-        await setDoc(docRef, payload)
+        await setDoc(docRef, payload, { merge: true })
         newStudentId = docRef.id
         payload.id = newStudentId
         console.log('Student added successfully with ID:', newStudentId, 'SSID:', ssid)

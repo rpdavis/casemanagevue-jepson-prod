@@ -15,9 +15,17 @@ import { computed } from 'vue'
 const props = defineProps(['id', 'label', 'list', 'modelValue'])
 defineEmits(['update:modelValue'])
 
-// Sorted list for dropdown (alphabetical order)
+// Sorted list for dropdown (by last name)
 const sortedList = computed(() => {
   const list = props.list || []
-  return list.sort((a, b) => (a.name || a.email || a.id).localeCompare(b.name || b.email || b.id))
+  return list.sort((a, b) => {
+    // Extract last names for sorting
+    const getLastName = (user) => {
+      const fullName = user.name || user.email || user.id
+      const nameParts = fullName.split(' ')
+      return nameParts.length > 1 ? nameParts[nameParts.length - 1] : fullName
+    }
+    return getLastName(a).localeCompare(getLastName(b))
+  })
 })
 </script> 

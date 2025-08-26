@@ -42,11 +42,13 @@ class SessionTimeoutManager {
   setupAuthWatcher() {
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Start timeout when user logs in
+        console.log('🔧 User logged in, starting session timeout system')
+        // Start timeout when user logs in - longer delay to ensure settings are loaded
         setTimeout(() => {
           this.resetTimeout()
-        }, 1000) // Small delay to ensure settings are loaded
+        }, 2000) // Increased delay to ensure settings listener is established
       } else {
+        console.log('🔧 User logged out, clearing session timeouts')
         // Clear timeouts when user logs out
         this.clearTimeouts()
         this.hideWarning()
@@ -58,27 +60,66 @@ class SessionTimeoutManager {
     try {
       const settingsRef = doc(db, 'app_settings', 'security')
       
-      // Load settings once for better performance (instead of real-time listener)
-      const settingsDoc = await getDoc(settingsRef)
-      
-      if (settingsDoc.exists()) {
-        const data = settingsDoc.data()
-        this.isEnabled.value = data.sessionTimeoutEnabled || false
-        this.timeoutMinutes.value = data.sessionTimeoutMinutes || 30
-        
-        // Restart timeout with new settings if user is logged in
-        if (auth.currentUser) {
-          this.resetTimeout()
+      // Use real-time listener to get updates when settings change in admin panel
+      this.unsubscribeSettings = onSnapshot(settingsRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data()
+          // More defensive: check for explicit false, otherwise default to true
+          const newEnabled = data.sessionTimeoutEnabled !== false
+          const newMinutes = data.sessionTimeoutMinutes || 30
+          
+          console.log(`🔧 Session timeout settings updated: enabled=${newEnabled}, timeout=${newMinutes}min`)
+          
+          // Update local values
+          this.isEnabled.value = newEnabled
+          this.timeoutMinutes.value = newMinutes
+          
+          // Restart timeout with new settings if user is logged in
+          if (auth.currentUser) {
+            this.resetTimeout()
+          }
+        } else {
+          // No settings document exists, create it with defaults
+          console.log('🔧 No session timeout settings found, creating with defaults')
+          const defaultSettings = {
+            sessionTimeoutEnabled: true,
+            sessionTimeoutMinutes: 30,
+            createdAt: new Date().toISOString(),
+            createdBy: 'system_auto_create'
+          }
+          
+          // Create the document
+          setDoc(settingsRef, defaultSettings, { merge: true }).catch(error => {
+            console.error('Failed to create default session timeout settings:', error)
+          })
+          
+          // Set local values
+          this.isEnabled.value = true
+          this.timeoutMinutes.value = 30
         }
-      } else {
-        // No settings document exists, use defaults
-        this.isEnabled.value = false
+      }, (error) => {
+        console.error('Failed to load session timeout settings:', error)
+        // Use defaults on error - but still try to create the document
+        this.isEnabled.value = true
         this.timeoutMinutes.value = 30
-      }
+        
+        // Try to create the missing document
+        const defaultSettings = {
+          sessionTimeoutEnabled: true,
+          sessionTimeoutMinutes: 30,
+          createdAt: new Date().toISOString(),
+          createdBy: 'system_error_recovery'
+        }
+        setDoc(settingsRef, defaultSettings, { merge: true }).catch(err => {
+          console.error('Failed to create session timeout settings during error recovery:', err)
+        })
+      })
       
-      console.log(`🔧 Session timeout settings loaded: enabled=${this.isEnabled.value}, timeout=${this.timeoutMinutes.value}min`)
     } catch (error) {
-      console.error('Failed to load session timeout settings:', error)
+      console.error('Failed to setup session timeout settings listener:', error)
+      // Use defaults on error
+      this.isEnabled.value = true
+      this.timeoutMinutes.value = 30
     }
   }
 
@@ -121,15 +162,15 @@ class SessionTimeoutManager {
     
     const now = Date.now()
     
-    // Simple throttling - only every 30 seconds instead of 60
-    if (now - this.lastActivity < 30000) {
+    // Reduced throttling - only every 10 seconds for more responsive timeout resets
+    if (now - this.lastActivity < 10000) {
       this.lastActivity = now
       return
     }
     
     this.lastActivity = now
     
-    // Always reset timeout on activity (this was the main bug)
+    // Always reset timeout on activity
     console.log('🔄 Activity detected - resetting session timeout')
     this.resetTimeout()
     
@@ -275,7 +316,11 @@ class SessionTimeoutManager {
       })
     }
     
-    // Settings loaded once, no unsubscribe needed
+    // Unsubscribe from settings listener
+    if (this.unsubscribeSettings) {
+      this.unsubscribeSettings()
+      this.unsubscribeSettings = null
+    }
   }
 }
 
